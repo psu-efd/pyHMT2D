@@ -1,15 +1,19 @@
+<p align="center">
+  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="pyhmt2d_logo_vel_color_vector.png" width="60%"></a>
+  <p align="center">2D Hydraulic Modeling Tools in Python.</p>
+</p>
+
 # pyHMT2D - <ins>Py</ins>thon <ins>H</ins>ydraulic <ins>M</ins>odeling <ins>T</ins>ools - 2D
 
-pyHMT2D is a Python package developed to control and (semi)automate 2D hydraulic modeling, and pre-/postprocessing simulation results. Currently, the following 2D hydraulic models are developed:
+pyHMT2D is a Python package developed to control and (semi)automate 2D hydraulic modeling, and pre-/postprocessing simulation results. Currently, the following 2D hydraulic models are supported:
 - SRH-2D
 - HEC-RAS 2D
 
-## Motivation
+## Motivations
 
-Two-dimensional hydraulic modeling, replacing one-dimensional modeling, has become the work horse for most engineering purposes in practice. Many agencies, such as U.S. DOT, Bureau of Reclamation (USBR), FEMA, and U.S. Army Corp of Engineers (USACE), have developed and promoted 2D hydraulic models to fulfill their missions. Example 2D models are SRH-2D (USBR) and HEC-RAS 2D (USACE).
+Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling, has become the work horse for most engineering purposes in practice. Many agencies, such as U.S. DOT, Bureau of Reclamation (USBR), FEMA, and U.S. Army Corp of Engineers (USACE), have developed and promoted 2D hydraulic models to fulfill their respective missions. Example 2D models are SRH-2D (USBR) and HEC-RAS 2D (USACE).
 
-
-
+One major motivation of this package is to efficiently and automatically run 2D hydraulic modeling simulations. For example, batch simulations to calibration model runs. Many of the 2D models have some automation to some degree. However, 
 
 ## Features
 
@@ -34,23 +38,27 @@ With the control and automation capability above, it is much easier to do the fo
 - Monte-Carlo simulations with scripting and Python's statistic libraries
 - ...
 
+Other features:
+- calculate the difference between simulation results (if they are on the same mesh)
+
+
 ## License
 MIT
 
 
 ## Author
 
-Xiaofeng Liu, Ph.D., P.E.
+Xiaofeng Liu, Ph.D., P.E.  
 Associate Professor
 
-Department of Civil and Environmental Engineering
-Institute of Computational and Data Sciences
-
+Department of Civil and Environmental Engineering  
+Institute of Computational and Data Sciences  
 Penn State University
+
 223B Sackett Building, University Park, PA 16802
 
 Web: http://water.engr.psu.edu/liu/
 
 ## Contributors
 
-
+(To be added)
