@@ -11,9 +11,12 @@ pyHMT2D is a Python package developed to control and (semi)automate 2D hydraulic
 
 ## Motivations
 
-Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling, has become the work horse for most engineering purposes in practice. Many agencies, such as U.S. DOT, Bureau of Reclamation (USBR), FEMA, and U.S. Army Corp of Engineers (USACE), have developed and promoted 2D hydraulic models to fulfill their respective missions. Example 2D models are SRH-2D (USBR) and HEC-RAS 2D (USACE).
+Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling, has become the work horse for most engineering purposes in practice. Many agencies, such as U.S. DOT, Bureau of Reclamation (USBR), FEMA, and U.S. Army Corp of Engineers (USACE), have developed and promoted 2D hydraulic models to fulfill their respective missions. Example 2D models are SRH-2D (USBR) and HEC-RAS 2D (USACE). The motivations of this package are as follows:
 
-One major motivation of this package is to efficiently and automatically run 2D hydraulic modeling simulations. For example, batch simulations to calibration model runs. Many of the 2D models have some automation to some degree. However, 
+- One major motivation of this package is to efficiently and automatically run 2D hydraulic modeling simulations, for example, batch simulations to calibration model runs. Many of the 2D models have some automation to some degree. However, these models and their GUIs are closed source. Therefore, a modeler is limited to what he/she can do. 
+- Most 2D models have good user interface and they have capability to produce good result visualizations and analysis. However, with this package and the power of the VTK library, 2D hydraulic modeling results can be visualized and analyzed with more flexibilty, efficiency, and compatability. 
+- This package also serves as a bridge between 2D hydraulic models and the Python universe where many powerful libaries exist, for example statistics, machine learning, GIS, and parallel computing.
+- Model inter-comparison and evaluation. Almost all 2D hydraulic models solve the shallow-water equations. However, every model does it differently. How these differences manifest in their results and how to interpret them are of great interest to practitioners. 
 
 ## Features
 
@@ -41,6 +44,16 @@ With the control and automation capability above, it is much easier to do the fo
 Other features:
 - calculate the difference between simulation results (if they are on the same mesh)
 
+## Requirements
+
+This package uses the following libraries:
+- [meshio](https://github.com/nschloe/meshio)
+- [h5py](https://www.h5py.org/)
+- [vtk](https://github.com/Kitware/VTK)
+
+## Installation
+
+## Example Usage
 
 ## License
 MIT
