@@ -1,7 +1,12 @@
+
+[comment]: <> (comment)
+
 <p align="center">
   <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="logo/pyhmt2d_logo_vel_color_vector.png" width="60%"></a>
-  <p align="center">2D Hydraulic Modeling Tools in Python.</p>
 </p>
+<p align="center">2D Hydraulic Modeling Tools in Python.</p>
+
+![image](logo/pyhmt2d_logo_vel_color_vector.png)
 
 # pyHMT2D - <ins>Py</ins>thon <ins>H</ins>ydraulic <ins>M</ins>odeling <ins>T</ins>ools - 2D
 
