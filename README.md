@@ -1,9 +1,5 @@
 
-[comment]: <> (
-<p align="center">
-  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="logo/pyhmt2d_logo_vel_color_vector.png" width="60%"></a>
-</p>
-)
+[comment]: <> (<p align="center"> <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="logo/pyhmt2d_logo_vel_color_vector.png" width="60%"></a> </p>)
 
 ![image](logo/pyhmt2d_logo_vel_color_vector.png)
 <p align="center">2D Hydraulic Modeling Tools in Python.</p>
