@@ -12,6 +12,19 @@ import meshio
 from scipy import interpolate
 from osgeo import gdal
 
+# map from number of nodes to cell type in VTK (see VTK documentation)
+vtkCellTypeMap = {
+  3: 5,     # triangle
+  4: 9,     # quad
+  5: 7,     # poly
+  6: 7,
+  7: 7,
+  8: 7
+}
+
+# maximum number of nodes for an element
+gMax_Nodes_per_Element = 8
+
 class SRH_2D_Data:
     """
     A class for SRH-2D data I/O, manipulation, and format conversion
@@ -34,18 +47,315 @@ class SRH_2D_Data:
     
     """
     
-    def __init__(self, srh_filename, terrain_filename):
-        self.srh_filename = srh_filename
-        self.terrain_filename = terrain_filename
+    def __init__(self, srhhydro_filename, srhgeom_filename, srhmat_filename):
+        self.srhhydro_filename = srhhydro_filename
+        self.srhgeom_filename = srhgeom_filename
+        self.srhmat_filename = srhmat_filename
+
+        #mesh information:
+        #   number of elements
+        self.numOfElements = -1
+
+        #   number of nodes
+        self.numOfNodes = -1
+
+        # First read of the SRHGEOM file to get number of elements and nodes
+        self.getNumOfElementsNodes()
+
+        # list of nodes for all elements
+        self.elementNodesList = np.zeros([self.numOfElements, gMax_Nodes_per_Element], dtype=int)
+
+        # number of nodes for each element (3,4,...,gMax_Nodes_per_Element)
+        self.elementNodesCount = np.zeros(self.numOfElements, dtype=int)
+
+        # each element's vtk cell type
+        self.vtkCellTypeCode = np.zeros(self.numOfElements, dtype=int)
+
+        # each node's 3D coordinates
+        self.nodeCoordinates = np.zeros([self.numOfNodes, 3], dtype=np.float64)
+
+        # get the mesh information (elementNodesList, elementNodesCount, vtkCellTypeCode, and nodeCoordinates)
+        # from reading the SRHGEOM file again
+        self.readSRHGEOMFile()
 
 
+    def getNumOfElementsNodes(self):
+        """ Get the number of elements and nodes in srhgeom mesh file
+
+        Returns
+        -------
+
+        """
+        print("Getting numbers of elements and nodes fromt the SRHGEOM file ...")
+
+        # read the "srhgeom" mesh file
+        try:
+            srhgeomfile = open(self.srhgeom_filename, 'r')
+        except:
+            print('Failed openning srhgeom file', self.srhgeom_filename)
+            sys.exit()
+
+        count = 0
+        elemCount = 0
+        nodeCount = 0
+
+        while True:
+            count += 1
+
+            # Get next line from file
+            line = srhgeomfile.readline()
+
+            # if line is empty
+            # end of file is reached
+            if not line:
+                break
+
+            # print("Line{}: {}".format(count, line.strip()))
+
+            search = line.split()
+            # print(search)
+
+            if len(search) != 0:
+                if search[0] == "Elem":
+                    elemCount += 1
+                    # print("Elem # %d: %s" % (elemCount, line))
+                elif search[0] == "Node":
+                    nodeCount += 1
+                    # print("Node # %d: %s" % (nodeCount, line))
+
+        srhgeomfile.close()
+
+        self.numOfElements = elemCount
+        self.numOfNodes = nodeCount
+
+        print("There are %d elements and %d nodes in the mesh." % (self.numOfElements, self.numOfNodes))
 
 
-#testing
+    def readSRHGEOMFile(self):
+        """ Get mesh information by reading the srhgeom file
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
+
+        print("Reading the SRHGEOM file ...")
+
+        # read the "srhgeom" mesh file
+        try:
+            srhgeomfile = open(self.srhgeom_filename, 'r')
+        except:
+            print('Failed openning srhgeom file', self.srhgeom_filename)
+            sys.exit()
+
+        count = 0
+        elemCount = 0
+        nodeCount = 0
+
+        while True:
+            count += 1
+
+            # Get next line from file
+            line = srhgeomfile.readline()
+
+            # if line is empty
+            # end of file is reached
+            if not line:
+                break
+
+            # print("Line{}: {}".format(count, line.strip()))
+
+            search = line.split()
+            # print(search)
+
+            if len(search) != 0:
+                if search[0] == "Elem":
+                    elemCount += 1
+                    # print("Elem # %d: %s" % (elemCount, line))
+                    self.elementNodesList[elemCount - 1][0:len(search[2:])] = search[2:]
+                    self.elementNodesCount[elemCount - 1] = len(search[2:])
+                    if len(search[2:]) < 1 or len(search[2:]) > gMax_Nodes_per_Element:
+                        sys.exit("Number of nodes for element %d is less than 1 or larger than the max of %d." % (elemCount,gMax_Nodes_per_Element))
+                    self.vtkCellTypeCode[elemCount - 1] = vtkCellTypeMap[len(search[2:])]
+                elif search[0] == "Node":
+                    nodeCount += 1
+                    # print("Node # %d: %s" % (nodeCount, line))
+                    self.nodeCoordinates[nodeCount - 1] = search[2:]
+
+        srhgeomfile.close()
+
+        print("elementNodesList = ", self.elementNodesList)
+        print("elementNodesCount = ", self.elementNodesCount)
+        print("vtkCellTypeCode = ", self.vtkCellTypeCode)
+        print("nodeCoordinates = ", self.nodeCoordinates)
+
+
+    def readSRHFile(self, srhFileName):
+        """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
+
+        Note: SRH-2D outputs an extra "," to each line. As a result, Numpy's
+        genfromtext(...) function adds a column of "nan" to the end.
+
+        Returns
+        -------
+        variable names, variable data
+
+        """
+
+        print("Reading the SRH/SRHC result file ...")
+
+        data = np.genfromtxt(srhFileName, delimiter=',', names=True)
+
+        return data.dtype.names[:-1], data
+
+    def outputVTK(self, vtkFileName, resultVarNames, resultData, bCellData):
+        """ Output result to VTK file
+
+        The supplied resultVarNames and resultData should be compatiable with the mesh. If resultVarNames is empty,
+        it only outputs the mesh with no data.
+
+        Parameters
+        ----------
+        vtkFileName: name for the output vtk file
+        resultVarNames: result variable names
+        resultData: result data
+        bCellData: whether the data is at cell center (True) or node (False)
+
+        Returns
+        -------
+
+        """
+
+        print("Output to VTK ...")
+
+        try:
+            fid = open(vtkFileName, 'w')
+        except IOError:
+            print('vtk file open error')
+            sys.exit()
+
+        fid.write('# vtk DataFile Version 3.0\n')
+        fid.write('Results from SRH-2D Modeling Run\n')
+        fid.write('ASCII\n')
+        fid.write('DATASET UNSTRUCTURED_GRID\n')
+        fid.write('\n')
+
+        # output points
+        fid.write('POINTS %d double\n' % self.nodeCoordinates.shape[0])
+
+        point_id = 0  # point ID counter
+        for k in range(self.nodeCoordinates.shape[0]):
+            point_id += 1
+            fid.write(" ".join(map(str, self.nodeCoordinates[k])))
+            fid.write("\n")
+
+        # output elements
+        fid.write('CELLS %d %d \n' % (self.elementNodesList.shape[0],
+                                      self.elementNodesList.shape[0] + np.sum(self.elementNodesCount)))
+
+        cell_id = 0  # cell ID counter
+        for k in range(self.elementNodesList.shape[0]):
+            cell_id += 1
+            fid.write('%d ' % self.elementNodesCount[k])
+            fid.write(" ".join(map(str, self.elementNodesList[k][:self.elementNodesCount[k]] - 1)))
+            fid.write("\n")
+
+        # output element types
+        fid.write('CELL_TYPES %d \n' % self.elementNodesList.shape[0])
+
+        for k in range(self.elementNodesList.shape[0]):
+            fid.write('%d ' % self.vtkCellTypeCode[k])
+            if (((k + 1) % 20) == 0):
+                fid.write('\n')
+
+        fid.write('\n')
+
+        # output solution variables: only if there is solution variable
+        if len(resultVarNames) != 0:
+            if bCellData:
+                print('Solution variables are at cell centers. \n')
+                fid.write('CELL_DATA %d\n' % self.elementNodesList.shape[0])
+            else:
+                print('Solution variables are at vertices. \n')
+                fid.write('POINT_DATA %d\n' % self.nodeCoordinates.shape[0])
+
+            # Note: in resultVarNames, the 1st, second, third, and fourth columns are Point_ID,
+            #      X_unit, Y_unit, and Bed_Elev_unit respectively. There is no need to save them
+            #      in vtk.
+
+            # column numbers for Vel_X and Vel_Y for vector assemble
+            nColVel_X = -1
+            nColVel_Y = -1
+
+            # First output all solution variables as scalars
+            print('The following solution variables are processed: \n')
+            for k in range(4, len(resultVarNames)):
+                print('     %s\n' % resultVarNames[k])
+
+                if resultVarNames[k].find('Vel_X') != -1:
+                    nColVel_X = k
+                elif resultVarNames[k].find('Vel_Y') != -1:
+                    nColVel_Y = k
+
+                fid.write('SCALARS %s double 1 \n' % resultVarNames[k])
+                fid.write('LOOKUP_TABLE default\n')
+
+                for cellI in range(self.elementNodesList.shape[0]):
+                    fid.write('%f ' % resultData[cellI][k])
+
+                    if (((cellI + 1) % 20) == 0):
+                        fid.write('\n')
+
+                fid.write('\n \n')
+
+            # Then output Vel_X and Vel_Y as velocity vector (Vel_Z = 0.0)
+            # print('nColVel_X, nColVel_Y = %d, %d' % (nColVel_X, nColVel_Y))
+            if (nColVel_X != -1) and (nColVel_Y != -1):
+                fid.write('VECTORS velocity double \n')
+
+                for cellI in range(self.elementNodesList.shape[0]):
+                    fid.write('%f %f 0.0   ' % (resultData[cellI][nColVel_X], resultData[cellI][nColVel_Y]))
+
+                    if (((cellI + 1) % 20) == 0):
+                        fid.write('\n')
+
+                fid.write('\n \n')
+
+        fid.close()
+
+
 def main():
-    my_srh2d_data = SRH_2D_Data("Muncie2DOnly_SI.data","subterrain_exported.tif")
+    """ Testing SRH_2D_data class
+
+    Returns
+    -------
+
+    """
+
+    my_srh_2d_data = SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
+
+    # User specified SRH-2D result in SRH (point) or SRHC (cell center) format
+    srhFileName = 'Muncie2D_SRHC2.dat'
+
+    # whehter it is cell center data or at point (need to be checked by user)
+    bCellData = True
+
+    # Read SRH-2D result file
+    resultVarNames, resultData = my_srh_2d_data.readSRHFile(srhFileName)
+    # print(resultVarNames, resultData)
+
+    # output SRH-2D result to VTK
+    srhName = os.path.splitext(srhFileName)[0]
+    vtkFileName = srhName + ".vtk"
+    print("vtk file name = ", vtkFileName)
+
+    my_srh_2d_data.outputVTK(vtkFileName, resultVarNames, resultData, bCellData)
 
     print("All done!")
+
 
 if __name__ == "__main__":
     main()
