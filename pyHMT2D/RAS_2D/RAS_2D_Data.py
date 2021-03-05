@@ -29,7 +29,7 @@ import meshio
 from scipy import interpolate
 from osgeo import gdal
 
-class RAS2D_Data:
+class RAS_2D_Data:
     """
     A class for HEC-RAS 2D data I/O, manipulation, and format conversion
     
@@ -1034,7 +1034,7 @@ class RAS2D_Data:
             self.meshioObjectList.append(hec_ras_mesh)
                 
             #write to vtk file (for debug)
-            fileName_temp = ['RAS2D_meshonly_', area.astype(str),'_', str(i).zfill(4),'.vtk']
+            fileName_temp = ['RAS2D_meshonly_', area.astype(str),'_Area', str(i).zfill(4),'.vtk']
             vtkFileName = "".join(fileName_temp)
             meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
 
@@ -1314,7 +1314,7 @@ class RAS2D_Data:
 
 #testing
 def main():
-    my_ras2d = RAS2D_Data("Muncie2DOnly_SI.p01.hdf","subterrain_exported.tif")
+    my_ras2d = RAS_2D_Data("Muncie2DOnly_SI.p01.hdf","subterrain_exported.tif")
     
     #print(my_ras2d.TwoDAreaFace_FacePoints[0])
     
