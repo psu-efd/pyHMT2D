@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="pyhmt2d_logo_vel_color_vector.png" width="60%"></a>
+  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="log/pyhmt2d_logo_vel_color_vector.png" width="60%"></a>
   <p align="center">2D Hydraulic Modeling Tools in Python.</p>
 </p>
 
@@ -13,10 +13,11 @@ pyHMT2D is a Python package developed to control and (semi)automate 2D hydraulic
 
 Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling, has become the work horse for most engineering purposes in practice. Many agencies, such as U.S. DOT, Bureau of Reclamation (USBR), FEMA, and U.S. Army Corp of Engineers (USACE), have developed and promoted 2D hydraulic models to fulfill their respective missions. Example 2D models are SRH-2D (USBR) and HEC-RAS 2D (USACE). The motivations of this package are as follows:
 
-- One major motivation of this package is to efficiently and automatically run 2D hydraulic modeling simulations, for example, batch simulations to calibration model runs. Many of the 2D models have some automation to some degree. However, these models and their GUIs are closed source. Therefore, a modeler is limited to what he/she can do. 
-- Most 2D models have good user interface and they have capability to produce good result visualizations and analysis. However, with this package and the power of the VTK library, 2D hydraulic modeling results can be visualized and analyzed with more flexibilty, efficiency, and compatability. 
+- One major motivation of this package is to efficiently and automatically run 2D hydraulic modeling simulations, for example, batch simulations to calibrate model runs. Many of the 2D models have some automation to certain degree. However, these models and their GUIs are closed source. Therefore, a modeler is limited to what he/she can do. 
+- Most 2D models have good user interface and they have capability to produce good result visualizations and analysis. However, with this package and the power of the VTK library, 2D hydraulic modeling results can be visualized and analyzed with more flexibilty and efficiency. 
 - This package also serves as a bridge between 2D hydraulic models and the Python universe where many powerful libaries exist, for example statistics, machine learning, GIS, and parallel computing.
-- Model inter-comparison and evaluation. Almost all 2D hydraulic models solve the shallow-water equations. However, every model does it differently. How these differences manifest in their results and how to interpret them are of great interest to practitioners. 
+- The read/write and tranformation of 2D hydraulic model results can be used to feed other models which use the simulated flow field, for example external water quality models and fish models.
+- Model inter-comparison and evaluation. Almost all 2D hydraulic models solve the shallow-water equations. However, every model does it differently. How these differences manifest in their results and how to quantify/interpret the differences are of great interest to practitioners.
 
 ## Features
 
@@ -55,7 +56,21 @@ This package uses the following libraries:
 
 ## Example Usage
 
+More examples can be found in the "test" directory.
+
+## Limitations
+
+For SRH-2D:
+- This package is developed and tested with SRH-2D v3.3; other versions may work but has not been tested.
+
+For HEC-RAS 2D:
+- Only one 2D flow area is supported.
+- Only 2D flow area information is processed; others such as 1D channels and structures are ignored.
+- Only flow data is processes; others such as sediment and water quality are ignored.
+- This package is developed and tested with HEC-RAS v5.0.7 and v6.0 beta; other versions may work but has not been tested.
+
 ## License
+
 MIT
 
 
@@ -73,5 +88,4 @@ Penn State University
 Web: http://water.engr.psu.edu/liu/
 
 ## Contributors
-
 (To be added)
