@@ -1,9 +1,8 @@
+<p align="center">
+  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="logo/pyhmt2d_logo_vel_color_vector.png" width="60%">
+  </a> 
+</p>
 
-<p align="center"> 
-  <a href="https://github.com/psu-efd/pyHMT2D"><img alt="pyHMT2D" src="logo/pyhmt2d_logo_vel_color_vector.png" width="60%"></a> 
-</p>)
-
-[comment]: <> (![image](logo/pyhmt2d_logo_vel_color_vector.png)
 <p align="center">2D Hydraulic Modeling Tools in Python.</p>
 
 # pyHMT2D - <ins>Py</ins>thon <ins>H</ins>ydraulic <ins>M</ins>odeling <ins>T</ins>ools - 2D
@@ -71,6 +70,16 @@ For HEC-RAS 2D:
 - Only 2D flow area information is processed; others such as 1D channels and structures are ignored.
 - Only flow data is processes; others such as sediment and water quality are ignored.
 - This package is developed and tested with HEC-RAS v5.0.7 and v6.0 beta; other versions may work but has not been tested.
+
+## Acknowledgements and references
+
+pyHMT2D utilizes and benefits from several open source codes. The usage of these codes follows the 
+proper copyright laws and their licenses (see the copies of their original licenses in the "licenses" directory). We 
+acknowledge their contributions.
+
+In particular, the following packages were used:
+- [PyRAS - Python for River AnalysiS](https://github.com/solomonvimal/pyras)
+- [HaD-to-Py](https://github.com/latomkovic/HaD-to-Py)
 
 ## License
 
