@@ -1,8 +1,6 @@
-# adapted from pyras
-
 """
-HEC-RAS Controller
-==================
+
+Some of the following code is adapted from pyras under the MIT license: https://github.com/solomonvimal/pyras
 """
 
 import os
@@ -10,28 +8,45 @@ import os
 import win32api
 import win32con
 
-
-def get_supported_versions():
-    """ """
-    return ['RAS600', 'RAS500']  # Order gives the priority
+from ..__common__ import yes_or_no
 
 
-def kill_all():
-    """ """
+def get_supported_hec_ras_versions():
+    """Return a list of supported HEC-RAS versions
+    """
+    return ['5.0.7', '6.0.1']
+
+
+def kill_all_hec_ras():
+    """ Kill all running HEC-RAS instances
+
+    Close all HEC-RAS instances. This is potentially dangerous because all running HEC-RAS processes will be killed
+    without warning. Make sure you save and close all HEC-RAS instances before you call this.
+
+    """
     import os
     import subprocess
 
-    ras_process_string = 'ras.exe'
+    print("Kill all HEC-RAS instances. Proceed with caution.")
+
+    if (not yes_or_no("Are you sure?")):
+        print("Ok, no HEC-RAS instance will be killed.")
+        return
+
+    ras_process_string = b'ras.exe'
     proc = subprocess.Popen('TASKLIST /FO "CSV"', stdout=subprocess.PIPE)
-    tasklist = proc.stdout.read().split('\n')
+    #print("proc.stdout.read() = ", proc.stdout.read())
+    tasklist = proc.stdout.read().split(b'\n')
     tasks = []
     pids = []
     for line in tasklist:
         l = line.lower()
         if ras_process_string in l:
-            items = l.split(',')
+            items = l.split(b',')
             tasks.append(items)
             pids.append(int(eval(items[1])))
+
+    print("Found ", len(pids), "running HEC-RAS instances. Kill them all.")
 
     for pid in pids:
         try:
@@ -40,10 +55,12 @@ def kill_all():
             print(e)
 
 
-def get_available_versions():
-    """ """
-    ver = {'HEC-RAS\\6.0 Beta Update 1\\Ras.exe': 'RAS600',
-           'HEC-RAS\\5.0.7\\Ras.exe': 'RAS500'}
+def get_installed_hec_ras_versions():
+    """ Get a list of installed HEC-RAS versions
+    """
+    #this list has to include as many possible HEC-RAS versions as possible
+    ver = {'HEC-RAS\\6.0 Beta Update 2\\Ras.exe': '6.0.1',
+           'HEC-RAS\\5.0.7\\Ras.exe': '5.0.7'}
 
     ldic = _get_registered_typelibs()
 
@@ -169,40 +186,10 @@ def _get_registered_typelibs(match='HEC River Analysis System'):
             num = num + 1
     finally:
         win32api.RegCloseKey(key)
-    result = sorted(result)
+
+    #print(result)
+    #result = sorted(result)
+
     return result
 
 
-# %%
-
-def RAS_2D_Initial_Cleaning():
-    """ Initial cleaning of HEC-RAS 2D environment
-
-    Returns
-    -------
-
-    """
-
-    kill_all()
-
-    __available_versions__ = get_available_versions()
-
-    if len(__available_versions__) > 0:
-        for ras_version in get_supported_versions():
-            if ras_version in __available_versions__:
-                os.environ['RAS_CONTROLLER_VERSION'] = ras_version
-                break
-
-        #from .hecrascontroller import HECRASController
-
-        # Cleaning the namespace
-        globals().pop('hecrascontroller')
-        globals().pop('hecrasgeometry')
-        globals().pop('win32api')
-        globals().pop('win32con')
-        globals().pop('runtime')
-        globals().pop('os')
-    else:
-        error = '"HEC River Analysis System" type library not found. ' \
-                'Please install HEC-RAS'
-        raise Exception(error)
