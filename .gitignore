@@ -1,3 +1,18 @@
+# user data
+*.vtk
+*.dat
+examples/
+
+# HEC-RAS
+# .hdf
+*.IC.*
+Backup.*
+*.b*
+*.c*
+*.dss
+*.rasmap.backup
+*.x*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -151,5 +166,8 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
-#user data
-.vtk
+
+
+
+
+

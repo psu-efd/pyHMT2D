@@ -361,8 +361,8 @@ class RAS_2D_Data:
 
         """
         print("Building HEC-RAS 2D area boundaries ...")
-        maxNumBC = 3          #maximum number of boundaries (adjust according to the mesh)
-        maxPointsPerBC = 20   #maximum number of points per boundary
+        maxNumBC = 10          #maximum number of boundaries (adjust according to the mesh)
+        maxPointsPerBC = 100   #maximum number of points per boundary
 
         boundaryIDList = np.zeros(maxNumBC,dtype=int)   #list of boundary IDs
         boundaryPointList = np.zeros((maxNumBC,maxPointsPerBC),dtype=int)  #list of point IDs on each boundary
@@ -411,8 +411,8 @@ class RAS_2D_Data:
         print('Building 2D elevation interpolator ...')
         # Read raster
         #print(terrainFileName)
-        source = gdal.Open(self.terrain_filename)
-        #print(source)
+        source = gdal.Open(self.terrain_filename,gdal.GA_ReadOnly)
+        print(source)
 
         # Read the raster band as separate variable
         #band = source.GetRasterBand(1)
@@ -1391,7 +1391,8 @@ class RAS_2D_Data:
             sys.exit()
     
         fid.write('SRHMAT 30\n')
-        fid.write('NMaterials %d\n' % nUniqueManningN)
+        fid.write('NMaterials %d\n' % (nUniqueManningN + 1))  #+1 is because SRH-2D also counts the default Manning's n
+        # in srhhydro file.
         
         #output MatName
         for matID in range(nUniqueManningN):
