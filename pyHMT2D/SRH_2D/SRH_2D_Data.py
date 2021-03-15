@@ -13,6 +13,7 @@ from scipy import interpolate
 from osgeo import gdal
 from os import path
 import shlex
+import vtk
 
 from .helpers import *
 from ..__common__ import *
@@ -541,6 +542,15 @@ class SRH_2D_Data:
         self.xmdfTimeArray_Cell = None   #numpy array to store all time values
         self.xmdfAllData_Cell = {}     #dict to store {varName: varValues (numpy array)}
 
+    def get_case_name(self):
+        """Get the "Case" name for this current case ("Case" in srhhyro file)
+
+        Returns
+        -------
+        case_name: {string} -- case name
+
+        """
+        return self.srhhydro_obj.srhhydro_content["Case"]
 
     def readSRHXMDFFile(self, xmdfFileName, bNodal):
         """ Read SRH-2D result file in XMDF format (current version 13.1.6 of SMS only support data at node).
@@ -720,6 +730,38 @@ class SRH_2D_Data:
         data = np.genfromtxt(srhFileName, delimiter=',', names=True)
 
         return data.dtype.names[:-1], data
+
+    def readTECFile(self, tecFileName):
+        """Read SRH-2D results in Tecplot format
+
+        Parameters
+        ----------
+        tecFileName: Tecplot file name
+
+        Returns
+        -------
+
+        """
+
+        readerTEC = vtk.vtkTecplotReader()
+        readerTEC.SetFileName(tecFileName)
+        # 'update' the reader i.e. read the Tecplot data file
+        readerTEC.Update()
+
+        polydata = readerTEC.GetOutput()
+
+        # print(polydata)  #this is a multibock dataset
+        # print(polydata.GetBlock(0))  #we only need the first block
+
+        # If there are no points in 'vtkPolyData' something went wrong
+        if polydata.GetBlock(0).GetNumberOfPoints() == 0:
+            raise ValueError(
+                "No point data could be loaded from '" + tecFileName)
+            return None
+
+        #return of the first block (there should be only one block)
+        return polydata.GetBlock(0)
+
 
     def outputVTK(self, vtkFileName, resultVarNames, resultData, bNodal):
         """ Output result to VTK file
