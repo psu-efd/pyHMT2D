@@ -14,7 +14,7 @@ OutputFormat XMDF SI
 OutputOption 1
 OutputInterval 0.5
 ManningsN 0 0.02
-ManningsN 1 0.02
+ManningsN 1 0.03
 ManningsN 2 0.02
 BC 1 INLET-Q
 BC 2 EXIT-H

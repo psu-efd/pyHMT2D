@@ -100,6 +100,9 @@ class HEC_RAS_UnsteadyFlow(object):
 class HEC_RAS_Model(HydraulicModel):
     """HEC-RAS Model
 
+    HEC-RAS Model controls the run of HEC-RAS. A plan can be loaded and executed. Currently HEC_RAS_Model has very
+    limited capability to modify HEC-RAS project, plan, geometry, and flow data.
+
     Attributes:
         _faceless: {bool} -- whether show the HEC-RAS GUI
         _ras_path: path to the HEC-RAS program (Ras.exe)
@@ -147,16 +150,16 @@ class HEC_RAS_Model(HydraulicModel):
         #An HEC_RAS_Project object for the opened HEC-RAS project
         self._project = None
 
-    #def __del__(self):
-    #    if self._RASController is not None:
-    #        print("Quitting HEC-RAS ...")
-    #        self._RASController.QuitRas()
+    def __del__(self):
+        if self._RASController is not None:
+            print("Quitting HEC-RAS ...")
+            self._RASController.QuitRas()
 
-    #        del self._RASController
+            self._RASController = None
 
-    #        del self._project
+            self._project = None
 
-    #        print("Finished quitting HEC-RAS.")
+            print("Finished quitting HEC-RAS.")
 
     def init_model(self):
         """ Initialize a HEC-RAS instance
@@ -409,6 +412,5 @@ class HEC_RAS_Model(HydraulicModel):
 
         #it returns PlanCount, PlanNames and IncludeOnlyPlansInBaseDirectory (temp; not used)
         PlanCount, PlanNames, temp = self._RASController.Plan_Names(None, None, IncludeOnlyPlansInBaseDirectory)
-        #print(PlanCount, PlanNames, temp)
-
+        
         return PlanCount, PlanNames

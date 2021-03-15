@@ -325,6 +325,7 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         self.TwoDAreaCellCounts = hf['Geometry']['2D Flow Areas']['Attributes']['Cell Count']
+        hf.close()
             
 
     def get2DAreaCellPoints(self):
@@ -337,6 +338,8 @@ class RAS_2D_Data:
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellPoints = np.array(hf['Geometry']['2D Flow Areas']['Cell Points'])
         #print(hdf2DAreaCellPoints)
+        hf.close()
+
         return hdf2DAreaCellPoints
     
 
@@ -349,7 +352,9 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaBoundaryPoints = np.array(hf['Geometry']['Boundary Condition Lines']['External Faces'])
-        #print(hdf2DAreaBoundaryPoints)    
+        #print(hdf2DAreaBoundaryPoints)
+        hf.close()
+
         return hdf2DAreaBoundaryPoints
     
 
@@ -450,6 +455,8 @@ class RAS_2D_Data:
         hdf2DAreaCellFacePointsIndexes = np.array(hf['Geometry']['2D Flow Areas'][area]
                                                    ['Cells FacePoint Indexes'])
         #print(hdf2DAreaCellFacePointsIndexes)
+        hf.close()
+
         return hdf2DAreaCellFacePointsIndexes
 
 
@@ -478,6 +485,8 @@ class RAS_2D_Data:
         self.interpolateZcoord2Points(hdf2DAreaFacePointsCoordinates3D)
         
         #print(hdf2DAreaFacePointsCoordinates3D)
+
+        hf.close()
         
         return hdf2DAreaFacePointsCoordinates3D
     
@@ -514,7 +523,10 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellsFaceOrientationInfo = np.array(hf['Geometry']['2D Flow Areas'][area]['Cells Face and Orientation Info'])
-        #print(hdf2DAreaCellsFaceOrientationInfo)    
+        #print(hdf2DAreaCellsFaceOrientationInfo)
+
+        hf.close()
+
         return hdf2DAreaCellsFaceOrientationInfo
 
 
@@ -531,7 +543,10 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellsFaceOrientationValues = np.array(hf['Geometry']['2D Flow Areas'][area]['Cells Face and Orientation Values'])
-        #print(hdf2DAreaCellsFaceOrientationValues)    
+        #print(hdf2DAreaCellsFaceOrientationValues)
+
+        hf.close()
+
         return hdf2DAreaCellsFaceOrientationValues    
     
 
@@ -550,7 +565,10 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFaceAreaElevationInfo = np.array(hf['Geometry']['2D Flow Areas'][area]['Faces Area Elevation Info'])
-        #print(hdf2DAreaFaceAreaElevationInfo)    
+        #print(hdf2DAreaFaceAreaElevationInfo)
+
+        hf.close()
+
         return hdf2DAreaFaceAreaElevationInfo    
     
 
@@ -570,7 +588,10 @@ class RAS_2D_Data:
         """
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFaceAreaElevationValues = np.array(hf['Geometry']['2D Flow Areas'][area]['Faces Area Elevation Values'])
-        #print(hdf2DAreaFaceAreaElevationValues)    
+        #print(hdf2DAreaFaceAreaElevationValues)
+
+        hf.close()
+
         return hdf2DAreaFaceAreaElevationValues 
     
 
@@ -588,7 +609,10 @@ class RAS_2D_Data:
 
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFaceFacePointIndexes = np.array(hf['Geometry']['2D Flow Areas'][area]['Faces FacePoint Indexes'])
-        #print(hdf2DAreaFaceFacePointIndexes)    
+        #print(hdf2DAreaFaceFacePointIndexes)
+
+        hf.close()
+
         return hdf2DAreaFaceFacePointIndexes  
     
 
@@ -610,7 +634,10 @@ class RAS_2D_Data:
         
         #only take the last row (time step)
         #hdf2DAreaResultVar = hdf2DAreaResultVar[(hdf2DAreaResultVar.shape[0]-1)]
-        #print(varName, hdf2DAreaResultVar)    
+        #print(varName, hdf2DAreaResultVar)
+
+        hf.close()
+
         return hdf2DAreaResultVar
     
 
@@ -625,6 +652,9 @@ class RAS_2D_Data:
         hdf2DAreaSolutionTimes = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['Time'])
         #print(hdf2DAreaSolutionTimes)
+
+        hf.close()
+
         return hdf2DAreaSolutionTimes
     
 
@@ -639,6 +669,9 @@ class RAS_2D_Data:
         hdf2DAreaSolutionTimeDates = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['Time Date Stamp'])
         #print(hdf2DAreaSolutionTimeDates)
+
+        hf.close()
+
         return hdf2DAreaSolutionTimeDates
 
 
