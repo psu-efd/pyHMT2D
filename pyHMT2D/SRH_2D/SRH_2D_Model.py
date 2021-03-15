@@ -3,18 +3,17 @@ SRH_2D_Model:
 """
 
 from pyHMT2D.__common__ import HydraulicModel
+from pyHMT2D.Misc.tools import printProgressBar
+
 from .SRH_2D_Data import *
 
 from .helpers import *
 import sys
 import subprocess
 import os
-
-import threading
-import queue
 import time
 
-from alive_progress import alive_bar
+#from alive_progress import alive_bar
 
 class SRH_2D_Model(HydraulicModel):
     """SRH_2D Model
@@ -124,60 +123,75 @@ class SRH_2D_Model(HydraulicModel):
         """
         cmd = self._srh_path
         case_srhhydro_file_name = self._srh_2d_data.get_case_name() + ".DAT"
+        case_INF_file_name = self._srh_2d_data.get_case_name() + "_INF.DAT"
 
         print("Running SRH-2D case with input file:", case_srhhydro_file_name)
 
-        #p = subprocess.run([cmd, case_srhhydro_file_name], stdout=subprocess.PIPE,
-        #                   stderr=subprocess.PIPE)
+        #get the start and end time in hours
+        startTime, endTime = self._srh_2d_data.srhhydro_obj.get_simulation_start_end_time()
+        deltaT = self._srh_2d_data.srhhydro_obj.get_simulation_time_step_size()
 
-        #p = subprocess.run([cmd, case_srhhydro_file_name], stdout=subprocess.PIPE,
-        #                   stderr=subprocess.PIPE, start_new_session=True)
-
-        #print(p.stdout)
-        #print(p.stderr)
-
-        #if str.encode("successfully executed") in p.stdout:
-        #    print("SRH-2D was successfully done!")
-        #else:
-        #    print("SRH-2D was not successfully done! Check the output files.")
-
-        #this can get real-time output from the external program like srh_2d.exe
-        #with subprocess.Popen([cmd, case_srhhydro_file_name], shell=True, stdout=subprocess.PIPE,
-        #                   stderr=subprocess.PIPE, bufsize=1) as sp:
-        #    for line in sp.stdout:
-        #        print(line)
-
-        #r = Runner([cmd, case_srhhydro_file_name])
-
-        #for stdout, stderr in r.start():
-        #    print("STDOUT", stdout)
-        #    print("STDERR", stderr)
+        print("startTime, endTime (hr) = ", startTime, endTime)
+        print("Time step size (s) = ", deltaT)
 
         try:
-            print("Remove existing case_INF.DAT")
-            os.remove('backwater_curve_INF.DAT')
+            if path.isfile(case_INF_file_name):
+                print("Removing case's existing _INF.DAT file ...")
+                os.remove(case_INF_file_name)
         except:
-            print("Error while deleting file backwater_curve_INF.DAT")
+            print("Error while deleting case's existing _INF.DAT file. Exiting ...")
             sys.exit()
 
         p = subprocess.Popen([cmd, case_srhhydro_file_name], shell=True, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, universal_newlines=True)
+                          stderr=subprocess.PIPE)
 
-        #while True:
-            #output = p.stdout.readline()  #this is blocking
-        #    if p.poll() is not None:
-        #        break
-            #if output:
-            #    print(output.strip())
+        #print the simulation progress bar
+        totalClicks = 100  # this is the granularity of the progress bar (how many times it needs to be updated)
 
-        #    time.sleep(2)
+        while True:
+            counter = 0 #counter to track how many times (out of 100) the bar() function has been called
 
-        #    info_data = np.genfromtxt("backwater_curve_INF.DAT",skip_header=1)
-        #    print(info_data[-1,0])
+            previous_checked_simulation_time = startTime  #this may not work if it is a restart simulation (?)
 
-        with alive_bar(8600) as bar:  # default setting
-            for i in range(100):
-                bar()  # call after consuming one item
+            time.sleep(5)  #check the simulation progress every 5 s (this value needs to be updated for each case
+            # depending on how long the simulation will be).
+
+            #get the latest simulation information from the INF file
+            info_data = np.genfromtxt(case_INF_file_name,skip_header=1)
+            #print(info_data[-1,1])  #latest "Time(Hours)"
+
+            time_passed_since_last_check = info_data[-1,1] - previous_checked_simulation_time
+            clicks_since_last_check = int(time_passed_since_last_check/(endTime-startTime)*totalClicks)
+
+            counter += clicks_since_last_check
+
+            #print("clicks_since_last_check, counter", clicks_since_last_check, counter)
+
+            if clicks_since_last_check > 0:
+                printProgressBar(counter, totalClicks, "Simulation in progress")
+                # print("test")   #Don't do this. It will create a new progress bar each time.
+
+            previous_checked_simulation_time = info_data[-1,1]
+
+            if counter > totalClicks:
+                break
+
+            if p.poll() is not None:
+                break
+
+        print("\n")
+
+        #check whehter the run was successful
+        bRunSucessful = False
+
+        for line in p.stdout:
+            if str.encode("successfully executed") in line:
+                bRunSucessful = True
+
+        if bRunSucessful:
+            print("SRH-2D simulation was successfully done!")
+        else:
+            print("SRH-2D simulation was not successful! Check the output files.")
 
 
     def run_pre_model(self):
@@ -193,16 +207,17 @@ class SRH_2D_Model(HydraulicModel):
 
         print("Running SRH-2D Pre with case SRHHYDRO input file:", case_srhhydro_file_name)
 
+        if not path.isfile(case_srhhydro_file_name):
+            print("The case SRHHYDRO input file does not exist:", case_srhhydro_file_name, "Exiting ...")
+            sys.exit()
+
         p = subprocess.run([cmd, '3', case_srhhydro_file_name], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
-
-        #print(p.stdout)
-        #print(p.stderr)
 
         if str.encode("successfully executed") in p.stdout:
             print("SRH-2D Pre was successfully done!")
         else:
-            print("SRH-2D Pre was not successfully done! Check the output files.")
+            print("SRH-2D Pre was not successfully! Check the output files.")
 
     def exit_model(self):
         """Exit the model (SRH-2D specific)
@@ -213,77 +228,3 @@ class SRH_2D_Model(HydraulicModel):
         """
 
         pass
-
-
-class Runner(object):
-
-    def __init__(self, cmd: []):
-        self.cmd = cmd
-        self.return_code = None
-        self.process = None # type: subprocess.Popen
-        self.run_time = 0
-
-
-    @property
-    def _default_popen_kwargs(self):
-        return {
-            "env": os.environ.copy(),
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
-            "shell": True,
-            "universal_newlines": True,
-            "bufsize": 1,
-        }
-
-
-    def _watch_output(self, process: subprocess.Popen, queue):
-        for line in iter(process.stderr.readline, ""):
-            queue.put(line)
-            if process.poll() is not None:
-                return
-
-    @property
-    def stdout(self):
-        return self.process.stdout
-
-    @property
-    def stderr(self):
-        return self.process.stderr
-
-
-    def start(self, wait_limit = 15):
-
-        start_time = time.time()
-
-        pargs = self._default_popen_kwargs
-        #if self.cmd is not None:
-        #    pargs['cmd'] = self.cmd
-
-        self.process = subprocess.Popen(self.cmd,**pargs)
-        self.returned = None
-        last_output = time.time()
-        q = queue.Queue()
-
-        t = threading.Thread(target=self._watch_output, args=(self.process, q,))
-        t.daemon = True
-        t.start()
-
-        while self.returned is None:
-            self.returned = self.process.poll()
-
-            delay = last_output-time.time()
-            if self.returned is None:
-                stdout = f"{last_output-time.time()} waited"
-                try:
-                    stderr = q.get_nowait()
-                except queue.Empty:
-                    time.sleep(1)
-                else:
-                    yield stdout, stderr
-                    last_output = time.time()
-
-            if delay > wait_limit:
-                print("Waited 15 seconds, breaking")
-                break
-
-        self.run_time = time.time() - start_time

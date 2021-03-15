@@ -234,7 +234,32 @@ class SRH_2D_SRHHydro:
 
         fid.close()
 
+    def get_simulation_start_end_time(self):
+        """Get the start and end time of simulation (in hours, from the "SimTime" entry)
 
+        Returns
+        -------
+        startTime (hr)
+        endTime (hr)
+
+        """
+
+        value = self.srhhydro_content["SimTime"]
+
+        return value[0],value[2]
+
+    def get_simulation_time_step_size(self):
+        """Get the time step size of simulation (in seconds, from the "SimTime" entry)
+
+        Returns
+        -------
+        deltaT (s)
+
+        """
+
+        value = self.srhhydro_content["SimTime"]
+
+        return value[1]
 
 class SRH_2D_SRHGeom:
     """A class to handle srhgeom file for SRH-2D

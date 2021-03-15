@@ -3,6 +3,7 @@ Some tools
 """
 
 import vtk
+import sys
 
 def read_sampling_points(num_sampling_files, \
                          sampling_file_names, \
@@ -192,3 +193,29 @@ def sampling_on_vtu(vtuFileName, samplingPointsFileName, fieldName):
     return probedData
 
     print("Done.")
+
+def printProgressBar(i,total,postText):
+    """A simple function to print a progress bar (no need to use other libraries)
+
+    Note: any print inbetween the calling of this function will create a new progress bar. So
+    it is better not print anything in between the calling.
+
+    Reference:
+    https://stackoverflow.com/questions/3002085/python-to-print-out-status-bar-and-percentage
+
+    Parameters
+    ----------
+    i
+    total
+    postText
+
+    Returns
+    -------
+
+    """
+    n_bar =20 #size of progress bar
+    j= (i+1)/total
+    j=max(j,0.01001)  #at least print something at the beginning
+    sys.stdout.write('\r')
+    sys.stdout.write(f"[{'=' * int(n_bar * j):{n_bar}s}] {int(100 * j)}%  {postText}")
+    sys.stdout.flush()
