@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 
 
 class HydraulicModel(object):
@@ -69,3 +70,47 @@ def yes_or_no(question):
             return answer in ('y', 'yes')
         else:
             print('You must answer y, yes, n, or no.')
+
+
+def dumpXMDFFileItems(xmdfFileName):
+    """ Print the items in the XMDF file.
+
+    Returns
+    -------
+
+
+    """
+
+    print("The content in the XMDF result file: ")
+
+    xmdfFile = h5py.File(xmdfFileName, "r")
+
+    xmdfFile.visititems(h5py_visitor_func)
+
+    xmdfFile.close()
+
+
+def h5py_visitor_func(name, node):
+    """
+
+    Reference:
+    https://stackoverflow.com/questions/57013771/how-to-display-elements-of-arrays-in-a-mat-file-in-python/57067674#57067674
+
+    Parameters
+    ----------
+    name
+    node
+
+    Returns
+    -------
+
+    """
+    if isinstance(node, h5py.Group):
+        print(node.name, 'is a Group')
+    elif isinstance(node, h5py.Dataset):
+        if (node.dtype == 'object'):
+            print(node.name, 'is an object Dataset')
+        else:
+            print(node.name, 'is a Dataset')
+    else:
+        print(node.name, 'is an unknown type')
