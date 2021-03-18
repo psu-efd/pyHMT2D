@@ -688,13 +688,16 @@ class SRH_2D_Data:
 
         xmdfFile.close()
 
-    def outputXMDFDataToVTK(self, bNodal):
+    def outputXMDFDataToVTK(self, bNodal, dir=''):
         """Output XMDF result data to VTK
+
+        This has to be called after the XMDF data have been loaded by calling readSRHXMDFFile(...)
 
         call outputVTK(self, vtkFileName, resultVarNames, resultData, bCellData)
 
         Attributes:
-          bNodal: whether export nodal data or cell center data. Currently, it can't output both.
+          bNodal: {bool} -- whether export nodal data or cell center data. Currently, it can't output both.
+          dir: {string} -- optional directory
 
         Returns
         -------
@@ -706,7 +709,15 @@ class SRH_2D_Data:
             print("Empty XMDF data arrays. Call readSRHXMDFFile() function first. Exiting ...")
             sys.exit()
 
-        vtkFileName_base = self.srhhydro_obj.srhhydro_content["Case"][0] #use the case name of the SRH-2D case
+        vtkFileName_base = ''
+        print("self.srhhydro_obj.srhhydro_content[\"Case\"] = ", self.srhhydro_obj.srhhydro_content["Case"])
+
+        if dir!='':
+            vtkFileName_base = dir + '/' + self.srhhydro_obj.srhhydro_content["Case"] #use the case name of the
+            # SRH-2D case
+        else:
+            vtkFileName_base = self.srhhydro_obj.srhhydro_content["Case"]  # use the case name of the SRH-2D case
+        print("vtkFileName_base = ", vtkFileName_base)
 
         #build result variable names
         resultVarNames = list(self.xmdfAllData_Nodal.keys()) if bNodal else list(self.xmdfAllData_Cell.keys())
@@ -850,6 +861,13 @@ class SRH_2D_Data:
 
         fid.write('\n')
 
+        # How many solution data entries to output depending on whehter it is nodal or not
+        entryCount = -1
+        if bNodal:
+            entryCount = self.srhgeom_obj.nodeCoordinates.shape[0]
+        else:
+            entryCount = self.srhgeom_obj.elementNodesList.shape[0]
+
         # output solution variables: only if there is solution variable
         if len(resultVarNames) != 0:
             if not bNodal:
@@ -876,10 +894,10 @@ class SRH_2D_Data:
                 fid.write('SCALARS %s double 1 \n' % resultVarNames[k])
                 fid.write('LOOKUP_TABLE default\n')
 
-                for cellI in range(self.srhgeom_obj.elementNodesList.shape[0]):
-                    fid.write('%f ' % resultData[cellI][k])
+                for entryI in range(entryCount):
+                    fid.write('%f ' % resultData[entryI][k])
 
-                    if (((cellI + 1) % 20) == 0):
+                    if (((entryI + 1) % 20) == 0):
                         fid.write('\n')
 
                 fid.write('\n \n')
@@ -889,10 +907,11 @@ class SRH_2D_Data:
             if (nColVel_X != -1) and (nColVel_Y != -1):
                 fid.write('VECTORS velocity double \n')
 
-                for cellI in range(self.srhgeom_obj.elementNodesList.shape[0]):
-                    fid.write('%f %f 0.0   ' % (resultData[cellI][nColVel_X], resultData[cellI][nColVel_Y]))
+                for entryI in range(entryCount):
+                    fid.write('%f %f 0.0   ' % (resultData[entryI][nColVel_X],
+                                                resultData[entryI][nColVel_Y]))
 
-                    if (((cellI + 1) % 20) == 0):
+                    if (((entryI + 1) % 20) == 0):
                         fid.write('\n')
 
                 fid.write('\n \n')

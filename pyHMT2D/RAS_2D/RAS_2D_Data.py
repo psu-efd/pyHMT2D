@@ -941,7 +941,7 @@ class RAS_2D_Data:
                     
             
 
-    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False):
+    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,dir=''):
         """ Save HEC-RAS 2D solutions to VTK files.
 
         Note:
@@ -956,8 +956,9 @@ class RAS_2D_Data:
 
         Parameters
         ----------
-        timeStep
-        lastTimeStep
+        timeStep: {int} -- only the specified time step will be saved
+        lastTimeStep: {bool} -- optionally specify only the last time step
+        dir: {string} -- optional directory name
 
         Returns
         -------
@@ -1202,7 +1203,11 @@ class RAS_2D_Data:
                 hec_ras_mesh.field_data = field_data
                 
                 #write to vtk file
-                fileName_temp = ['RAS2D_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
+                fileName_temp = []
+                if dir!= '':
+                    fileName_temp = [dir, '/', 'RAS2D_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
+                else:
+                    fileName_temp = ['RAS2D_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
                 vtkFileName = "".join(fileName_temp)
                 meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
 
@@ -1303,9 +1308,9 @@ class RAS_2D_Data:
             self.meshioObjectList.append(hec_ras_mesh)
                 
             #write to vtk file (for debug)
-            fileName_temp = ['RAS2D_meshonly_', area.astype(str),'_Area', str(i).zfill(4),'.vtk']
-            vtkFileName = "".join(fileName_temp)
-            meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
+            #fileName_temp = ['RAS2D_meshonly_', area.astype(str),'_Area', str(i).zfill(4),'.vtk']
+            #vtkFileName = "".join(fileName_temp)
+            #meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
 
 
     def exportSRHGEOMFile(self, srhgeomFileName):
