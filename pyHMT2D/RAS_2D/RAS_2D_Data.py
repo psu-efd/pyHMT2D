@@ -28,6 +28,10 @@ import h5py
 import meshio
 from scipy import interpolate
 from osgeo import gdal
+import affine
+import os.path
+
+from ..Misc import printProgressBar
 
 class RAS_2D_Data:
     """
@@ -64,7 +68,7 @@ class RAS_2D_Data:
         self.short_identifier = "Short Identifier="
         self.project_filename = self.plan_filename[:-4] + '.prj'
         self.terrain_filename = terrain_filename
-        
+
         #number of points for each face's profile (subgrid terrain)
         #HEC-RAS's HDF file does not export face profile, although in RAS Mapper
         #the face profile can be plotted and tabulated. It is not clear how these face 
@@ -110,7 +114,7 @@ class RAS_2D_Data:
         
         #get 2D area cell points
         self.TwoDAreaCellPoints = self.get2DAreaCellPoints()
-        
+
         #get 2D ara boundary points
         self.TwoDAreaBoundaryPoints = self.get2DAreaBoundaryPoints()
         
@@ -121,7 +125,7 @@ class RAS_2D_Data:
         #self.TwoDAreaCellFacePointsIndexes = self.get2DAreaCellFacePointsIndexes()
         
         #interpolator for elevation (bathymetry)
-        self.bilinterp = self.build2DElevationInterpolator()
+        #self.bilinterp = self.build2DInterpolatorFromGeoTiff(self.terrain_filename)
         
         #2D area face area elevation info and values
         self.TwoDAreaFaceAreaElevationInfo = []
@@ -129,20 +133,54 @@ class RAS_2D_Data:
         
         #list to store face hydraulic information: a list of lists
         self.TwoDAreaFaceHydraulicInformation = self.build2DAreaFaceHydraulicInformation()
-        
+
+        #list to store face points' coordinates list: a list of lists
+        #e.g., TwoDAreaFacePointCoordinatesList[0] is a list of face point coordinates in 2D flow area 0
+        self.TwoDAreaFacePointCoordinatesList = []
+
+        self.build2DAreaFacePointCoordinatesList()
+
+
         #list to store cell face list: a list of lists
         #e.g., TwoDAreaCellFaceList[0][1] is a list of faces for cell 1 in 2D flow area 0
         self.TwoDAreaCellFaceList = []
 
         #build TwoDAreaCellFaceList
         self.build2DAreaCellFaceList()
-        
+
+        #land cover (Manning n)
+        #This can be retrived from HDF's entries: [Geometry][Land Cover Filename] and [Geometry][Land Cover Layername]
+        self.landcover_filename = ''
+        self.landcover_layername = ''
+
+        #Manning n zone dictionary: {ID: [name, Manning's n]}
+        self.ManningNZones = {}
+        self.build2DManningNZones()
+
+        #cell IDs in each Manning's n zones (for srhmat output)
+        self.cellsInManningZones = []
+
+        #2D interpolator for Manning n ID from GeoTiff file
+        #Note: This interpolator uses linear interpolation and returns a float (need to convert to integer ID for use)
+
+        #get the full land cover file name (deal with relative path w.r.t. the script where RAS_2D_Data class is used)
+        #fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+        #full_landcover_filename = fileBase+self.landcover_filename
+
+        #self.ManningNIDInterpolator = self.build2DInterpolatorFromGeoTiff(full_landcover_filename)
+
         #2D area Manning's n at cell center: a list for all 2D areas
         #e.g., TwoDAreaCellManningN[0][1] is the Manning's n value for cell 1 in 2D flow area 0
         self.TwoDAreaCellManningN = []
-        
-        #interpolte Manning's n from face to cell center: TwoDAreaCellManningN 
-        self.interpolateManningN_face_to_cell()
+
+        #Set Manning's n for each cell. There are two options.
+        #Option 1: interpolte Manning's n from face to cell center: TwoDAreaCellManningN
+        #          This option is not accurate. Better use option 2.
+        #self.interpolateManningN_face_to_cell()
+
+        #Option 2: set Manning's n for cells from HEC-RAS's Manning's n GeoTiff and HDF files
+        self.buildCellManningNFromGeoTiffHDF()
+
         
         #list to store face's two FacePoints
         #e.g., TwoDAreaFace_FacePoints[0][1] is a list two FacePoint IDs for face 1 in 2D flow area 0
@@ -156,7 +194,7 @@ class RAS_2D_Data:
         self.TwoDAreaFaceProfile = []
         
         #build face profile
-        self.build2DAreaFaceProfile()
+        #self.build2DAreaFaceProfile()
         
         #meshio object list (each 2D area corresponding to one meshio object although only one 2D area is supported)
         self.meshioObjectList = []
@@ -179,8 +217,7 @@ class RAS_2D_Data:
         
         self.load2DAreaSolutions()
         
-        
-    
+
     def get_units(self):    
         """Get the units used in the HEC-RAS project
         
@@ -189,6 +226,7 @@ class RAS_2D_Data:
         """
         
         # open the HEC-RAS project file
+        #print("self.project_filename = ", self.project_filename)
         with open(self.project_filename,'r') as project_file:
             lines = project_file.readlines()
             if "English Units" in lines[3]:
@@ -341,7 +379,7 @@ class RAS_2D_Data:
         hf.close()
 
         return hdf2DAreaCellPoints
-    
+
 
     def get2DAreaBoundaryPoints(self):
         """ Get 2D Flow Area boundary points (all points on boundaries)
@@ -405,19 +443,78 @@ class RAS_2D_Data:
     
         return totalBoundaries, boundaryTotalPoints, boundaryPointList
 
-
-    def build2DElevationInterpolator(self):
-        """ Build the interpolator for elevation at points
+    def build2DManningNZones(self):
+        """ Build 2D flow area's Manning n zones from the land cover (Manning's n) HDF file
 
         Returns
         -------
 
         """
-        print('Building 2D elevation interpolator ...')
+
+        hf = h5py.File(self.hdf_filename, 'r')
+
+        self.landcover_filename = hf['Geometry'].attrs['Land Cover Filename']
+        self.landcover_layername = hf['Geometry'].attrs['Land Cover Layername']
+
+        hf.close()
+
+        print("Land Cover Filename = ", self.landcover_filename)
+        print("Land Cover Layername = ", self.landcover_layername)
+
+        #Some time HEC-RAS does not save land cover filename and layername to HDF because the
+        #geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
+        #computation has been done.
+        if len(self.landcover_filename) == 0 or len(self.landcover_layername) == 0:
+            print("Land Cover Filename or Land Cover Layername in result HDF is empty. Check. Exiting ...")
+            sys.exit()
+
+        #read the Manning n zones (land cover zones)
+        self.ManningNZones = {}   #clear the dictionary just in case
+
+        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+
+        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r')
+
+        dset = hfManningN['IDs']
+
+        with dset.astype(np.uint8):
+            IDs = dset[:]
+
+        ManningN = np.array(hfManningN['ManningsN'])
+        Names = hfManningN['Names']
+
+        #print("IDs =", IDs)
+        #print("ManningN =", ManningN)
+        #print("Names =", Names)
+
+        for i in range(len(IDs)):
+            self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+
+        print("self.ManningNZones = ", self.ManningNZones)
+
+        hfManningN.close()
+
+
+    def build2DInterpolatorFromGeoTiff(self, geoTiffFileName):
+        """ Build 2D interpolator for from geoTiff file, e.g., terrain and Manning n ID, using Python interpolate.interp2d
+
+        Assume the data is in band 1.
+
+        This method is too slow.
+
+        Attributes
+        -------
+        geoTiffFileName: name for the geoTiff file
+
+        Returns
+        -------
+
+        """
+        print('Building 2D interpolator from GeoTiff file ...')
+
         # Read raster
-        #print(terrainFileName)
-        source = gdal.Open(self.terrain_filename,gdal.GA_ReadOnly)
-        print(source)
+        source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
+        #print(source)
 
         # Read the raster band as separate variable
         #band = source.GetRasterBand(1)
@@ -438,7 +535,53 @@ class RAS_2D_Data:
         bilinterp = interpolate.interp2d(ax, ay, band_array, kind='linear')
     
         return bilinterp
-        
+
+    def interpolatorFromGeoTiff(self, geoTiffFileName, pointList, dataType=np.float):
+        """Interpolate from a GeoTiff file given a point list.
+
+        Parameters
+        ----------
+        geoTiffFileName: name of the GeoTiff file
+        pointList: list of points (x,y)
+        dataType: data type in the GeoTiff (default is numpy.float)
+
+        Returns
+        -------
+
+        """
+        # Read raster
+        source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
+        #print(source)
+
+        # Read the raster band as separate variable
+        data_array = np.array(source.GetRasterBand(1).ReadAsArray())
+
+        #print(data_array.shape)
+
+        # Print only selected metadata:
+        #print ("[ NO DATA VALUE ] = ", band.GetNoDataValue()) # none
+        #print ("[ MIN ] = ", band.GetMinimum())
+        #print ("[ MAX ] = ", band.GetMaximum())
+
+        forward_transform = affine.Affine.from_gdal(*source.GetGeoTransform())
+        reverse_transform = ~forward_transform
+
+        interpolatedValues = []
+
+        #loop through all points in the list
+        for pointI in range(pointList.shape[0]):
+            x = pointList[pointI,0]
+            y = pointList[pointI,1]
+
+            px, py = reverse_transform * (x, y)
+            px, py = int(px + 0.5), int(py + 0.5)
+
+            #Sample with the pixel coordinates. Note that py should be first because
+            # the index is [rows, columns] in a 2@ grid in python
+            interpolatedValues.append(data_array[py][px])
+
+        return interpolatedValues
+
 
     def get2DAreaCellFacePointsIndexes(self, area):
         """ Get 2D Flow Area cell face points indexes for a specified 2D area
@@ -458,6 +601,55 @@ class RAS_2D_Data:
         hf.close()
 
         return hdf2DAreaCellFacePointsIndexes
+
+    def get2DAreaCellCenterCoordiantes(self, area):
+        """ Get 2D Flow Area cell center coordinates for a specified 2D area
+
+        Note: these coordinates only have (x,y), no z.
+
+        Parameters
+        ----------
+        area
+
+        Returns
+        -------
+
+        """
+        hf = h5py.File(self.hdf_filename, 'r')
+
+        #in HEC-RAS v5.0.7 and earlier, the 'Cells Center Coordinate' contains also the ghost cell centers
+        #Here, we only need the real centers, not the ghost.
+
+        #Get 2D Flow Areas Attributes table
+        twoDFlowAreaAttributs = hf['Geometry']['2D Flow Areas']['Attributes']
+
+        #index of the 2D flow area in the geometry (in case there are more than one 2D flow areas)
+        areaIndex = 0
+
+        bFound = False
+
+        for name in twoDFlowAreaAttributs['Name']:
+            if name == area:
+                bFound = True
+                break
+
+            areaIndex += 1
+
+        if not bFound:
+            print("The specified area with name", area, "was not found in the geometry. Exiting ...")
+            sys.exit()
+
+        #Get the start and end of current 2D flow area cell index
+        temp = hf['Geometry']['2D Flow Areas']['Cell Info']
+        iStart = temp[areaIndex,0]
+        iEnd = temp[areaIndex,1]
+
+        hdf2DAreaCellCenterCoordinates = np.array(hf['Geometry']['2D Flow Areas'][area]
+                                                  ['Cells Center Coordinate'])[iStart:iEnd,:]
+        # print(hdf2DAreaCellCenterCoordinates)
+        hf.close()
+
+        return hdf2DAreaCellCenterCoordinates
 
 
     def get2DAreaFacePointsCoordinates(self, area):
@@ -502,12 +694,20 @@ class RAS_2D_Data:
         -------
 
         """
+
+        allFacePointsCoordiantes=np.empty([facePointsCoordinates3D.shape[0],2])
+
         for k in range(facePointsCoordinates3D.shape[0]):
             x1 = facePointsCoordinates3D[k,0]
             y1 = facePointsCoordinates3D[k,1]
+
+            allFacePointsCoordiantes[k,0] = x1
+            allFacePointsCoordiantes[k,1] = y1
+
+        allFacePointZ = self.interpolatorFromGeoTiff(self.terrain_filename, allFacePointsCoordiantes)
         
-            #print(nx, ny, x1,y1,bilinterp(x1,y1))
-            facePointsCoordinates3D[k,2] = self.bilinterp(x1,y1)
+        for k in range(facePointsCoordinates3D.shape[0]):
+            facePointsCoordinates3D[k,2] = allFacePointZ[k]
 
 
     def get2DAreaCellsFaceOrientationInfo(self, area):
@@ -785,7 +985,25 @@ class RAS_2D_Data:
             return areaFaceHydraulicInformationTable
                 
             
-            
+    def build2DAreaFacePointCoordinatesList(self):
+        """ Build face point coordinates list
+
+        Returns
+        -------
+
+        """
+
+        print("Building 2D area's face point coordinates list ...")
+
+        #loop through each 2D areas
+        for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
+            #print("2D Flow Area = ", area)
+
+            #get the FacePoint coordinates in the current 2D flow area
+            facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
+
+            self.TwoDAreaFacePointCoordinatesList.append(facePointsCoordinates)
+
 
     def build2DAreaCellFaceList(self):
         """ Build cell's face list
@@ -857,9 +1075,12 @@ class RAS_2D_Data:
             facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
             
             curAreaProfilePoints = []
-            
-            #loop through all faces in current area
+
+            #loop through all faces in current area (it is a slow process; print a progress bar)
             for faceI in range(face_facePoints.shape[0]):
+
+                printProgressBar(faceI, face_facePoints.shape[0], "Face profile computation in progress")
+
                 #print("faceI =", faceI)
                 facePoint_start = face_facePoints[faceI,0]  #start ID of facePoint
                 facePoint_end = face_facePoints[faceI,1]    #end ID of facePoint
@@ -913,6 +1134,9 @@ class RAS_2D_Data:
 
         """
         print("Interpolating Manning's n from face to cell center ...")
+
+        #clear the list up in case this function has been called before
+        self.TwoDAreaCellManningN = []
         
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -922,9 +1146,61 @@ class RAS_2D_Data:
             
             #loop through cells in current area
             for cellI in range(self.TwoDAreaCellCounts[i]):
-                temp_n[cellI] = self.TwoDAreaFaceHydraulicInformation[i][cellI][0,3] #only take the first value because it is constant for each face
-                
+                sum_n = 0.0
+                #loop through all faces of current cell
+                for faceI in self.TwoDAreaCellFaceList[i][cellI]:
+                    sum_n += self.TwoDAreaFaceHydraulicInformation[i][faceI][0,3] #only take the first value because
+                                                                                  #it is constant for each face
+
+                temp_n[cellI] = sum_n/len(self.TwoDAreaCellFaceList[i][cellI])
+
             self.TwoDAreaCellManningN.append(temp_n)
+
+
+    def buildCellManningNFromGeoTiffHDF(self):
+        """ Build 2D flow area cell's Manning n value from HEC-RAS's GeoTiff and HDF files for Manning n.
+
+        This method is more accurate than interpolateManningN_face_to_cell(), which uses a face to cell interpolation.
+
+
+
+        Returns
+        -------
+
+        """
+        print("Building cell's Manning n values from GeoTiff and HDF ...")
+
+        self.TwoDAreaCellManningN = []
+        self.TwoDAreaCellManningN.append(np.zeros(self.TwoDAreaCellCounts[0]))
+
+        cell_center_coordinates = np.array(self.get2DAreaCellCenterCoordiantes(self.TwoDAreaNames[0]))
+
+        #loop through each cell
+        #for cellI in range(self.TwoDAreaCellCounts[0]):
+        #    ManningN_ID = int(self.ManningNIDInterpolator(cell_center_coordinates[cellI,0],
+        #                                                  cell_center_coordinates[cellI,1]))
+        #    cell_ManningN[cellI] = self.ManningNZones[ManningN_ID][1]  #get the Manning n value
+
+        #get the full land cover file name (deal with relative path w.r.t. the script where RAS_2D_Data class is used)
+        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+        full_landcover_filename = fileBase+self.landcover_filename
+
+        ManningN_IDs = self.interpolatorFromGeoTiff(full_landcover_filename, cell_center_coordinates)
+
+        #set the Manning's n values for each cells
+        for cellI in range(self.TwoDAreaCellCounts[0]):
+            self.TwoDAreaCellManningN[0][cellI] = self.ManningNZones[ManningN_IDs[cellI]][1]  #get the Manning n value
+
+        #bin each cell to different Manning's n zones
+        self.cellsInManningZones = [ [] for _ in range(len(self.ManningNZones))]  # a list of lists
+
+        for cellI in range(self.TwoDAreaCellCounts[0]):
+            if self.cellsInManningZones[ManningN_IDs[cellI]]:
+                self.cellsInManningZones[ManningN_IDs[cellI]].append(cellI)
+            else:
+                self.cellsInManningZones[ManningN_IDs[cellI]] = [cellI]
+
+        print("cellsInManningZones = ", self.cellsInManningZones)
 
     #build face's facepoint list
     def buildFace_FacePoints(self):
@@ -970,6 +1246,20 @@ class RAS_2D_Data:
         if (timeStep != -1) and (not timeStep in range(len(self.solution_time))):
             message = "Specified timeStep = %d not in range (0 to %d)." % (timeStep, len(self.solution_time))
             sys.exit(message)
+
+        #get units for variable name appendix (like SRH-2D)
+        varLengthNameAppendix = ''
+        varVelocityNameAppendix = ''
+        print("HEC-RAS project units =",self.units)
+        if self.units == 'Feet':
+            varLengthNameAppendix = '_ft'
+            varVelocityNameAppendix = '_ft_p_s'
+        elif self.units == 'Meter':
+            varLengthNameAppendix = '_m'
+            varVelocityNameAppendix = '_m_p_s'
+        else:
+            print("Wrong units specified in the HEC-RAS project file. Exiting ...")
+            sys.exit()
         
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -1160,7 +1450,7 @@ class RAS_2D_Data:
                 #concatenate cell depth numpy arrays into one
                 all_cellDepth = np.concatenate([tri_cellDepth, quad_cellDepth, polygon5_cellDepth, 
                                                 polygon6_cellDepth, polygon7_cellDepth, polygon8_cellDepth])
-                cellDataDict = {'depth': all_cellDepth}
+                cellDataDict = {'Water_Depth'+varLengthNameAppendix: all_cellDepth}
     
                 #print(cellDataDict)
                 #print("all_cellDepth =", all_cellDepth)
@@ -1168,12 +1458,12 @@ class RAS_2D_Data:
                 #cell WSE
                 all_cellWSE = np.concatenate([tri_cellWSE, quad_cellWSE, polygon5_cellWSE, 
                                               polygon6_cellWSE, polygon7_cellWSE, polygon8_cellWSE])
-                cellDataDict['WSE'] = all_cellWSE
+                cellDataDict['Water_Elev'+varLengthNameAppendix] = all_cellWSE
     
                 #cell center elevation
                 all_cellElev = np.concatenate([tri_cellElev, quad_cellElev, polygon5_cellElev, 
                                                polygon6_cellElev, polygon7_cellElev, polygon8_cellElev])
-                cellDataDict['Elev'] = all_cellElev
+                cellDataDict['Bed_Elev'+varLengthNameAppendix] = all_cellElev
                     
                 hec_ras_mesh.cell_data = cellDataDict
                 
@@ -1190,7 +1480,7 @@ class RAS_2D_Data:
                 #print(pVel3D)
     
                 print("Add velocity to pointDataDict.")
-                pointDataDict = {'Node_Velocity': pVel3D}
+                pointDataDict = {'Velocity'+varVelocityNameAppendix: pVel3D}
                 
                 hec_ras_mesh.point_data = pointDataDict
     
@@ -1325,7 +1615,15 @@ class RAS_2D_Data:
 
         """
         #only the first 2D area is exported. 
-        hec_ras_mesh = self.meshioObjectList[0]
+
+        # get the cell's FacePoint indexes
+        cellFacePointIndexes = self.get2DAreaCellFacePointsIndexes(self.TwoDAreaNames[0])
+
+        # get the FacePoint coordinates
+        facePointsCoordinates = self.TwoDAreaFacePointCoordinatesList[0]
+
+        # get cells face and orientation info
+        cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(self.TwoDAreaNames[0])
         
         #write out to srhgeom file
         fname = srhgeomFileName + '.srhgeom'
@@ -1345,37 +1643,25 @@ class RAS_2D_Data:
         fid.write('GridUnit \"%s\" \n' % self.units)        
         
         #all cells
-        cell_id = 0   #cell ID counter
-        for cell_type, data in hec_ras_mesh.cells:
-            out = np.column_stack([np.full(data.shape[0], data.shape[1], dtype=data.dtype), data])
-            #print(out.shape[0],out.shape[1])
-        
-            #for each cell in this block (type) of cells
-            for row in out:
-                cell_id += 1
+        for cellI in range(self.TwoDAreaCellCounts[0]):
+            cell_list = cellFacePointIndexes[cellI,0:cellsFaceOrientationInfo[cellI,1]]
 
-                #replace the first number with the cell ID (counter)
-                row[0] = cell_id
-                #print(row)
-            
-                #HEC-RAS is 0-based; SRH-2D is 1-based. Thus "+1" for each point ID
-                for k in range(len(row)-1):
-                    row[k+1] += 1  
-            
-                #print(row)
-                #print("\n")
-            
-            
-                fid.write("Elem ")
-                fid.write(" ".join(map(str, row)))
-                fid.write("\n")
+            for i in range(len(cell_list)):
+                cell_list[i] += 1
+
+            fid.write("Elem ")
+            fid.write("%d " % (cellI+1))  #cellI+1 because SRH-2D is 1-based
+            fid.write(" ".join(map(str, cell_list)))
+            fid.write("\n")
         
         #all points
-        point_id = 0 #point ID counter
-        for k in range(hec_ras_mesh.points.shape[0]):
-            point_id += 1
-            fid.write("Node %d " % point_id)
-            fid.write(" ".join(map(str, hec_ras_mesh.points[k])))
+        for pointI in range(facePointsCoordinates.shape[0]):
+            fid.write("Node %d " % (pointI+1))  #pointI+1 because SRH-2D is 1-based
+            curr_point_coordinates = [facePointsCoordinates[pointI,0],
+                                      facePointsCoordinates[pointI,1],
+                                      facePointsCoordinates[pointI,2]]
+
+            fid.write(" ".join(map(str, curr_point_coordinates)))
             fid.write("\n")
 
         #NodeString    
@@ -1383,7 +1669,15 @@ class RAS_2D_Data:
         for k in range(self.totalBoundaries):
             boundary_id += 1
             fid.write("NodeString %d " % boundary_id)
-            fid.write(" ".join(map(str, self.boundaryPointList[boundary_id-1,:self.boundaryTotalPoints[boundary_id-1]]+1))) #all point IDs are +1 becaue SRH-2D is 1-based and RAS2D is 0-based.
+
+            #loop over all node ID in the current NodeString
+            for i in range(self.boundaryTotalPoints[boundary_id-1]):
+                fid.write(" %d" % (self.boundaryPointList[boundary_id-1,i]+1)) #all point IDs are +1 becaue SRH-2D is 1-based and RAS2D is 0-based.
+
+                # 10 numbers per line or this is the last node, start a new line
+                if (((i + 1) % 10) == 0) or (i == (self.boundaryTotalPoints[boundary_id-1] - 1)):
+                    fid.write("\n")
+
             fid.write("\n")
         
         fid.close()
@@ -1400,24 +1694,15 @@ class RAS_2D_Data:
         -------
 
         """
-        #only the first 2D area is exported. 
-        hec_ras_mesh = self.meshioObjectList[0]       #mesh in meshio format
+        #only the first 2D area is exported.
         cell_ManningN = self.TwoDAreaCellManningN[0]  #cell Manning's n
         
         print("cell_ManningN", cell_ManningN)
         
-        #unique values of Mannings'n (one catch here is that in HEC-RAS different materials/zones may
-        #have the same Manning's n. Here, it is impossible to differentiate them. But this does affect
-        #simulation result.)
-        #Here nIndices can be used as the Material ID
-        uniqueManningN, nIndices = np.unique(cell_ManningN, return_inverse=True)
+        #number of Manning's n zones
+        nManningNZones = len(self.ManningNZones)
         
-        #number of unique Manning's n values
-        nUniqueManningN = uniqueManningN.shape[0]     
-        
-        print("uniqueManningN", uniqueManningN)
-        print("nIndices", nIndices)
-        print("nUniqueManningN", nUniqueManningN)
+        print("nManningNZones", nManningNZones)
         
         fname = srhmatFileName + '.srhmat'
         print("Writing SRHMAT file: ", fname)
@@ -1429,26 +1714,28 @@ class RAS_2D_Data:
             sys.exit()
     
         fid.write('SRHMAT 30\n')
-        fid.write('NMaterials %d\n' % (nUniqueManningN + 1))  #+1 is because SRH-2D also counts the default Manning's n
-        # in srhhydro file.
+        fid.write('NMaterials %d\n' % (nManningNZones + 1))  #+1 is because SRH-2D also counts the default Manning's n in srhhydro file.
         
         #output MatName
-        for matID in range(nUniqueManningN):
-            fid.write('MatName %d \"zone_%d\" \n' %(matID+1, matID+1))  #+1 because SRH-2D is 1-based
+        for matID in range(nManningNZones):
+            fid.write('MatName %d \"%s\" \n' % (matID + 1, self.ManningNZones[matID][0].decode("utf-8")))  # +1 because SRH-2D is 1-based
     
         #output cells in different material categories
-        for matID in range(nUniqueManningN):
+        for matID in range(nManningNZones):
+            if not self.cellsInManningZones[matID]: #this Manning's n zone has no cells
+                continue
+
             fid.write('Material %d ' % (matID+1))
             
-            #loop over all cells
-            for celli in range(self.TwoDAreaCellCounts[0]):
-                if abs(uniqueManningN[matID] - cell_ManningN[celli]) < 1e-4:
-                    fid.write(" %d" % (celli+1))  #+1 because SRH-2D is 1-based
-                    
-                    if(((celli+1) % 10) == 0):  #10 numbers per line
-                        fid.write("\n")
-                
-        fid.close()    
+            #loop over all cells in current Manning's n zone
+            for cellI in range(len(self.cellsInManningZones[matID])):
+                fid.write(" %d" % (self.cellsInManningZones[matID][cellI]+1))  #+1 because SRH-2D is 1-based
+
+                # 10 numbers per line or this is the last cell, start a new line
+                if (((cellI+1) % 10) == 0) or (cellI == (len(self.cellsInManningZones[matID])-1)):
+                    fid.write("\n")
+
+        fid.close()
 
 
     def exportBoundariesToVTK(self, boundaryVTKFileName):
@@ -1535,6 +1822,10 @@ class RAS_2D_Data:
         -------
 
         """
+
+        #check whether the face profiles have been created; if not,create them (slow calculation)
+        if len(self.TwoDAreaFaceProfile) == 0:
+            self.TwoDAreaFaceProfile = self.build2DAreaFaceProfile()
 
         #only the face profiles of the first 2D area is exported.
         faceProfiles = self.TwoDAreaFaceProfile[0]

@@ -344,7 +344,7 @@ class vtkHandler:
         return points, varProbedValues, elev
 
     def vtk_diff_consistent(self, vtkFileName1, vtkFileName2, vtkFileNameDiff,
-                            varName1, varName2, varNameDiff, diffNodal):
+                            varName1, varName2, varNameDiff):
         """ Calculate the difference of a variable in two VTK files with consistent Unstructured Grid.
 
         vrkNameDiff = vtkFileName1 - vtkFileName2
@@ -359,7 +359,7 @@ class vtkHandler:
         varName1: variable name in first VTK
         varName2: variable name in second VTK
         varNameDiff: variable name for the difference
-        diffNodal: whehter varNameDiff should be calculated at node or cell center.
+        (not implemented) diffNodal: whether varNameDiff should be calculated at node or cell center.
 
         Returns
         -------
@@ -379,8 +379,33 @@ class vtkHandler:
            print("Vtk files 1 and 2 are not consistent. They have different number of cells and/or points. Exiting ...")
            sys.exit()
 
-        varName1_data = VN.vtk_to_numpy(data1.GetPointData().GetArray(varName1))
-        varName2_data = VN.vtk_to_numpy(data2.GetPointData().GetArray(varName2))
+        #check whether the request varName exists in the VTK's cell data. If not check its point data.
+        #If varName exists in the point data, interpolate it to cell center. Otherwise, report error.
+        pointDataNames1, cellDataNames1 = self.get_uGRid_all_field_names(data1)
+
+        print("pointDataNames, cellDataNames in first VTK file =", pointDataNames1, cellDataNames1)
+
+        if (not varName1 in cellDataNames1): #varName1 does not exist in VTK file1's cell data:
+            if (varName1 in pointDataNames1): #varName1 exists in VTK file1's point data; interpolate that to cell center
+                self.vtk_point_to_cell_interpolation(data1)
+            else:
+                print("varName1 does not exist in vtkFileName1's cell data or point data. Exiting...")
+                sys.exit()
+
+        pointDataNames2, cellDataNames2 = self.get_uGRid_all_field_names(data2)
+
+        print("pointDataNames, cellDataNames in second VTK file =", pointDataNames2, cellDataNames2)
+
+        if (not varName2 in cellDataNames2):  # varName2 does not exist in VTK file1's cell data:
+            if (varName2 in pointDataNames2):  # varName1 exists in VTK file1's point data; interpolate that to cell center
+                self.vtk_point_to_cell_interpolation(data2)
+            else:
+                print("varName2 does not exist in vtkFileName2's cell data or point data. Exiting...")
+                sys.exit()
+
+
+        varName1_data = VN.vtk_to_numpy(data1.GetCellData().GetArray(varName1))
+        varName2_data = VN.vtk_to_numpy(data2.GetCellData().GetArray(varName2))
 
         varDiff_data = varName1_data - varName2_data
 
@@ -390,20 +415,24 @@ class vtkHandler:
         #print(varDiff_data)
 
 
+        #create a copy of the unstructured grid vtk
         uGrid = vtk.vtkUnstructuredGrid()
         uGrid.DeepCopy(data1)
 
+        #get the names of all point and cell data in uGrid
+        pointDataNames_temp, cellDataNames_temp = self.get_uGRid_all_field_names(uGrid)
+
         #remove all uGrid's point and cell data
         vtkPointData = uGrid.GetPointData()
-        for i in range(vtkPointData.GetNumberOfArrays()):
-            vtkPointData.RemoveArray(vtkPointData.GetArrayName(i))
+        for i in range(len(pointDataNames_temp)):
+            vtkPointData.RemoveArray(pointDataNames_temp[i])
 
         vtkCellData = uGrid.GetCellData()
-        for i in range(vtkCellData.GetNumberOfArrays()):
-            vtkCellData.RemoveArray(vtkCellData.GetArrayName(i))
+        for i in range(len(cellDataNames_temp)):
+            vtkCellData.RemoveArray(cellDataNames_temp[i])
 
-        #add the diff field
-        vtkPointData.AddArray(varDiff_data_vtk)
+        #add the diff field to the cell data
+        vtkCellData.AddArray(varDiff_data_vtk)
 
         # write out the diff result to vtk
         self.writeVTK_UnstructuredGrid(uGrid, vtkFileNameDiff)
@@ -437,12 +466,15 @@ class vtkHandler:
         return pointDataNames, cellDataNames
 
     def vtk_cell_to_point_interpolation(self, uGrid, varName=''):
-        """Interpolate the all cell data to point in an unstructured grid
+        """Interpolate all cell data to point in an unstructured grid
+
+        In VTK, it is simply an avarege of all data of cells sharing a point
 
         Parameters
         ----------
         uGrid: vtkUnstructuredGrid object
-        varName: {string} -- optional variable name; if specified, only this variable will be processed
+        varName: {string} -- optional variable name; if specified, only this variable will be processed (not
+        implemented yet)
 
 
         Returns
@@ -465,12 +497,52 @@ class vtkHandler:
 
         pointdata = c2p_interpolator.GetOutput().GetPointData()
 
-        print("Interpolated point data = ", pointdata)
+        #print("Interpolated point data = ", pointdata)
 
         uGridPointData = uGrid.GetPointData()
 
         for i in range(pointdata.GetNumberOfArrays()):
             uGridPointData.AddArray(pointdata.GetArray(i))
 
+
+
+    def vtk_point_to_cell_interpolation(self, uGrid, varName=''):
+        """Interpolate all point data to cell in an unstructured grid
+
+        In VTK, it is a simple average of data for all points defining a cell.
+
+        Parameters
+        ----------
+        uGrid: vtkUnstructuredGrid object
+        varName: {string} -- optional variable name; if specified, only this variable will be processed (not
+        implemented yet)
+
+
+        Returns
+        -------
+
+        """
+
+        #first check whether there is already a cell data named "varName"
+        pointDataNames, cellDataNames = self.get_uGRid_all_field_names(uGrid)
+
+        print("pointDataNames, cellDataNames =", pointDataNames, cellDataNames)
+
+        if varName in cellDataNames:
+            print("varName = ", varName, "is already in the point data. Nothing to be done.")
+            return
+
+        p2c_interpolator = vtk.vtkPointDataToCellData()
+        p2c_interpolator.SetInputData(uGrid)
+        p2c_interpolator.Update()
+
+        celldata = p2c_interpolator.GetOutput().GetCellData()
+
+        #print("Interpolated cell data = ", celldata)
+
+        uGridCellData = uGrid.GetCellData()
+
+        for i in range(celldata.GetNumberOfArrays()):
+            uGridCellData.AddArray(celldata.GetArray(i))
 
 
