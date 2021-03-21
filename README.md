@@ -50,7 +50,6 @@ Other features:
 ## Requirements
 
 This package uses the following libraries:
-- [meshio](https://github.com/nschloe/meshio)
 - [h5py](https://www.h5py.org/)
 - [vtk](https://github.com/Kitware/VTK)
 
