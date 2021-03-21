@@ -25,13 +25,15 @@ Penn State University
 import sys
 import numpy as np
 import h5py
-import meshio
+import vtk
+from vtk.util import numpy_support as VN
 from scipy import interpolate
 from osgeo import gdal
 import affine
 import os.path
 
-from ..Misc import printProgressBar
+from ..Misc import printProgressBar, vtkHandler
+from ..__common__ import *
 
 class RAS_2D_Data:
     """
@@ -115,11 +117,26 @@ class RAS_2D_Data:
         #get 2D area cell points
         self.TwoDAreaCellPoints = self.get2DAreaCellPoints()
 
-        #get 2D ara boundary points
+        #get 2D area boundary points
+        #the content of the "External Faces" table in HDF, which
+        #includes "BC Line ID", "Face Index", "FP Start Index", "FP End Index",
+        #"Station Start", and "Station End"
         self.TwoDAreaBoundaryPoints = self.get2DAreaBoundaryPoints()
+
+        #get 2D area boundary names, types, and other information
+        #e.g., TwoDAreaBoundaryNamesTypes[0] is list with info on ["Name", "SA-2D", "Type", "Length"]
+        self.TwoDAreaBoundaryNamesTypes = self.get2DAreaBoundaryNamesTypes()
         
-        #build boundaries
-        self.totalBoundaries, self.boundaryTotalPoints, self.boundaryPointList = self.build2DAreaBoundaries()
+        #build boundary information for 2D flow areas
+        #totalBoundaries: total number of boundaries
+        #boundaryIDList: a list boundary IDs (0, 1, 2, etc.)
+        #boundaryNameList: a list of boundary names ("inet", "outlet", ...). Its order is the same as in boundaryIDList.
+        #boundaryTypeList: a list of boundary types ("External", "Internal", etc). Its order is the same as in boundaryIDList.
+        #boundary2DFlowAreaNameList: a list of 2D flow areas corresponding to each boundary. Its order is the same as in boundaryIDList.
+        #boundaryTotalPoints: a list for the total number of points in each boundary.
+        #boundaryPointList: list of points in each boundary
+        self.totalBoundaries, self.boundaryIDList, self.boundaryNameList, self.boundary2DFlowAreaNameList,\
+            self.boundaryTypeList, self.boundaryTotalPoints, self.boundaryPointList = self.build2DAreaBoundaries()
         
         #get 2D area cell face points indexes
         #self.TwoDAreaCellFacePointsIndexes = self.get2DAreaCellFacePointsIndexes()
@@ -195,12 +212,6 @@ class RAS_2D_Data:
         
         #build face profile
         #self.build2DAreaFaceProfile()
-        
-        #meshio object list (each 2D area corresponding to one meshio object although only one 2D area is supported)
-        self.meshioObjectList = []
-        
-        #build the meshio object list
-        self.buildMeshioObjects()
         
         #By default, HEC-RAS 2D outputs the following time series solution data in HDF file
         #   - Depth (in each cell, including the ghost cells)
@@ -386,6 +397,10 @@ class RAS_2D_Data:
 
         Returns
         -------
+        hdf2DAreaBoundaryPoints: the content of the "External Faces" table in HDF, which
+                                include "BC Line ID", "Face Index", "FP Start Index", "FP End Index",
+                                "Station Start", and "Station End"
+
 
         """
         hf = h5py.File(self.hdf_filename,'r') 
@@ -394,6 +409,26 @@ class RAS_2D_Data:
         hf.close()
 
         return hdf2DAreaBoundaryPoints
+
+    def get2DAreaBoundaryNamesTypes(self):
+        """ Get 2D Flow Area boundary names, which 2D area it belongs to, type (External or Internal), and Length
+
+        Returns
+        -------
+        hdf2DAreaBoundaryNamesTypes: the content of the "Attributes" table in HDF, which
+                                includes "Name", "SA-2D", "Type", and "Length"
+
+
+        """
+        hf = h5py.File(self.hdf_filename,'r')
+        hdf2DAreaBoundaryNamesTypes = hf['Geometry']['Boundary Condition Lines']['Attributes']
+        #print(hdf2DAreaBoundaryNamesTypes)
+
+        #don't close (?) so the result can be queries outside of this function. Danger?
+        #hf.close()
+
+        return hdf2DAreaBoundaryNamesTypes
+
     
 
     def build2DAreaBoundaries(self):
@@ -436,12 +471,25 @@ class RAS_2D_Data:
                 boundaryPointList[currentBoundary,1] = self.TwoDAreaBoundaryPoints[k+1][3]  #second point
                 pointCounterInCurrentBoundary = 2
                 boundaryTotalPoints[currentBoundary] = 2
+
+
+        boundaryNameList = []
+        boundary2DFlowAreaNameList = []
+        boundaryTypeList = []
+
+        for k in range(self.TwoDAreaBoundaryNamesTypes.shape[0]):
+            boundaryNameList.append(self.TwoDAreaBoundaryNamesTypes["Name"][k])
+            boundary2DFlowAreaNameList.append(self.TwoDAreaBoundaryNamesTypes["SA-2D"][k])
+            boundaryTypeList.append(self.TwoDAreaBoundaryNamesTypes["Type"][k])
+
         
-        #print("Total number of boundaries: ", totalBoundaries)        
+        #print("Total number of boundaries: ", totalBoundaries)
+        #print("Boundary ID list: ",boundaryIDList)
         #print("boundaryTotalPoints: ", boundaryTotalPoints)
         #print("boundaryPointList: ", boundaryPointList)
     
-        return totalBoundaries, boundaryTotalPoints, boundaryPointList
+        return totalBoundaries, boundaryIDList, boundaryNameList, boundary2DFlowAreaNameList,\
+               boundaryTypeList, boundaryTotalPoints, boundaryPointList
 
     def build2DManningNZones(self):
         """ Build 2D flow area's Manning n zones from the land cover (Manning's n) HDF file
@@ -541,7 +589,7 @@ class RAS_2D_Data:
 
         Parameters
         ----------
-        geoTiffFileName: name of the GeoTiff file
+        geoTiffFileName: optional name of the GeoTiff file
         pointList: list of points (x,y)
         dataType: data type in the GeoTiff (default is numpy.float)
 
@@ -1073,11 +1121,21 @@ class RAS_2D_Data:
             
             #get the FacePoint coordinates in the current 2D flow area
             facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
+
+            #calculate how many points there are in all the profiles
+            # loop through all faces in current area (it is a slow process; print a progress bar)
+            totalNumProfilePoints = self.nFaceProfilePoints * face_facePoints.shape[0]
+
+            #array to store all profile points (for all faces)
+            totalProfilePoints = np.zeros((totalNumProfilePoints,3))
+
             
             curAreaProfilePoints = []
 
             #loop through all faces in current area (it is a slow process; print a progress bar)
             for faceI in range(face_facePoints.shape[0]):
+
+                #print("faceI, face_facePoints.shape[0] = ", faceI, face_facePoints.shape[0])
 
                 printProgressBar(faceI, face_facePoints.shape[0], "Face profile computation in progress")
 
@@ -1097,25 +1155,20 @@ class RAS_2D_Data:
                 
                 #print(startFacePointCoordinates)
                 #print(endFacePointCoordinates)
-                
-                #create the array for the coordinates of all points on the profile 
-                #(x,y,z)
-                profilePoints = np.zeros((self.nFaceProfilePoints,3))
-                
+
                 for pointI in range(self.nFaceProfilePoints):
-                    profilePoints[pointI,:] = (startFacePointCoordinates + (endFacePointCoordinates-startFacePointCoordinates)
+                    totalProfilePoints[pointI+self.nFaceProfilePoints*faceI,:] = (startFacePointCoordinates + (endFacePointCoordinates-startFacePointCoordinates)
                                            *pointI/(self.nFaceProfilePoints-1))
-                    
-                #if faceI == 0: print(repr(profilePoints))
-                    
-                self.interpolateZcoord2Points(profilePoints)
+
+            #interpolate elevation to all profile points
+            self.interpolateZcoord2Points(totalProfilePoints)
                 
-                #if faceI == 0: print(repr(profilePoints))    
-                
+            #unpack the points and assign to each face profile
+            for faceI in range(face_facePoints.shape[0]):
+                profilePoints = totalProfilePoints[self.nFaceProfilePoints*faceI:(self.nFaceProfilePoints*(faceI+1)),:]
                 curAreaProfilePoints.append(profilePoints)
                 
-                
-            self.TwoDAreaFaceProfile.append(curAreaProfilePoints)
+                self.TwoDAreaFaceProfile.append(curAreaProfilePoints)
             
 
     def interpolateManningN_face_to_cell(self):
@@ -1200,7 +1253,7 @@ class RAS_2D_Data:
             else:
                 self.cellsInManningZones[ManningN_IDs[cellI]] = [cellI]
 
-        print("cellsInManningZones = ", self.cellsInManningZones)
+        #print("cellsInManningZones = ", self.cellsInManningZones)
 
     #build face's facepoint list
     def buildFace_FacePoints(self):
@@ -1268,15 +1321,15 @@ class RAS_2D_Data:
             #get the FacePoint indexes
             cellFacePointIndexes = self.get2DAreaCellFacePointsIndexes(area)
     
-            #get the FacePoint coordinates
+            #get the FacePoint coordinates (3D, the elevation is interpolated from terrain)
             facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
     
             #get cells face and orientation info
             cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(area)
             
             #get current 2D area's solutions
-            cellDepth = self.TwoDAreaCellDepth[i]
-            cellWSE = self.TwoDAreaCellWSE[i]
+            cellDepth = self.TwoDAreaCellDepth[i][:,0:self.TwoDAreaCellCounts[i]]
+            cellWSE = self.TwoDAreaCellWSE[i][:,0:self.TwoDAreaCellCounts[i]]
             pointVx = self.TwoDAreaPointVx[i]
             pointVy = self.TwoDAreaPointVy[i]
             pointVz = self.TwoDAreaPointVz[i]
@@ -1299,199 +1352,106 @@ class RAS_2D_Data:
                     continue
                 
                 print("timeI = ", timeI)
-                
-                #loop through each cell in the current 2D area
-                #lists to store the point indexes of cells of different shapes
-                tri_pointIndexes_list = []
-                quad_pointIndexes_list = []
-                polygon5_pointIndexes_list = []
-                polygon6_pointIndexes_list = []
-                polygon7_pointIndexes_list = []
-                polygon8_pointIndexes_list = []    
-    
-                #lists to store the cell center results
-                tri_cellDepth_list = []
-                quad_cellDepth_list = []
-                polygon5_cellDepth_list = []
-                polygon6_cellDepth_list = []
-                polygon7_cellDepth_list = []
-                polygon8_cellDepth_list = []    
-    
-                tri_cellWSE_list = []
-                quad_cellWSE_list = []
-                polygon5_cellWSE_list = []
-                polygon6_cellWSE_list = []
-                polygon7_cellWSE_list = []
-                polygon8_cellWSE_list = []
-                
-                tri_ManningN_list = []
-                quad_ManningN_list = []
-                polygon5_ManningN_list = []
-                polygon6_ManningN_list = []
-                polygon7_ManningN_list = []
-                polygon8_ManningN_list = []
-    
+
+                #points
+                pointsVTK = vtk.vtkPoints()
+                pointsVTK.SetData(VN.numpy_to_vtk(facePointsCoordinates))
+
+                #cell topology information list: [num. of FP, FP0, FP1, .., num. of FP, FPxxx]
+                #the list start with the number of FP for a cell and then the list of FP indexes
+                connectivity_list = []
+
+                #type of cells (contains the number of face points
+                #celltypes = np.zeros(self.TwoDAreaCellCounts[i], dtype=np.int64)
+                cellFPCounts = np.zeros(self.TwoDAreaCellCounts[i], dtype=np.int64)
+
+                #loop through each cell in the current 2D area to get their face point indexes
                 for celli in range(self.TwoDAreaCellCounts[i]):
+
                     #get the number of face points (=number of faces)
                     numFP = cellsFaceOrientationInfo[celli,1]
                     #print("numFP = ", numFP)
-        
-                    if numFP==3:  #triangle, only has 3 points
-                        #print("trinalge")
-                        tri_pointIndexes_list.append(cellFacePointIndexes[celli][0:3])
-                        tri_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        tri_cellWSE_list.append(cellWSE[timeI,:][celli])
-                        tri_ManningN_list.append(cellManningN[celli])
-                    elif numFP == 4:  #quad
-                        #print("quad")
-                        quad_pointIndexes_list.append(cellFacePointIndexes[celli][0:4])
-                        #print("cellDepth[timeI,:] = ", cellDepth[timeI,:])
-                        #print("cellDepth[timeI,:][celli] = ", cellDepth[timeI,:][celli])
-                        quad_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        quad_cellWSE_list.append(cellWSE[timeI,:][celli])
-                        quad_ManningN_list.append(cellManningN[celli])
-                    elif numFP == 5:  #polygon5
-                        #print("polygon5")
-                        polygon5_pointIndexes_list.append(cellFacePointIndexes[celli][0:5])
-                        polygon5_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        polygon5_cellWSE_list.append(cellWSE[timeI,:][celli])
-                        polygon5_ManningN_list.append(cellManningN[celli])
-                    elif numFP == 6:  #polygon6
-                        #print("polygon6")
-                        polygon6_pointIndexes_list.append(cellFacePointIndexes[celli][0:6])
-                        polygon6_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        polygon6_cellWSE_list.append(cellWSE[timeI,:][celli])
-                        polygon6_ManningN_list.append(cellManningN[celli])
-                    elif numFP == 7:  #polygon7
-                        #print("polygon7")
-                        polygon7_pointIndexes_list.append(cellFacePointIndexes[celli][0:7])
-                        polygon7_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        polygon7_cellWSE_list.append(cellWSE[timeI,:][celli])
-                        polygon7_ManningN_list.append(cellManningN[celli])
-                    elif numFP == 8:  #polygon8
-                        #print("polygon8")
-                        polygon8_pointIndexes_list.append(cellFacePointIndexes[celli][0:8])
-                        polygon8_cellDepth_list.append(cellDepth[timeI,:][celli])
-                        polygon8_cellWSE_list.append(cellWSE[timeI,:][celli])   
-                        polygon8_ManningN_list.append(cellManningN[celli])
-                    else:
-                        print("The cell shape is not supported")
-            
-                #convert the list to numpy array
-                tri_pointIndexes = np.array(tri_pointIndexes_list)
-                quad_pointIndexes = np.array(quad_pointIndexes_list)
-                polygon5_pointIndexes = np.array(polygon5_pointIndexes_list)
-                polygon6_pointIndexes = np.array(polygon6_pointIndexes_list)   
-                polygon7_pointIndexes = np.array(polygon7_pointIndexes_list)
-                polygon8_pointIndexes = np.array(polygon8_pointIndexes_list)
-    
-                tri_cellDepth = np.array(tri_cellDepth_list)
-                quad_cellDepth = np.array(quad_cellDepth_list)
-                polygon5_cellDepth = np.array(polygon5_cellDepth_list)
-                polygon6_cellDepth = np.array(polygon6_cellDepth_list)
-                polygon7_cellDepth = np.array(polygon7_cellDepth_list)
-                polygon8_cellDepth = np.array(polygon8_cellDepth_list)
-    
-                tri_cellWSE = np.array(tri_cellWSE_list)
-                quad_cellWSE = np.array(quad_cellWSE_list)
-                polygon5_cellWSE = np.array(polygon5_cellWSE_list)
-                polygon6_cellWSE = np.array(polygon6_cellWSE_list)
-                polygon7_cellWSE = np.array(polygon7_cellWSE_list)
-                polygon8_cellWSE = np.array(polygon8_cellWSE_list)
-    
-                tri_cellElev = tri_cellWSE - tri_cellDepth
-                quad_cellElev = quad_cellWSE - quad_cellDepth
-                polygon5_cellElev = polygon5_cellWSE - polygon5_cellDepth
-                polygon6_cellElev = polygon6_cellWSE - polygon6_cellDepth
-                polygon7_cellElev = polygon7_cellWSE - polygon7_cellDepth
-                polygon8_cellElev = polygon8_cellWSE - polygon8_cellDepth
-                
-                tri_ManningN = np.array(tri_ManningN_list)
-                quad_ManningN = np.array(quad_ManningN_list)
-                polygon5_ManningN = np.array(polygon5_ManningN_list)
-                polygon6_ManningN = np.array(polygon6_ManningN_list)
-                polygon7_ManningN = np.array(polygon7_ManningN_list)
-                polygon8_ManningN = np.array(polygon8_ManningN_list)                
-                
-                #print("quad_pointIndexes = ", quad_pointIndexes)
-                #print('len(quad_pointIndexes) = ',len(quad_pointIndexes))
-                
-                #define the cells dictionary
-                cellsDict = dict()
-                if len(tri_pointIndexes)!=0:
-                    cellsDict.update({'triangle' : tri_pointIndexes})   
-        
-                if len(quad_pointIndexes)!=0:
-                    cellsDict.update({'quad' : quad_pointIndexes})    
-        
-                if len(polygon5_pointIndexes)!=0:
-                    cellsDict.update({'polygon5' : polygon5_pointIndexes})       
-        
-                if len(polygon6_pointIndexes)!=0:
-                    cellsDict.update({'polygon6' : polygon6_pointIndexes})  
-        
-                if len(polygon7_pointIndexes)!=0:
-                    cellsDict.update({'polygon7' : polygon7_pointIndexes})    
-        
-                if len(polygon8_pointIndexes)!=0:
-                    cellsDict.update({'polygon8' : polygon8_pointIndexes})   
 
-                #print(cellsDict)
-        
-                #create the mesh without any data
-                hec_ras_mesh = meshio.Mesh(facePointsCoordinates,cellsDict)
-                
-                #add data to the meshio mesh
-    
-                #add cell center scalar data
-                #cellDataDict = {}
-    
-                #cell water depth
-                #concatenate cell depth numpy arrays into one
-                all_cellDepth = np.concatenate([tri_cellDepth, quad_cellDepth, polygon5_cellDepth, 
-                                                polygon6_cellDepth, polygon7_cellDepth, polygon8_cellDepth])
-                cellDataDict = {'Water_Depth'+varLengthNameAppendix: all_cellDepth}
-    
-                #print(cellDataDict)
-                #print("all_cellDepth =", all_cellDepth)
-    
+                    if numFP > gMax_Nodes_per_Element:
+                        print("The number of face points, %d, for current face is more than the maximum allowed (%d)."
+                                % (numFP, gMax_Nodes_per_Element))
+                        print("Exiting ...")
+                        sys.exit()
+
+                    connectivity_list.append(numFP)
+
+                    for fpI in range(numFP):
+                        connectivity_list.append(cellFacePointIndexes[celli][fpI])
+
+                    cellFPCounts[celli] = numFP
+
+                connectivity = np.array(connectivity_list, dtype=np.int64)
+
+                #convert cell's number of face points to VTK cell type
+                vtkHandler_obj = vtkHandler()
+                cell_types = vtkHandler_obj.number_of_nodes_to_vtk_celltypes(cellFPCounts)
+
+                cellsVTK = vtk.vtkCellArray()
+                cellsVTK.SetCells(self.TwoDAreaCellCounts[i], VN.numpy_to_vtkIdTypeArray(connectivity))
+
+                uGrid = vtk.vtkUnstructuredGrid()
+                uGrid.SetPoints(pointsVTK)
+                uGrid.SetCells(cell_types, cellsVTK)
+
+                #add solutions
+
+                #add cell center data
+                currentTimeCellDepth = cellDepth[timeI,:]
+                currentTimeCellWSE = cellWSE[timeI,:]
+                currentTimePointVx = pointVx[timeI,:]
+                currentTimePointVy = pointVy[timeI,:]
+                currentTimePointVz = pointVz[timeI,:]
+
+                #combine point velocity components into a vector (numpy array)
+                currentTimePointV = np.zeros((len(currentTimePointVx),3))
+                currentTimePointV[:,0] = currentTimePointVx
+                currentTimePointV[:,1] = currentTimePointVy
+                currentTimePointV[:,2] = currentTimePointVz
+
+                currentTimePointElevation = facePointsCoordinates[:,2] #z coordinate of nodes
+
+                currentTimeCellManningN = cellManningN #the same; no time change
+
+                cell_data = uGrid.GetCellData()  # This holds cell data
+                point_data = uGrid.GetPointData()  # This holds point data
+
+                #cell depth
+                currentTimeCellDepth_array = VN.numpy_to_vtk(currentTimeCellDepth)
+                currentTimeCellDepth_array.SetName('Water_Depth'+varLengthNameAppendix)
+                cell_data.AddArray(currentTimeCellDepth_array)
+
                 #cell WSE
-                all_cellWSE = np.concatenate([tri_cellWSE, quad_cellWSE, polygon5_cellWSE, 
-                                              polygon6_cellWSE, polygon7_cellWSE, polygon8_cellWSE])
-                cellDataDict['Water_Elev'+varLengthNameAppendix] = all_cellWSE
-    
-                #cell center elevation
-                all_cellElev = np.concatenate([tri_cellElev, quad_cellElev, polygon5_cellElev, 
-                                               polygon6_cellElev, polygon7_cellElev, polygon8_cellElev])
-                cellDataDict['Bed_Elev'+varLengthNameAppendix] = all_cellElev
-                    
-                hec_ras_mesh.cell_data = cellDataDict
-                
+                currentTimeCellWSE_array = VN.numpy_to_vtk(currentTimeCellWSE)
+                currentTimeCellWSE_array.SetName('Water_Elev'+varLengthNameAppendix)
+                cell_data.AddArray(currentTimeCellWSE_array)
+
                 #cell center Manning's n
-                all_cellManningN = np.concatenate([tri_ManningN, quad_ManningN, polygon5_ManningN, 
-                                                polygon6_ManningN, polygon7_ManningN, polygon8_ManningN])
-                cellDataDict['ManningN'] = all_cellManningN
-                
-                #print(hec_ras_mesh.cell_data)
-                
-                # add point data
-                
-                pVel3D = self.assembleVectors(pointVx[timeI,:], pointVy[timeI,:], pointVz[timeI,:])
-                #print(pVel3D)
-    
-                print("Add velocity to pointDataDict.")
-                pointDataDict = {'Velocity'+varVelocityNameAppendix: pVel3D}
-                
-                hec_ras_mesh.point_data = pointDataDict
-    
+                currentTimeCellManningN_array = VN.numpy_to_vtk(currentTimeCellManningN)
+                currentTimeCellManningN_array.SetName('ManningN')
+                cell_data.AddArray(currentTimeCellManningN_array)
+
+                #point velocity
+                currentTimePointV_array = VN.numpy_to_vtk(currentTimePointV)
+                currentTimePointV_array.SetName('Velocity'+varVelocityNameAppendix)
+                point_data.AddArray(currentTimePointV_array)
+
+                #point elevation
+                currentTimePointElevation_array = VN.numpy_to_vtk(currentTimePointElevation)
+                currentTimePointElevation_array.SetName('Bed_Elev'+varLengthNameAppendix)
+                point_data.AddArray(currentTimePointElevation_array)
+
+
                 #add field data: 
                 #    - Time (float)
                 #    - Time_Date (string)
                 #field_data = {'TIME': np.array([self.solution_time[timeI]]), 'DATE_TIME': str(self.solution_time_date[timeI],'utf-8')}
                 field_data = {'TIME': np.array([self.solution_time[timeI]])}
-                
-                hec_ras_mesh.field_data = field_data
-                
+
                 #write to vtk file
                 fileName_temp = []
                 if dir!= '':
@@ -1499,131 +1459,36 @@ class RAS_2D_Data:
                 else:
                     fileName_temp = ['RAS2D_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
                 vtkFileName = "".join(fileName_temp)
-                meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
+
+                # write out the ugrid
+                unstr_writer = vtk.vtkUnstructuredGridWriter()  # this can save as vtu format
+                unstr_writer.SetFileName(vtkFileName)
+                unstr_writer.SetInputData(uGrid)
+                unstr_writer.Write()
 
 
-    def buildMeshioObjects(self):
-        """ Build meshio objects for each 2D areas in the RAS2D mesh (although for now only one 2D area is supported)
-
-        Returns
-        -------
-
-        """
-        print("Building meshio objects ...")
-        #loop through each 2D areas
-        for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
-            #print("2D Flow Area = ", area)
-            
-            #get the FacePoint indexes
-            cellFacePointIndexes = self.get2DAreaCellFacePointsIndexes(area)
-    
-            #get the FacePoint coordinates
-            facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
-    
-            #get cells face and orientation info
-            cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(area)
-            
-                
-            #loop through each cell in the current 2D area
-            #lists to store the point indexes of cells of different shapes
-            tri_pointIndexes_list = []
-            quad_pointIndexes_list = []
-            polygon5_pointIndexes_list = []
-            polygon6_pointIndexes_list = []
-            polygon7_pointIndexes_list = []
-            polygon8_pointIndexes_list = []    
-    
-            for celli in range(self.TwoDAreaCellCounts[i]):
-                #get the number of face points (=number of faces)
-                numFP = cellsFaceOrientationInfo[celli,1]
-                #print("numFP = ", numFP)
-        
-                if numFP==3:  #triangle, only has 3 points
-                    #print("trinalge")
-                    tri_pointIndexes_list.append(cellFacePointIndexes[celli][0:3])
-                elif numFP == 4:  #quad
-                    #print("quad")
-                    quad_pointIndexes_list.append(cellFacePointIndexes[celli][0:4])
-                elif numFP == 5:  #polygon5
-                    #print("polygon5")
-                    polygon5_pointIndexes_list.append(cellFacePointIndexes[celli][0:5])
-                elif numFP == 6:  #polygon6
-                    #print("polygon6")
-                    polygon6_pointIndexes_list.append(cellFacePointIndexes[celli][0:6])
-                elif numFP == 7:  #polygon7
-                    #print("polygon6")
-                    polygon7_pointIndexes_list.append(cellFacePointIndexes[celli][0:7])
-                elif numFP == 8:  #polygon8
-                    #print("polygon6")
-                    polygon8_pointIndexes_list.append(cellFacePointIndexes[celli][0:8])
-                else:
-                    print("The cell shape is not supported")
-            
-            #convert the list to numpy array
-            tri_pointIndexes = np.array(tri_pointIndexes_list)
-            quad_pointIndexes = np.array(quad_pointIndexes_list)
-            polygon5_pointIndexes = np.array(polygon5_pointIndexes_list)
-            polygon6_pointIndexes = np.array(polygon6_pointIndexes_list)   
-            polygon7_pointIndexes = np.array(polygon7_pointIndexes_list)
-            polygon8_pointIndexes = np.array(polygon8_pointIndexes_list)
-                
-            #print("quad_pointIndexes = ", quad_pointIndexes)
-            #print('len(quad_pointIndexes) = ',len(quad_pointIndexes))
-                
-            #define the cells dictionary
-            cellsDict = dict()
-            if len(tri_pointIndexes)!=0:
-                cellsDict.update({'triangle' : tri_pointIndexes})   
-        
-            if len(quad_pointIndexes)!=0:
-                cellsDict.update({'quad' : quad_pointIndexes})    
-        
-            if len(polygon5_pointIndexes)!=0:
-                cellsDict.update({'polygon5' : polygon5_pointIndexes})       
-        
-            if len(polygon6_pointIndexes)!=0:
-                cellsDict.update({'polygon6' : polygon6_pointIndexes})  
-        
-            if len(polygon7_pointIndexes)!=0:
-                cellsDict.update({'polygon7' : polygon7_pointIndexes})    
-        
-            if len(polygon8_pointIndexes)!=0:
-                cellsDict.update({'polygon8' : polygon8_pointIndexes})   
-
-            #print(cellsDict)
-        
-            #create the mesh without any data
-            hec_ras_mesh = meshio.Mesh(facePointsCoordinates,cellsDict)
-            
-            self.meshioObjectList.append(hec_ras_mesh)
-                
-            #write to vtk file (for debug)
-            #fileName_temp = ['RAS2D_meshonly_', area.astype(str),'_Area', str(i).zfill(4),'.vtk']
-            #vtkFileName = "".join(fileName_temp)
-            #meshio.write(vtkFileName,hec_ras_mesh,"vtk",binary=False)
-
-
-    def exportSRHGEOMFile(self, srhgeomFileName):
+    def exportSRHGEOMFile(self, srhgeomFileName, twoDAreaNumber = 0):
         """ Export srhgeom file
 
         Parameters
         ----------
         srhgeomFileName
+        twoDAreaNumber: {str} -- optional 2D flow area number (default = 0)
 
         Returns
         -------
 
         """
-        #only the first 2D area is exported. 
+        #only one 2D area is exported.
 
         # get the cell's FacePoint indexes
-        cellFacePointIndexes = self.get2DAreaCellFacePointsIndexes(self.TwoDAreaNames[0])
+        cellFacePointIndexes = self.get2DAreaCellFacePointsIndexes(self.TwoDAreaNames[twoDAreaNumber])
 
         # get the FacePoint coordinates
-        facePointsCoordinates = self.TwoDAreaFacePointCoordinatesList[0]
+        facePointsCoordinates = self.TwoDAreaFacePointCoordinatesList[twoDAreaNumber]
 
         # get cells face and orientation info
-        cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(self.TwoDAreaNames[0])
+        cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(self.TwoDAreaNames[twoDAreaNumber])
         
         #write out to srhgeom file
         fname = srhgeomFileName + '.srhgeom'
@@ -1666,8 +1531,18 @@ class RAS_2D_Data:
 
         #NodeString    
         boundary_id = 0 #boundary ID counter
+
+        #loop through all boundaries (only pick those used in current 2D flow area and with type = "External")
         for k in range(self.totalBoundaries):
             boundary_id += 1
+
+            #check the current boundary is used by the current 2D flow area and its type
+            if self.TwoDAreaBoundaryNamesTypes[k][1] != self.TwoDAreaNames[twoDAreaNumber] or \
+               self.TwoDAreaBoundaryNamesTypes[k][2] != "External":
+                continue
+
+            boundaryName = self.TwoDAreaBoundaryNamesTypes[k][0]
+
             fid.write("NodeString %d " % boundary_id)
 
             #loop over all node ID in the current NodeString
@@ -1738,21 +1613,22 @@ class RAS_2D_Data:
         fid.close()
 
 
-    def exportBoundariesToVTK(self, boundaryVTKFileName):
+    def exportBoundariesToVTK(self, boundaryVTKFileName, dir='', twoDAreaNumber = 0):
         """ Export boundaries of 2D area to VTK (for visual inspection in Paraview and check the ID of NodeString)
 
         Parameters
         ----------
         boundaryVTKFileName
+        twoDAreaNumber: {int} -- optional 2D flow area number (default is 0)
 
         Returns
         -------
 
         """
-        #only the boundaries of the first 2D area is exported.
-        hec_ras_mesh = self.meshioObjectList[0]
+        #only the boundaries of one 2D area is exported.
+
         
-        fname = boundaryVTKFileName + '.vtk'
+        fname = dir + "/" + boundaryVTKFileName + '.vtk'
         
         print('Writing RAS2D mesh boundaries to', fname)
         
@@ -1772,18 +1648,24 @@ class RAS_2D_Data:
         #output all points in the mesh
         #(a short cut instead of output boundary points only; does not matter because
         #this is for inspection purpose only)
-        
+
+        #only the first 2D flow area
+        area = self.TwoDAreaNames[twoDAreaNumber]
+
+        # get the FacePoint coordinates (3D, the elevation is interpolated from terrain)
+        facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
+
         #total number of points in mesh
-        totalNumPoints = hec_ras_mesh.points.shape[0]
+        totalNumPoints = facePointsCoordinates.shape[0]
         
         fid.write('POINTS %d float\n' % totalNumPoints)
 
         #loop over all points
-        for k in range(hec_ras_mesh.points.shape[0]):
-            fid.write(" ".join(map(str, hec_ras_mesh.points[k])))
+        for k in range(facePointsCoordinates.shape[0]):
+            fid.write(" ".join(map(str, facePointsCoordinates[k])))
             fid.write("\n")
             
-        #calculate total number of boundary points
+        #calculate total number of boundary points (all boundaries)
         totalNumBoundaryPoints = 0
         for k in range(self.totalBoundaries):
             totalNumBoundaryPoints += self.boundaryTotalPoints[k]
@@ -1811,7 +1693,7 @@ class RAS_2D_Data:
         fid.close()
 
 
-    def exportFaceProfilesToVTK(self, faceProfileVTKFileName):
+    def exportFaceProfilesToVTK(self, faceProfileVTKFileName, dir='', twoDAreaNumber = 0):
         """ Export face profile of 2D area to VTK (for visual inspection in Paraview)
 
         Parameters
@@ -1825,14 +1707,14 @@ class RAS_2D_Data:
 
         #check whether the face profiles have been created; if not,create them (slow calculation)
         if len(self.TwoDAreaFaceProfile) == 0:
-            self.TwoDAreaFaceProfile = self.build2DAreaFaceProfile()
+            self.build2DAreaFaceProfile()
 
-        #only the face profiles of the first 2D area is exported.
-        faceProfiles = self.TwoDAreaFaceProfile[0]
+        #only the face profiles of one 2D area is exported.
+        faceProfiles = self.TwoDAreaFaceProfile[twoDAreaNumber]
         
-        fname = faceProfileVTKFileName + '.vtk'
+        fname = dir + "/" + faceProfileVTKFileName + '.vtk'
         
-        print('Writing all face profiles to', fname)     
+        print('\nWriting all face profiles to', fname)
         
         try:
             fid = open(fname, 'w')

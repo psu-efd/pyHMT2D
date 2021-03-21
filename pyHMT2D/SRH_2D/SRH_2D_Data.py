@@ -10,31 +10,17 @@ import os
 import copy
 import numpy as np
 import h5py
-import meshio
 from scipy import interpolate
 from osgeo import gdal
 from os import path
 import shlex
 import vtk
+from vtk.util import numpy_support as VN
 
 from .helpers import *
 from ..__common__ import *
-
-# map from number of nodes to cell type in VTK (see VTK documentation)
-vtkCellTypeMap = {
-  3: 5,     # triangle
-  4: 9,     # quad
-  5: 7,     # poly
-  6: 7,
-  7: 7,
-  8: 7
-}
-
-# maximum number of nodes for an element
-gMax_Nodes_per_Element = 8
-
-# maximum number of elements for a node
-gMax_Elements_per_Node = 10
+from ..Misc.vtk_utilities import vtkCellTypeMap
+from ..Misc import printProgressBar, vtkHandler
 
 class SRH_2D_SRHHydro:
     """A class to handle srhhydro file for SRH-2D
@@ -871,7 +857,7 @@ class SRH_2D_Data:
                     sys.exit(message)
 
         vtkFileName_base = ''
-        print("self.srhhydro_obj.srhhydro_content[\"Case\"] = ", self.srhhydro_obj.srhhydro_content["Case"])
+        #print("self.srhhydro_obj.srhhydro_content[\"Case\"] = ", self.srhhydro_obj.srhhydro_content["Case"])
 
         if dir!='':
             vtkFileName_base = dir + '/' + 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"] #use the case name of the
@@ -883,19 +869,29 @@ class SRH_2D_Data:
         #build result variable names
         resultVarNames = list(self.xmdfAllData_Nodal.keys()) if bNodal else list(self.xmdfAllData_Cell.keys())
 
-        #add bed elevation
+        #add Manning's n (at cell center regardless bNodal)
+        ManningNVarName = "ManningN"
+
+        if bNodal:
+            print("All nodal solution variable names: ", resultVarNames[:-1], "and cell center ManningN")
+        else:
+            print("All cell center solution variable names: ", resultVarNames)
+
+        #add bed elevation at nodes regardless whether bNodal is True or False. Nodal elevation is more accurate representation
+        #of the terrain because cell center elevation is averaged from nodal elevations.
         #get the units of the results
         units = self.srhhydro_obj.srhhydro_content['OutputFormat'][1]
         print("SRH-2D result units:", units)
+        bedElevationVarName = ''
+        velocityVarName = ''
         if units == "SI":
-            resultVarNames.append("Bed_Elev_m")
+            bedElevationVarName = "Bed_Elev_m"
+            velocityVarName = "Velocity_m_p_s"
         else:
-            resultVarNames.append("Bed_Elev_ft")
+            bedElevationVarName = "Bed_Elev_ft"
+            velocityVarName = "Velocity_ft_p_s"
 
-        print("All solution variable names: ", resultVarNames)
-
-        #add Manning's n
-        resultVarNames.append("ManningN")
+        print("Nodal bed elevation name: ", bedElevationVarName)
 
         #loop through each time step
         timeArray = self.xmdfTimeArray_Nodal if bNodal else self.xmdfTimeArray_Cell
@@ -919,74 +915,115 @@ class SRH_2D_Data:
             vtkFileName = vtkFileName_base + str_extra + str(timeI).zfill(4) + ".vtk"
             print("vtkFileName = ", vtkFileName)
 
-            #loop through each solution variable
-            for varName, varI in zip(resultVarNames, range(len(resultVarNames)-1)):
+            #loop through each solution variable (except Bed_Elev and ManningN, which will be added seperately)
+            for varName, varI in zip(resultVarNames, range(len(resultVarNames))):
                 print("varName = ", varName)
-                if ("Bed_Elev" not in varName) and ("ManningN" not in varName):
-                    #get the values of current solution varialbe at current time
-                    resultData[:,varI] =      self.xmdfAllData_Nodal[varName][timeI,:] if bNodal \
-                                         else self.xmdfAllData_Cell[varName][timeI,:]
+                #get the values of current solution varialbe at current time
+                resultData[:,varI] =      self.xmdfAllData_Nodal[varName][timeI,:] if bNodal \
+                                     else self.xmdfAllData_Cell[varName][timeI,:]
 
-            #add the bed elevation (the last one in resultData)
-            resultData[:,len(resultVarNames)-2] = self.srhgeom_obj.nodeCoordinates[:,2] if bNodal \
-                                     else self.srhgeom_obj.elementBedElevation
+            #add Mannng's n to cell center
+            #self.ManningN_cell
 
-            #add Mannng's n
-            resultData[:, len(resultVarNames)-1] = self.ManningN_node if bNodal \
-                                    else self.ManningN_cell
+            #add nodal bed elevation to VTK's point data
+            nodalElevation = self.srhgeom_obj.nodeCoordinates[:,2]
 
-            #call the vtk output function
-            self.outputVTK(vtkFileName, resultVarNames, resultData, bNodal)
+            #build VTK object:
+            # points
+            pointsVTK = vtk.vtkPoints()
+            pointsVTK.SetData(VN.numpy_to_vtk(self.srhgeom_obj.nodeCoordinates))
 
+            # cell topology information list: [num. of nodes, node0, node1, .., num. of nodes, nodexxx]
+            # the list start with the number of nodes for a cell and then the list of node indexes
+            connectivity_list = []
 
-    def readSRHFile(self, srhFileName):
-        """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
+            # type of cells (contains the number of face points
+            cellFPCounts = np.zeros(self.srhgeom_obj.elementNodesList.shape[0], dtype=np.int64)
 
-        Note: SRH-2D outputs an extra "," to each line. As a result, Numpy's
-        genfromtext(...) function adds a column of "nan" to the end.
+            #loop over all elements
+            for k in range(self.srhgeom_obj.elementNodesList.shape[0]):
+                connectivity_list.append(self.srhgeom_obj.elementNodesCount[k])
 
-        Returns
-        -------
-        variable names, variable data
+                for nodeI in range(self.srhgeom_obj.elementNodesCount[k]):
+                    connectivity_list.append(self.srhgeom_obj.elementNodesList[k][nodeI]-1) #-1 becasue SRH-2D is 1-based.
 
-        """
+                cellFPCounts[k] = self.srhgeom_obj.elementNodesCount[k]
 
-        print("Reading the SRH/SRHC result file ...")
+            connectivity = np.array(connectivity_list, dtype=np.int64)
 
-        data = np.genfromtxt(srhFileName, delimiter=',', names=True)
+            # convert cell's number of face points to VTK cell type
+            vtkHandler_obj = vtkHandler()
+            cell_types = vtkHandler_obj.number_of_nodes_to_vtk_celltypes(cellFPCounts)
 
-        return data.dtype.names[:-1], data
+            cellsVTK = vtk.vtkCellArray()
+            cellsVTK.SetCells(self.srhgeom_obj.elementNodesList.shape[0], VN.numpy_to_vtkIdTypeArray(connectivity))
 
-    def readTECFile(self, tecFileName):
-        """Read SRH-2D results in Tecplot format
+            uGrid = vtk.vtkUnstructuredGrid()
+            uGrid.SetPoints(pointsVTK)
+            uGrid.SetCells(cell_types, cellsVTK)
 
-        Parameters
-        ----------
-        tecFileName: Tecplot file name
+            cell_data = uGrid.GetCellData()  # This holds cell data
+            point_data = uGrid.GetPointData()  # This holds point data
 
-        Returns
-        -------
+            # add solutions
 
-        """
+            # column numbers for Vel_X and Vel_Y for vector assemble
+            nColVel_X = -1
+            nColVel_Y = -1
 
-        readerTEC = vtk.vtkTecplotReader()
-        readerTEC.SetFileName(tecFileName)
-        # 'update' the reader i.e. read the Tecplot data file
-        readerTEC.Update()
+            # First output all solution variables as scalars
+            print('The following solution variables are processed: \n')
+            for k in range(len(resultVarNames)):
+                print('     %s\n' % resultVarNames[k])
 
-        polydata = readerTEC.GetOutput()
+                #if it is a veloctiy component, only record its location
+                #not output to VTK by itself, will be assembed to vector.
+                if resultVarNames[k].find('Vel_X') != -1:
+                    nColVel_X = k
+                    continue
+                elif resultVarNames[k].find('Vel_Y') != -1:
+                    nColVel_Y = k
+                    continue
 
-        # print(polydata)  #this is a multibock dataset
-        # print(polydata.GetBlock(0))  #we only need the first block
+                if bNodal:
+                    temp_point_data_array = VN.numpy_to_vtk(resultData[:,k])
+                    temp_point_data_array.SetName(resultVarNames[k])
+                    point_data.AddArray(temp_point_data_array)
+                else:
+                    temp_cell_data_array = VN.numpy_to_vtk(resultData[:,k])
+                    temp_cell_data_array.SetName(resultVarNames[k])
+                    cell_data.AddArray(temp_cell_data_array)
 
-        # If there are no points in 'vtkPolyData' something went wrong
-        if polydata.GetBlock(0).GetNumberOfPoints() == 0:
-            raise ValueError(
-                "No point data could be loaded from '" + tecFileName)
-            return None
+            #add veloctiy by combining components
+            currentTimePointV = np.zeros((self.srhgeom_obj.numOfNodes, 3)) if bNodal else \
+                                np.zeros((self.srhgeom_obj.numOfElements,3))
+            currentTimePointV[:, 0] = resultData[:,nColVel_X]
+            currentTimePointV[:, 1] = resultData[:,nColVel_Y]
+            currentTimePointV[:, 2] = 0.0
 
-        #return of the first block (there should be only one block)
-        return polydata.GetBlock(0)
+            if bNodal:
+                temp_point_data_array = VN.numpy_to_vtk(currentTimePointV)
+                temp_point_data_array.SetName(velocityVarName)
+                point_data.AddArray(temp_point_data_array)
+            else:
+                temp_cell_data_array = VN.numpy_to_vtk(currentTimePointV)
+                temp_cell_data_array.SetName(velocityVarName)
+                cell_data.AddArray(temp_cell_data_array)
+
+            #add nodal bed elevation
+            currentBedElev = np.zeros(self.srhgeom_obj.numOfNodes) if bNodal else np.zeros(self.srhgeom_obj.numOfElements)
+
+            currentBedElev = self.srhgeom_obj.nodeCoordinates[:,2]
+
+            temp_point_data_array = VN.numpy_to_vtk(currentBedElev)
+            temp_point_data_array.SetName(bedElevationVarName)
+            point_data.AddArray(temp_point_data_array)
+
+            # write to vtk file
+            unstr_writer = vtk.vtkUnstructuredGridWriter()
+            unstr_writer.SetFileName(vtkFileName)
+            unstr_writer.SetInputData(uGrid)
+            unstr_writer.Write()
 
 
     def outputVTK(self, vtkFileName, resultVarNames, resultData, bNodal):
@@ -1115,6 +1152,56 @@ class SRH_2D_Data:
                 fid.write('\n \n')
 
         fid.close()
+
+    def readSRHFile(self, srhFileName):
+        """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
+
+        Note: SRH-2D outputs an extra "," to each line. As a result, Numpy's
+        genfromtext(...) function adds a column of "nan" to the end.
+
+        Returns
+        -------
+        variable names, variable data
+
+        """
+
+        print("Reading the SRH/SRHC result file ...")
+
+        data = np.genfromtxt(srhFileName, delimiter=',', names=True)
+
+        return data.dtype.names[:-1], data
+
+    def readTECFile(self, tecFileName):
+        """Read SRH-2D results in Tecplot format
+
+        Parameters
+        ----------
+        tecFileName: Tecplot file name
+
+        Returns
+        -------
+
+        """
+
+        readerTEC = vtk.vtkTecplotReader()
+        readerTEC.SetFileName(tecFileName)
+        # 'update' the reader i.e. read the Tecplot data file
+        readerTEC.Update()
+
+        polydata = readerTEC.GetOutput()
+
+        # print(polydata)  #this is a multibock dataset
+        # print(polydata.GetBlock(0))  #we only need the first block
+
+        # If there are no points in 'vtkPolyData' something went wrong
+        if polydata.GetBlock(0).GetNumberOfPoints() == 0:
+            raise ValueError(
+                "No point data could be loaded from '" + tecFileName)
+            return None
+
+        #return of the first block (there should be only one block)
+        return polydata.GetBlock(0)
+
 
     def cell_center_to_vertex(self, cell_data, vertex_data):
         """Interpolate result from cell center to vertex

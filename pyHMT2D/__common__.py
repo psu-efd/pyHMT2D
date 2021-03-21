@@ -1,6 +1,11 @@
 import numpy as np
 import h5py
 
+# maximum number of nodes for an element
+gMax_Nodes_per_Element = 8
+
+# maximum number of elements for a node
+gMax_Elements_per_Node = 10
 
 class HydraulicModel(object):
     """ Hydraulic model base class

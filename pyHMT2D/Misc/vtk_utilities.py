@@ -12,8 +12,20 @@ import vtk
 from vtk.util import numpy_support as VN
 
 import sys
+import os
+import copy
 
 import numpy as np
+
+# map from number of nodes to cell type in VTK (see VTK documentation)
+vtkCellTypeMap = {
+  3: 5,     # triangle
+  4: 9,     # quad
+  5: 7,     # poly
+  6: 7,
+  7: 7,
+  8: 7
+}
 
 class vtkHandler:
     """
@@ -344,7 +356,7 @@ class vtkHandler:
         return points, varProbedValues, elev
 
     def vtk_diff_consistent(self, vtkFileName1, vtkFileName2, vtkFileNameDiff,
-                            varName1, varName2, varNameDiff):
+                            varName1, varName2, varNameDiff, diffNodal=False):
         """ Calculate the difference of a variable in two VTK files with consistent Unstructured Grid.
 
         vrkNameDiff = vtkFileName1 - vtkFileName2
@@ -359,12 +371,21 @@ class vtkHandler:
         varName1: variable name in first VTK
         varName2: variable name in second VTK
         varNameDiff: variable name for the difference
-        (not implemented) diffNodal: whether varNameDiff should be calculated at node or cell center.
+        diffNodal: optional whether varNameDiff should be calculated at node or cell center. Default is cell center.
 
         Returns
         -------
 
         """
+
+        #check the vtk files' existance
+        if (not os.path.isfile(vtkFileName1)):
+            print("Vtk files 1", vtkFileName1, "does not exist. Exiting ...")
+            sys.exit()
+
+        if (not os.path.isfile(vtkFileName2)):
+            print("Vtk files 2", vtkFileName2, "does not exist. Exiting ...")
+            sys.exit()
 
         vtkFileReader1 = self.readVTK_UnstructuredGrid(vtkFileName1)
         vtkFileReader2 = self.readVTK_UnstructuredGrid(vtkFileName2)
@@ -385,27 +406,59 @@ class vtkHandler:
 
         print("pointDataNames, cellDataNames in first VTK file =", pointDataNames1, cellDataNames1)
 
-        if (not varName1 in cellDataNames1): #varName1 does not exist in VTK file1's cell data:
-            if (varName1 in pointDataNames1): #varName1 exists in VTK file1's point data; interpolate that to cell center
-                self.vtk_point_to_cell_interpolation(data1)
-            else:
-                print("varName1 does not exist in vtkFileName1's cell data or point data. Exiting...")
-                sys.exit()
+        if diffNodal: # if the intended diff is nodal
+            if (not varName1 in pointDataNames1):  # varName1 does not exist in VTK file1's point data:
+                if (varName1 in cellDataNames1):  # varName1 exists in VTK file1's cell data; interpolate that to node
+                    print("varName1 = ", varName1, "does not exist in the point data, but does in cell data. "
+                                                   "Thus, cell data will be interpolated to nodes.")
+
+                    self.vtk_cell_to_point_interpolation(data1)
+                else:
+                    print("varName1 = ", varName1, "does not exist in vtkFileName1's cell data or point data. Exiting...")
+                    sys.exit()
+        else:   #the intended diff is at cell center
+            if (not varName1 in cellDataNames1):  # varName1 does not exist in VTK file1's cell data:
+                if (varName1 in pointDataNames1):  # varName1 exists in VTK file1's point data; interpolate that to cell
+                    print("varName1 = ", varName1, "does not exist in the cell data, but does in point data. "
+                                                   "Thus, point data will be interpolated to cells.")
+
+                    self.vtk_point_to_cell_interpolation(data1)
+                else:
+                    print("varName1 = ", varName1,
+                          "does not exist in vtkFileName1's cell data or point data. Exiting...")
+                    sys.exit()
 
         pointDataNames2, cellDataNames2 = self.get_uGRid_all_field_names(data2)
 
         print("pointDataNames, cellDataNames in second VTK file =", pointDataNames2, cellDataNames2)
 
-        if (not varName2 in cellDataNames2):  # varName2 does not exist in VTK file1's cell data:
-            if (varName2 in pointDataNames2):  # varName1 exists in VTK file1's point data; interpolate that to cell center
-                self.vtk_point_to_cell_interpolation(data2)
-            else:
-                print("varName2 does not exist in vtkFileName2's cell data or point data. Exiting...")
-                sys.exit()
+        if diffNodal:  # if the intended diff is to be at nodal
+            if (not varName2 in pointDataNames2):  # varName2 does not exist in VTK file2's point data:
+                if (varName2 in pointDataNames2):  # varName2 exists in VTK file2's cell data; interpolate that to node
+                    print("varName2 = ", varName2, "does not exist in the point data, but does in cell data. "
+                                                   "Thus, cell data will be interpolated to nodes.")
 
+                    self.vtk_cell_to_point_interpolation(data2)
+                else:
+                    print("varName2 = ", varName2,
+                          "does not exist in vtkFileName2's cell data or point data. Exiting...")
+                    sys.exit()
+        else:  # the intended diff is at cell center
+            if (not varName2 in cellDataNames2):  # varName2 does not exist in VTK file2's cell data:
+                if (varName2 in pointDataNames2):  # varName2 exists in VTK file2's point data; interpolate that to cell
+                    print("varName2 = ", varName2, "does not exist in the cell data, but does in point data. "
+                                                   "Thus, point data will be interpolated to cells.")
 
-        varName1_data = VN.vtk_to_numpy(data1.GetCellData().GetArray(varName1))
-        varName2_data = VN.vtk_to_numpy(data2.GetCellData().GetArray(varName2))
+                    self.vtk_point_to_cell_interpolation(data2)
+                else:
+                    print("varName2 = ", varName2,
+                          "does not exist in vtkFileName2's cell data or point data. Exiting...")
+                    sys.exit()
+
+        varName1_data =      VN.vtk_to_numpy(data1.GetPointData().GetArray(varName1)) if diffNodal \
+                        else VN.vtk_to_numpy(data1.GetCellData().GetArray(varName1))
+        varName2_data =      VN.vtk_to_numpy(data2.GetPointData().GetArray(varName2)) if diffNodal \
+                        else VN.vtk_to_numpy(data2.GetCellData().GetArray(varName2))
 
         varDiff_data = varName1_data - varName2_data
 
@@ -413,7 +466,6 @@ class vtkHandler:
         varDiff_data_vtk.SetName(varNameDiff)
 
         #print(varDiff_data)
-
 
         #create a copy of the unstructured grid vtk
         uGrid = vtk.vtkUnstructuredGrid()
@@ -432,7 +484,10 @@ class vtkHandler:
             vtkCellData.RemoveArray(cellDataNames_temp[i])
 
         #add the diff field to the cell data
-        vtkCellData.AddArray(varDiff_data_vtk)
+        if diffNodal:
+            vtkPointData.AddArray(varDiff_data_vtk)
+        else:
+            vtkCellData.AddArray(varDiff_data_vtk)
 
         # write out the diff result to vtk
         self.writeVTK_UnstructuredGrid(uGrid, vtkFileNameDiff)
@@ -504,8 +559,6 @@ class vtkHandler:
         for i in range(pointdata.GetNumberOfArrays()):
             uGridPointData.AddArray(pointdata.GetArray(i))
 
-
-
     def vtk_point_to_cell_interpolation(self, uGrid, varName=''):
         """Interpolate all point data to cell in an unstructured grid
 
@@ -545,4 +598,29 @@ class vtkHandler:
         for i in range(celldata.GetNumberOfArrays()):
             uGridCellData.AddArray(celldata.GetArray(i))
 
+
+    def number_of_nodes_to_vtk_celltypes(self, input_array):
+        """ convert a numpy array with the number of points to an array of VTK cell types
+
+        Returns
+        -------
+
+        """
+
+        k = np.array(list(vtkCellTypeMap.keys()))
+        v = np.array(list(vtkCellTypeMap.values()))
+
+        #print(k)
+        #print(v)
+
+        #input_array = np.array([3, 5, 6])
+
+        mapping_ar = np.zeros(k.max() + 1, dtype=v.dtype)
+        mapping_ar[k] = v
+        #output_array = copy.deepcopy(mapping_ar[input_array])
+
+        #print("intput_array", input_array)
+        #print("output_array", output_array)
+
+        return mapping_ar[input_array]
 
