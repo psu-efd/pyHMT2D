@@ -411,6 +411,9 @@ class SRH_2D_SRHGeom:
         nodeCount = 0
         nodeStringCound = 0
 
+        # nodeString could be long enough to have more than one line. Use this to record the current nodeString during reading.
+        currentNodeStringID = -1
+
         while True:
             count += 1
 
@@ -443,6 +446,14 @@ class SRH_2D_SRHGeom:
                 elif search[0] == "NodeString":
                     nodeStringCound += 1
                     self.nodeStringsDict[int(search[1])] = [int(i) for i in search[2:]]
+                    currentNodeStringID = int(search[1])
+                elif ("SRHGEOM".lower() not in search[0].lower()) and \
+                     ("Name".lower() not in search[0].lower()) and \
+                     ("Grid".lower() not in search[0].lower()): #assume this is still nodeString
+                    node_list = self.nodeStringsDict[currentNodeStringID]
+                    for i in search:
+                        node_list.append(int(i))
+                    self.nodeStringsDict[currentNodeStringID] = node_list
 
         srhgeomfile.close()
 
@@ -484,6 +495,8 @@ class SRH_2D_SRHGeom:
         -------
 
         """
+
+        print("Building mesh's node, elements, and topology ...")
 
         #create an emptp list of lists for all nodes
         self.nodeElementsList = [[] for _ in range(self.numOfNodes)]
@@ -603,35 +616,31 @@ class SRH_2D_SRHGeom:
         self.boundaryEdges[defaultWallNodeStringID] = unusedBoundaryEdgeList
 
         #debug
-        if True:
+        if False:
             print("edges", self.edges)
             print("edgeElements",self.edgeElements)
             print("allBoundaryEdgeIDs",self.allBoundaryEdgeIDs)
             print("boundaryEdges", self.boundaryEdges)
 
-    def extrude_to_3D(self, nlayers, layerHeights, mshFileName, dir=''):
+    def extrude_to_3D(self, layerHeights, mshFileName, bTerrainFollowing=False, dir=''):
         """ Extrude the 2D mesh to 3D with layers
 
         When extruded: node -> line, edge -> face, 2D element-> volume, boundary line -> boundary face
 
-        #node data
-        self.numOfNodes
-        self.nodeCoordinates
-        self.nodeElementsCount
-        self.nodeElementsList
 
-        #element data
-        self.numOfElements
-        self.elementNodesCount
-        self.elementNodesList
-        self.elementBedElevation
 
-        #edge data
-        self.edges  #dictionary: {edgeID: [node1, node2]}
-        self.edgeElements  #dictionary: {edgeID: [element list]}
-        self.boundaryEdges #dictionary: {boundaryID: [list of edge IDs]}
-        self.allBoundaryEdgeIDs #list of all boundary edge IDs (all lumped to one list)
-        self.numOfNodeStrings
+        Also writes to a GMSH MSH file. Tried MSH version 4. But it seems too complicated (entities etc.). They are not
+        necessary for our purpose. Therefore, we will stick with version 2 and OpenFOAM takes this version well.
+        https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
+
+        Attributes
+        -------
+        layerHeights: a list with strictly increasing heights for the layers. If bTerrainFollowing is True, only
+                      the last value is used as the top elevation.
+        mshFileName: name of the GMSH MSH file to be written
+        bTerrainFollowing: whether to follow the terrain. If False, the bottom will be at z = 0, and the layer heights
+                           are specified in layerHeights. If True, the bottom will key the terrain elevation, the top
+                           will be at layerHeights[-1] and interpolation inbetween.
 
         Returns
         -------
@@ -650,21 +659,44 @@ class SRH_2D_SRHGeom:
         number_of_prism = 0 #number of prism in the extruded 3D mesh
         number_of_hex = 0 #number of hex in the extruded 3D mesh
 
+        #some sanity check nlayers and layerHeights
+        nlayers = len(layerHeights)
+
+        if nlayers == 0:
+            print("layerHeight is empty. Check. Exiting ...")
+            sys.exit()
+
+        #check the values in the list layerHeights are strictly increasing
+        bHeighIncreasing = all(i < j for i, j in zip(layerHeights, layerHeights[1:]))
+
+        if not bHeighIncreasing:
+            print("Values in layerHeight is not strictly increasing. Check. Exiting ...")
+            sys.exit()
+
         allBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
 
         #create all nodes
         #1. add the original nodes in 2D mesh
         for nodeI in range(self.nodeCoordinates.shape[0]):
-            allNodes[nodeI] = self.nodeCoordinates[nodeI,:]
-            allNodes[nodeI][2] = 0.0  #make the 2D mesh flat
+            if bTerrainFollowing:
+                allNodes[nodeI] = self.nodeCoordinates[nodeI,:]
+            else:
+                allNodes[nodeI] = self.nodeCoordinates[nodeI, :]
+                allNodes[nodeI][2] = 0.0  # make the 2D mesh flat
 
         #2. add the extruded nodes
         for layerI in range (1, nlayers+1):
             for nodeI in range(self.nodeCoordinates.shape[0]):
-                # make the original 2D mesh flat; only add the layer height
-                allNodes[nodeI + layerI*self.numOfNodes] = np.array([self.nodeCoordinates[nodeI,0],
-                                                                     self.nodeCoordinates[nodeI,1],
-                                                                     layerHeights[layerI-1]])
+                if bTerrainFollowing: #interpolation between bottom elevation and the top elevation in layerHeights[-1]
+                    elev = allNodes[nodeI][2] + (layerHeights[-1] - allNodes[nodeI][2])/nlayers*layerI
+                    allNodes[nodeI + layerI * self.numOfNodes] = np.array([self.nodeCoordinates[nodeI, 0],
+                                                                           self.nodeCoordinates[nodeI, 1],
+                                                                           elev])
+                else:
+                    # make the original 2D mesh flat; only add the layer height
+                    allNodes[nodeI + layerI*self.numOfNodes] = np.array([self.nodeCoordinates[nodeI,0],
+                                                                         self.nodeCoordinates[nodeI,1],
+                                                                         layerHeights[layerI-1]])
 
         #create all cells
 
@@ -726,6 +758,7 @@ class SRH_2D_SRHGeom:
             allBoundaryFaces[boundaryID] = faceList
 
         #write to GMSH MSH file
+
         if dir!='':
             mshFileName_base = dir + '/' + mshFileName
         else:
@@ -733,11 +766,11 @@ class SRH_2D_SRHGeom:
         print("Write to GMESH MSH file with name = ", mshFileName_base)
 
 
-        fid = open(mshFileName, 'w')
+        fid = open(mshFileName_base, 'w')
 
         #write MeshFormat
         fid.write("$MeshFormat\n")
-        fid.write("4.1 0 8\n")
+        fid.write("2.1 0 8\n")
         fid.write("$EndMeshFormat\n")
 
         #write PhysicalNames:
@@ -755,57 +788,22 @@ class SRH_2D_SRHGeom:
 
         fid.write("$EndPhysicalNames\n")
 
-        #write Entities
-        #1. create point and curve entities for the bounding box
-        xmin = self.twoDMeshBoundingbox[0]
-        xmax = self.twoDMeshBoundingbox[3]
-        ymin = self.twoDMeshBoundingbox[1]
-        ymax = self.twoDMeshBoundingbox[4]
-        zmin = 0.0
-        zmax = layerHeights[-1]
-
-        #2. add surface and volume entities
-        fid.write("$Entities\n")
-
-        fid.write("0 0 %d 1\n" % (len(allBoundaryFaces)))   #numPoints, numCurves, numSurfaces, numVolumes
-
-        #surface entities for boundaries
-        for boundaryID in allBoundaryFaces:
-            #surfaceTag, minX, minY, minZ, maxX, maxY, maxZ, numPhysicalTags, physicalTags ...
-            #numBoundingCurves, curveTags ...
-            fid.write("%d %f %f %f %f %f %f 1 %d 0\n" % (boundaryID, xmin, ymin, zmin, xmax, ymax, zmax, boundaryID))
-
-        #volume entities for volumes (only one volume for now)
-        #volumeTag, minX, minY, minZ, maxX, maxY, maxZ, numPhysicalTags, physicalTags ...
-        #numBoundngSurfaces, surfaceTags ...
-        fid.write("1 %f %f %f %f %f %f 1 %d 0\n" % (xmin, ymin, zmin, xmax, ymax, zmax, len(allBoundaryFaces)+1))
-
-        fid.write("$EndEntities\n")
-
         #write Nodes
         fid.write("$Nodes\n")
         #total_num_nodes = (nlayers+1)*self.numOfNodes
         total_num_nodes = len(allNodes)
 
-        fid.write("1 %d 1 %d\n" % (total_num_nodes, total_num_nodes))  #all nodes in one entity: numEntityBlocks, numNodes, minNodeTag, maxNodeTag(size_t)
-
-        fid.write("0 1 0 %d\n" % total_num_nodes) #entityDim, entityTag, parametric, numNodesInBlock
-
-        #output node tags
-        for nodeI in allNodes:
-            fid.write("%d\n" % (nodeI+1))  #GMSH is 1-based
+        fid.write("%d\n" % total_num_nodes)
 
         #output node coordinates
         for nodeI in allNodes:
-            fid.write("%d %d %d\n" %(allNodes[nodeI][0], allNodes[nodeI][1], allNodes[nodeI][2]))
+            #GMSH is 1-based
+            fid.write("%d %f %f %f\n" %(nodeI+1, allNodes[nodeI][0], allNodes[nodeI][1], allNodes[nodeI][2]))
 
         fid.write("$EndNodes\n")
 
         #write Elements (boundary conditions and volume)
-        #  numEntityBlocks = number of boundaries + number of volume
         #  numElements = number of all faces in all boundaries + number of cells in all volumes
-        #  minElementTag = 1
-        #  maxElementTag = numElements
 
         elementTag_counter = 0 #count the number of elements
 
@@ -815,57 +813,40 @@ class SRH_2D_SRHGeom:
             print("There is on hex or prism, the only supported cell types, in the extruded 3D mesh. Check the mesh. Exiting ...")
             sys.exit()
 
-        if (number_of_hex == 0) or (number_of_prism == 0):
-            fid.write("%d %d 1 %d\n" % (len(allBoundaryFaces)+1, len(self.allBoundaryEdgeIDs)*(nlayers+1) + number_of_hex + number_of_prism,
-                                  len(self.allBoundaryEdgeIDs)*(nlayers+1) + len(allCells)))
-        else:
-            fid.write("%d %d 1 %d\n" % (len(allBoundaryFaces) + 2, len(self.allBoundaryEdgeIDs) * (nlayers + 1) + number_of_hex + number_of_prism,
-                                  len(self.allBoundaryEdgeIDs) * (nlayers + 1) + number_of_hex + number_of_prism))
+        #output total number of elements
+        fid.write("%d \n" % (len(self.allBoundaryEdgeIDs)*nlayers + number_of_hex + number_of_prism))
 
         #loop through all boundaries
         for boundaryID in allBoundaryFaces:
-            fid.write("2 %d 3 %d\n" % (boundaryID, len(allBoundaryFaces[boundaryID])))  #entityDim(2-surface)
-                                                                                        #entityTag
-                                                                                        #elementType(3-quad)
-                                                                                        #numElementsInBlock: number of quad faces in current boundary
-
-            #output each quad face's tag (ID) and node list
+            #output each quad face's
             for faceID in range(len(allBoundaryFaces[boundaryID])):
                 elementTag_counter += 1
-                fid.write("%d %d %d %d %d\n" % (elementTag_counter, allBoundaryFaces[boundaryID][faceID][0],
+                fid.write("%d 3 1 %d %d %d %d %d\n" % (elementTag_counter, boundaryID, allBoundaryFaces[boundaryID][faceID][0],
                                     allBoundaryFaces[boundaryID][faceID][1], allBoundaryFaces[boundaryID][faceID][2],
                                     allBoundaryFaces[boundaryID][faceID][3]))
 
         #output the volume's tag and node list. Hex and prism need to be seperate
         #1.Hex
         if number_of_hex > 0:
-            fid.write("3 1 5 %d\n" % (number_of_hex))  #entityDim(3-volume)
-                                                     #entityTag
-                                                     #elementType(5-hex)
-                                                     #numElementsInBlock: number of hex in current volume
-
             #loop through all cells in the volume
             for cellID in allCells:
-                elementTag_counter += 1
                 if allCells[cellID][0] == MSHHEX:
-                    fid.write("%d %d %d %d %d %d %d %d %d\n" % (elementTag_counter, allCells[cellID][1][0], allCells[cellID][1][1],
+                    elementTag_counter += 1
+                    fid.write("%d 5 1 %d %d %d %d %d %d %d %d %d\n" % (elementTag_counter, len(allBoundaryFaces)+1,
+                                                                       allCells[cellID][1][0], allCells[cellID][1][1],
                                             allCells[cellID][1][2], allCells[cellID][1][3], allCells[cellID][1][4],
                                             allCells[cellID][1][5], allCells[cellID][1][6], allCells[cellID][1][7]))
 
         #2. prism
-        elif number_of_prism > 0:
-            fid.write("3 1 6 %d\n" % (number_of_prism))  #entityDim(3-volume)
-                                                       #entityTag
-                                                       #elementType(6-prism)
-                                                       #numElementsInBlock: number of prism in current volume
-
+        if number_of_prism > 0:
             #loop through all cells in the volume
             for cellID in allCells:
-                elementTag_counter += 1
                 if allCells[cellID][0] == MSHPRISM:
-                    fid.write("%d %d %d %d %d %d %d\n" % (elementTag_counter, allCells[cellID][1][0], allCells[cellID][1][1],
-                                                        allCells[cellID][1][2], allCells[cellID][1][3],
-                                                        allCells[cellID][1][4], allCells[cellID][1][5]))
+                    elementTag_counter += 1
+                    fid.write("%d 6 1 %d %d %d %d %d %d %d\n" % (elementTag_counter, len(allBoundaryFaces)+1,
+                                                                 allCells[cellID][1][0], allCells[cellID][1][1],
+                                                                 allCells[cellID][1][2], allCells[cellID][1][3],
+                                                                 allCells[cellID][1][4], allCells[cellID][1][5]))
 
         fid.write("$EndElements")
 
@@ -1044,7 +1025,7 @@ class SRH_2D_SRHMat:
 
         #convert material ID from str to int
         for zoneID, cellList in res_Materials.items():
-            print("cellList ", cellList)
+            #print("cellList ", cellList)
             temp_list = [int(i) for i in cellList]
             res_Materials[zoneID] = temp_list
 
