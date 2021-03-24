@@ -289,6 +289,9 @@ class SRH_2D_SRHGeom:
         # each node's 3D coordinates
         self.nodeCoordinates = np.zeros([self.numOfNodes, 3], dtype=np.float64)
 
+        # twoD mesh's boundingBox: [xmin, ymin, zmin, xmax, ymax, zmax]
+        self.twoDMeshBoundingbox = []
+
         # each element (cell)'s bed elevation (z)
         self.elementBedElevation = np.zeros(self.numOfElements, dtype=np.float64)
 
@@ -307,6 +310,23 @@ class SRH_2D_SRHGeom:
 
         # build the element list for each node
         self.buildNodeElements()
+
+        #edges (connecting two nodes). Not using "faces" because they are lines. When 2D mesh is extruded to 3D,
+        #these lines will become faces.
+        self.edges = {} #dictionary: {[node1, node2]: edgeID}
+        self.edges_r = {} #dictionary: {edgeID: [node1, node2]}  #revise of self.edges
+
+        self.edgeElements = {} #dictionary: {edgeID: [element list]}. Here since one edge can be shared by two
+                               #elements at the most, the element list's length is either 1 or 2
+
+        #edges each boundary (nodeString). boundaryID = nodeString ID
+        self.boundaryEdges = {} #dictionary: {boundaryID: [list of edge IDs]}
+
+        #list of all boundary edge IDs (all lumped to one list)
+        self.allBoundaryEdgeIDs = []
+
+        #build "lines" and "boundaryLines" dictionaries. SRH-2D has no such information in SRHGEOM. We need to build it.
+        self.buildEdgesAndBoundaryEdges()
 
 
     def getNumOfElementsNodes(self):
@@ -411,7 +431,7 @@ class SRH_2D_SRHGeom:
                 if search[0] == "Elem":
                     elemCount += 1
                     # print("Elem # %d: %s" % (elemCount, line))
-                    self.elementNodesList[elemCount - 1][0:len(search[2:])] = search[2:]
+                    self.elementNodesList[elemCount - 1][0:len(search[2:])] = [int(i) for i in search[2:]]
                     self.elementNodesCount[elemCount - 1] = len(search[2:])
                     if len(search[2:]) < 1 or len(search[2:]) > gMax_Nodes_per_Element:
                         sys.exit("Number of nodes for element %d is less than 1 or larger than the max of %d." % (elemCount,gMax_Nodes_per_Element))
@@ -419,10 +439,10 @@ class SRH_2D_SRHGeom:
                 elif search[0] == "Node":
                     nodeCount += 1
                     # print("Node # %d: %s" % (nodeCount, line))
-                    self.nodeCoordinates[nodeCount - 1] = search[2:]
+                    self.nodeCoordinates[nodeCount - 1] = [float(i) for i in search[2:]]
                 elif search[0] == "NodeString":
                     nodeStringCound += 1
-                    self.nodeStringsDict[search[1]] = search[2:]
+                    self.nodeStringsDict[int(search[1])] = [int(i) for i in search[2:]]
 
         srhgeomfile.close()
 
@@ -436,6 +456,18 @@ class SRH_2D_SRHGeom:
                 elev_temp += self.nodeCoordinates[self.elementNodesList[cellI][nodeI]-1,2]  #z elevation; nodeI-1 because node number is 1-based for SRH-2D
 
             self.elementBedElevation[cellI] = elev_temp / self.elementNodesCount[cellI]
+
+        #calculate the 2D mesh's bounding box
+        xmin = np.min(self.nodeCoordinates[:,0])
+        ymin = np.min(self.nodeCoordinates[:,1])
+        zmin = np.min(self.nodeCoordinates[:,2])
+        xmax = np.max(self.nodeCoordinates[:,0])
+        ymax = np.max(self.nodeCoordinates[:,1])
+        zmax = np.max(self.nodeCoordinates[:,2])
+
+        self.twoDMeshBoundingbox = [xmin, ymin, zmin, xmax, ymax, zmax]
+
+        print("2D mesh's bounding box = ", self.twoDMeshBoundingbox)
 
         if False:
             print("elementNodesList = ", self.elementNodesList)
@@ -471,6 +503,455 @@ class SRH_2D_SRHGeom:
 
         #print("nodeElementsCount = ", self.nodeElementsCount)
         #print("nodeElementsList = ", self.nodeElementsList)
+
+    def buildEdgesAndBoundaryEdges(self):
+        """ Build edges and boundaryEdges dictionaries
+
+        Returns
+        -------
+
+        """
+
+        current_edgeID = 1  #note: SRH-2D is 1-based.
+
+        #loop over all elements
+        for cellI in range(self.numOfElements):
+            # loop over all edges of current element
+            for i in range(self.elementNodesCount[cellI]):
+                # get the node ID of current and next nodes
+                # connecting current edge
+
+                nodeID_1 = 0
+                nodeID_2 = 0
+
+                if i != (self.elementNodesCount[cellI]-1):  #if not the last edge
+                    nodeID_1 = self.elementNodesList[cellI][i]
+                    nodeID_2 = self.elementNodesList[cellI][i+1]
+                else:                                      #if the last edge
+                    nodeID_1 = self.elementNodesList[cellI][i]
+                    nodeID_2 = self.elementNodesList[cellI][0]
+
+                curr_edge_node_IDs = tuple(sorted([nodeID_1, nodeID_2]))
+
+                #check whether the current edge is in the edges dictionary or not
+                if curr_edge_node_IDs not in self.edges:  #if no, added a new edge
+                    self.edges[curr_edge_node_IDs] = current_edgeID
+                    self.edges_r[current_edgeID] = curr_edge_node_IDs
+
+                    #add the new edge to edgeElements dictionary too
+                    self.edgeElements[current_edgeID] = [cellI+1]  #+1 because SRH-2D is 1-based
+
+                    current_edgeID += 1
+                else: # if yes, neighbor element already has that edge and no need to do anything, but need to add
+                      # the current element to edgeElements list
+
+                    #get the existing edge's ID
+                    existingEdgeID = self.edges[curr_edge_node_IDs]
+
+                    #in this case, there should be one and only one element in the list
+                    assert len(self.edgeElements[existingEdgeID]) == 1
+
+                    self.edgeElements[existingEdgeID].append(cellI+1) #+1 because SRH-2D is 1-based
+
+
+        #build the allBoundaryEdgeIDs list: boundary edges are those with only one element
+        #loop over all edges in the mesh
+        for edge in self.edgeElements:
+            if len(self.edgeElements[edge]) == 1:
+                self.allBoundaryEdgeIDs.append(edge)
+
+        #list to flag whether a boundary edge in self.allBoundaryEdgeIDs is used or not
+        #if not, it is a default boundary (wall)
+        allBoundaryEdgeUsageFlag = {}
+        for boundaryEdgeID in self.allBoundaryEdgeIDs:
+            allBoundaryEdgeUsageFlag[boundaryEdgeID] = False
+
+        #now all edges are built, we check the boundary edges
+        #loop through all boundaries (not all NodeStrings are boundaries; need to check this).
+        for nodeString in self.nodeStringsDict:
+            #list of nodes in current nodeString
+            nodeString_nodeList = self.nodeStringsDict[nodeString]
+
+            current_boundary_edge_list = []
+
+            #loop through all edges in current boundary
+            for i in range(len(nodeString_nodeList)-1):
+                nodeID_1 = nodeString_nodeList[i]
+                nodeID_2 = nodeString_nodeList[i + 1]
+
+                curr_edge_node_IDs = tuple(sorted([nodeID_1, nodeID_2]))
+
+                #check whether the edge is in the edge list. If not, we got a problem.
+                if curr_edge_node_IDs not in self.edges:
+                    print("Boundary edge ", curr_edge_node_IDs, "in NodeString", nodeString, "can not be found in edge list. Mesh is wrong. Exiting...")
+                    sys.exit()
+
+                current_boundary_edge_list.append(self.edges[curr_edge_node_IDs])
+
+                allBoundaryEdgeUsageFlag[self.edges[curr_edge_node_IDs]] = True
+
+            self.boundaryEdges[nodeString] = current_boundary_edge_list
+
+        #build default boundary as wall (in SMS, the default boundary is not exported in SRHGEOM)
+        #boundary edges are those who is used only by one element.
+        unusedBoundaryEdgeList = []
+        for boundaryEdgeID in self.allBoundaryEdgeIDs:
+            if not allBoundaryEdgeUsageFlag[boundaryEdgeID]: #if not used
+                unusedBoundaryEdgeList.append(boundaryEdgeID)
+
+        defaultWallNodeStringID = self.numOfNodeStrings+1   #nodeString ID for default boundary
+        self.boundaryEdges[defaultWallNodeStringID] = unusedBoundaryEdgeList
+
+        #debug
+        if True:
+            print("edges", self.edges)
+            print("edgeElements",self.edgeElements)
+            print("allBoundaryEdgeIDs",self.allBoundaryEdgeIDs)
+            print("boundaryEdges", self.boundaryEdges)
+
+    def extrude_to_3D(self, nlayers, layerHeights, mshFileName, dir=''):
+        """ Extrude the 2D mesh to 3D with layers
+
+        When extruded: node -> line, edge -> face, 2D element-> volume, boundary line -> boundary face
+
+        #node data
+        self.numOfNodes
+        self.nodeCoordinates
+        self.nodeElementsCount
+        self.nodeElementsList
+
+        #element data
+        self.numOfElements
+        self.elementNodesCount
+        self.elementNodesList
+        self.elementBedElevation
+
+        #edge data
+        self.edges  #dictionary: {edgeID: [node1, node2]}
+        self.edgeElements  #dictionary: {edgeID: [element list]}
+        self.boundaryEdges #dictionary: {boundaryID: [list of edge IDs]}
+        self.allBoundaryEdgeIDs #list of all boundary edge IDs (all lumped to one list)
+        self.numOfNodeStrings
+
+        Returns
+        -------
+
+        """
+
+        #GMSH element type code
+        MSHTRI = 2  # 3-node triangle
+        MSHQUAD = 3  # 4-node quadrilateral
+
+        MSHHEX = 5  # 8-node hexahedron
+        MSHPRISM = 6  # 6-node prism
+
+        allNodes = {}   #dict: {nodeID: [x,y,z]}
+        allCells = {}   #dict: {cellID: [cell_type, [list of nodes]]}
+        number_of_prism = 0 #number of prism in the extruded 3D mesh
+        number_of_hex = 0 #number of hex in the extruded 3D mesh
+
+        allBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
+
+        #create all nodes
+        #1. add the original nodes in 2D mesh
+        for nodeI in range(self.nodeCoordinates.shape[0]):
+            allNodes[nodeI] = self.nodeCoordinates[nodeI,:]
+            allNodes[nodeI][2] = 0.0  #make the 2D mesh flat
+
+        #2. add the extruded nodes
+        for layerI in range (1, nlayers+1):
+            for nodeI in range(self.nodeCoordinates.shape[0]):
+                # make the original 2D mesh flat; only add the layer height
+                allNodes[nodeI + layerI*self.numOfNodes] = np.array([self.nodeCoordinates[nodeI,0],
+                                                                     self.nodeCoordinates[nodeI,1],
+                                                                     layerHeights[layerI-1]])
+
+        #create all cells
+
+        cellID = 0
+
+        #layer by layer
+        for layerI in range(1, nlayers+1):
+            #loop through each element in 2D mesh
+            for elementI in range(self.numOfElements):
+
+                if self.elementNodesCount[elementI] == 3: #triangle -> prism
+                    cell_type = MSHPRISM
+                    number_of_prism += 1
+                elif self.elementNodesCount[elementI] == 4: #quad -> hex
+                    cell_type = MSHHEX
+                    number_of_hex += 1
+
+                cellID += 1
+
+                cell_list = []
+
+                #loop over all nodes of the current elment in 2D mesh (at current layer's bottom)
+                for nodeI in range(self.elementNodesCount[elementI]):
+                    cell_list.append(self.elementNodesList[elementI, nodeI] + (layerI-1)*self.numOfNodes)
+
+                #now add the nodes at current layer's top.
+                for nodeI in range(self.elementNodesCount[elementI]):
+                    cell_list.append(self.elementNodesList[elementI, nodeI] + layerI*self.numOfNodes)
+
+                allCells[cellID] = [cell_type, cell_list]
+
+
+        #create all boundaries
+
+        #allBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
+
+        #loop through all boundary lines (nodeStrings) in 2D mesh
+        for boundaryID in self.boundaryEdges:
+
+            #list of all faces for current boundary
+            #each face is a list four nodes (quad because we extrude a line in vertical direction)
+            faceList = []
+
+            #loop through all edges of current boundary
+            for edgeID in self.boundaryEdges[boundaryID]:
+                nodeID_1 = self.edges_r[edgeID][0]
+                nodeID_2 = self.edges_r[edgeID][1]
+
+                #loop through all layers
+                for layerI in range(1, nlayers + 1):
+                    #add the four nodes to the current face (ordered)
+                    curFace = [nodeID_1+(layerI-1)*self.numOfNodes, nodeID_1+layerI*self.numOfNodes,
+                               nodeID_2+ layerI*self.numOfNodes, nodeID_2+(layerI-1)*self.numOfNodes]
+
+                    #add the current face to the faceList for current boundary
+                    faceList.append(curFace)
+
+            #now we have all faces in the current boundary
+            allBoundaryFaces[boundaryID] = faceList
+
+        #write to GMSH MSH file
+        if dir!='':
+            mshFileName_base = dir + '/' + mshFileName
+        else:
+            mshFileName_base = mshFileName
+        print("Write to GMESH MSH file with name = ", mshFileName_base)
+
+
+        fid = open(mshFileName, 'w')
+
+        #write MeshFormat
+        fid.write("$MeshFormat\n")
+        fid.write("4.1 0 8\n")
+        fid.write("$EndMeshFormat\n")
+
+        #write PhysicalNames:
+        fid.write("$PhysicalNames\n")
+        fid.write("%d\n" % (len(allBoundaryFaces)+1))   #need to output all boundaries and the volume
+
+        #loop through all boundaries
+        for boundaryID in allBoundaryFaces:
+            boundary_name = "boundary_"+str(boundaryID)   #need to read srhhydro to get their real names (TODO)
+            fid.write("2 %d \"%s\"\n" % (boundaryID, boundary_name))  #dimension, physicalTag, name
+
+        #output the volume
+        volume_name = "channel"  #just a generic name for the volume
+        fid.write("3 %d \"%s\"\n" % (len(allBoundaryFaces)+1, volume_name))
+
+        fid.write("$EndPhysicalNames\n")
+
+        #write Entities
+        #1. create point and curve entities for the bounding box
+        xmin = self.twoDMeshBoundingbox[0]
+        xmax = self.twoDMeshBoundingbox[3]
+        ymin = self.twoDMeshBoundingbox[1]
+        ymax = self.twoDMeshBoundingbox[4]
+        zmin = 0.0
+        zmax = layerHeights[-1]
+
+        #2. add surface and volume entities
+        fid.write("$Entities\n")
+
+        fid.write("0 0 %d 1\n" % (len(allBoundaryFaces)))   #numPoints, numCurves, numSurfaces, numVolumes
+
+        #surface entities for boundaries
+        for boundaryID in allBoundaryFaces:
+            #surfaceTag, minX, minY, minZ, maxX, maxY, maxZ, numPhysicalTags, physicalTags ...
+            #numBoundingCurves, curveTags ...
+            fid.write("%d %f %f %f %f %f %f 1 %d 0\n" % (boundaryID, xmin, ymin, zmin, xmax, ymax, zmax, boundaryID))
+
+        #volume entities for volumes (only one volume for now)
+        #volumeTag, minX, minY, minZ, maxX, maxY, maxZ, numPhysicalTags, physicalTags ...
+        #numBoundngSurfaces, surfaceTags ...
+        fid.write("1 %f %f %f %f %f %f 1 %d 0\n" % (xmin, ymin, zmin, xmax, ymax, zmax, len(allBoundaryFaces)+1))
+
+        fid.write("$EndEntities\n")
+
+        #write Nodes
+        fid.write("$Nodes\n")
+        #total_num_nodes = (nlayers+1)*self.numOfNodes
+        total_num_nodes = len(allNodes)
+
+        fid.write("1 %d 1 %d\n" % (total_num_nodes, total_num_nodes))  #all nodes in one entity: numEntityBlocks, numNodes, minNodeTag, maxNodeTag(size_t)
+
+        fid.write("0 1 0 %d\n" % total_num_nodes) #entityDim, entityTag, parametric, numNodesInBlock
+
+        #output node tags
+        for nodeI in allNodes:
+            fid.write("%d\n" % (nodeI+1))  #GMSH is 1-based
+
+        #output node coordinates
+        for nodeI in allNodes:
+            fid.write("%d %d %d\n" %(allNodes[nodeI][0], allNodes[nodeI][1], allNodes[nodeI][2]))
+
+        fid.write("$EndNodes\n")
+
+        #write Elements (boundary conditions and volume)
+        #  numEntityBlocks = number of boundaries + number of volume
+        #  numElements = number of all faces in all boundaries + number of cells in all volumes
+        #  minElementTag = 1
+        #  maxElementTag = numElements
+
+        elementTag_counter = 0 #count the number of elements
+
+        fid.write("$Elements\n")
+
+        if (number_of_hex == 0) and (number_of_prism == 0):
+            print("There is on hex or prism, the only supported cell types, in the extruded 3D mesh. Check the mesh. Exiting ...")
+            sys.exit()
+
+        if (number_of_hex == 0) or (number_of_prism == 0):
+            fid.write("%d %d 1 %d\n" % (len(allBoundaryFaces)+1, len(self.allBoundaryEdgeIDs)*(nlayers+1) + number_of_hex + number_of_prism,
+                                  len(self.allBoundaryEdgeIDs)*(nlayers+1) + len(allCells)))
+        else:
+            fid.write("%d %d 1 %d\n" % (len(allBoundaryFaces) + 2, len(self.allBoundaryEdgeIDs) * (nlayers + 1) + number_of_hex + number_of_prism,
+                                  len(self.allBoundaryEdgeIDs) * (nlayers + 1) + number_of_hex + number_of_prism))
+
+        #loop through all boundaries
+        for boundaryID in allBoundaryFaces:
+            fid.write("2 %d 3 %d\n" % (boundaryID, len(allBoundaryFaces[boundaryID])))  #entityDim(2-surface)
+                                                                                        #entityTag
+                                                                                        #elementType(3-quad)
+                                                                                        #numElementsInBlock: number of quad faces in current boundary
+
+            #output each quad face's tag (ID) and node list
+            for faceID in range(len(allBoundaryFaces[boundaryID])):
+                elementTag_counter += 1
+                fid.write("%d %d %d %d %d\n" % (elementTag_counter, allBoundaryFaces[boundaryID][faceID][0],
+                                    allBoundaryFaces[boundaryID][faceID][1], allBoundaryFaces[boundaryID][faceID][2],
+                                    allBoundaryFaces[boundaryID][faceID][3]))
+
+        #output the volume's tag and node list. Hex and prism need to be seperate
+        #1.Hex
+        if number_of_hex > 0:
+            fid.write("3 1 5 %d\n" % (number_of_hex))  #entityDim(3-volume)
+                                                     #entityTag
+                                                     #elementType(5-hex)
+                                                     #numElementsInBlock: number of hex in current volume
+
+            #loop through all cells in the volume
+            for cellID in allCells:
+                elementTag_counter += 1
+                if allCells[cellID][0] == MSHHEX:
+                    fid.write("%d %d %d %d %d %d %d %d %d\n" % (elementTag_counter, allCells[cellID][1][0], allCells[cellID][1][1],
+                                            allCells[cellID][1][2], allCells[cellID][1][3], allCells[cellID][1][4],
+                                            allCells[cellID][1][5], allCells[cellID][1][6], allCells[cellID][1][7]))
+
+        #2. prism
+        elif number_of_prism > 0:
+            fid.write("3 1 6 %d\n" % (number_of_prism))  #entityDim(3-volume)
+                                                       #entityTag
+                                                       #elementType(6-prism)
+                                                       #numElementsInBlock: number of prism in current volume
+
+            #loop through all cells in the volume
+            for cellID in allCells:
+                elementTag_counter += 1
+                if allCells[cellID][0] == MSHPRISM:
+                    fid.write("%d %d %d %d %d %d %d\n" % (elementTag_counter, allCells[cellID][1][0], allCells[cellID][1][1],
+                                                        allCells[cellID][1][2], allCells[cellID][1][3],
+                                                        allCells[cellID][1][4], allCells[cellID][1][5]))
+
+        fid.write("$EndElements")
+
+        fid.close()
+
+
+    def output_flat_mesh_to_vtk(self,flatMeshVTKFileName, dir=''):
+        """output the flat 2D mesh to vtk (z=0 for all coordinates)
+
+        Returns
+        -------
+
+        """
+
+        vtkFileName = ''
+        if len(dir) == 0:
+            vtkFileName = flatMeshVTKFileName
+        else:
+            vtkFileName = dir + "/" + flatMeshVTKFileName
+
+        # build VTK object:
+        # points
+        pointsVTK = vtk.vtkPoints()
+        flatCoordinates = np.copy(self.nodeCoordinates)
+        flatCoordinates[:,2] = 0.0
+        pointsVTK.SetData(VN.numpy_to_vtk(flatCoordinates))
+
+        # cell topology information list: [num. of nodes, node0, node1, .., num. of nodes, nodexxx]
+        # the list start with the number of nodes for a cell and then the list of node indexes
+        connectivity_list = []
+        # type of cells (contains the number of face points
+        cellFPCounts = np.zeros(self.elementNodesList.shape[0], dtype=np.int64)
+
+        # loop over all elements
+        for k in range(self.elementNodesList.shape[0]):
+            connectivity_list.append(self.elementNodesCount[k])
+
+            for nodeI in range(self.elementNodesCount[k]):
+                connectivity_list.append(
+                    self.elementNodesList[k][nodeI] - 1)  # -1 becasue SRH-2D is 1-based.
+
+            cellFPCounts[k] = self.elementNodesCount[k]
+
+        connectivity = np.array(connectivity_list, dtype=np.int64)
+
+        # convert cell's number of face points to VTK cell type
+        vtkHandler_obj = vtkHandler()
+        cell_types = vtkHandler_obj.number_of_nodes_to_vtk_celltypes(cellFPCounts)
+
+        cellsVTK = vtk.vtkCellArray()
+        cellsVTK.SetCells(self.elementNodesList.shape[0], VN.numpy_to_vtkIdTypeArray(connectivity))
+
+        uGrid = vtk.vtkUnstructuredGrid()
+        uGrid.SetPoints(pointsVTK)
+        uGrid.SetCells(cell_types, cellsVTK)
+
+        # write to vtk file
+        unstr_writer = vtk.vtkUnstructuredGridWriter()
+        unstr_writer.SetFileName(vtkFileName)
+        unstr_writer.SetInputData(uGrid)
+        unstr_writer.Write()
+
+
+
+    def output_as_gmsh(self, gmshFileName, dir=''):
+        """ Output SRH-2D mesh in GMESH format
+
+        Attributes:
+        -------
+        dir: {string} -- optional directory
+
+        Returns
+        -------
+
+        """
+
+        return NotImplemented
+
+        if dir!='':
+            gmshFileName_base = dir + '/' + gmshFileName
+        else:
+            gmshFileName_base = gmshFileName
+        print("GMESH file name = ", gmshFileName_base)
+
+
+
 
 class SRH_2D_SRHMat:
     """A class to handle srhmat file for SRH-2D
@@ -597,10 +1078,15 @@ class SRH_2D_SRHMat:
                 bFound = True
                 return matID
 
-        #if cellID is not found, report problem
+        #if cellID is not found, report problem.
+        #This could be due to several reasons. Most likely, the material coverage in SMS does not
+        #cover certain area of the mesh. In this case, SMS will not report the material for the missed
+        #cells in srhmat (no warning given either). Here, if we can't find the cell in material list,
+        #simply use the default Manning's n ID.
         if not bFound:
-            print("In find_cell_material_ID(cellID), cellID =", cellID, "is not found. Check mesh. Exiting ...")
-            sys.exit()
+            print("In find_cell_material_ID(cellID), cellID =", cellID, "is not found. Check mesh and material coverage. Default is used.")
+            return 0 #return the default (?)
+            #sys.exit()
 
 
 class SRH_2D_Data:
@@ -1152,6 +1638,21 @@ class SRH_2D_Data:
                 fid.write('\n \n')
 
         fid.close()
+
+    def output_flat_mesh_to_vtk(self, flatMeshVTKFileName, dir=''):
+        """ output the flat mesh to vtk
+
+        Parameters
+        ----------
+        flatMeshVTKFileName
+        dir
+
+        Returns
+        -------
+
+        """
+        #just call srhgeom_obj's function
+        self.srhgeom_obj.output_flat_mesh_to_vtk(flatMeshVTKFileName, dir)
 
     def readSRHFile(self, srhFileName):
         """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
