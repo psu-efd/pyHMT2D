@@ -1,11 +1,12 @@
-    <div class="banner" style="text-align:center">
-        <a href="https://github.com/psu-efd/pyHMT2D"><img src="_static/images/pyhmt2d_logo_vel_color_vector.png" alt="pyHMT2D" width="100%"/></a>
-    </div>
+.. raw:: html
 
-    <div class="banner" style="text-align:center">
-        <a href="https://github.com/psu-efd/pyHMT2D"><img src="logo/pyhmt2d_logo_vel_color_vector.png" alt="pyHMT2D" width="100%"/></a>
-    </div>
+   <h1 align="center">
+       <a href="https://github.com/psu-efd/pyHMT2D"><img src="_static/images/pyhmt2d_logo_vel_color_vector.png" alt="pyHMT2D" width="100%"/></a>
+   </h1>
 
+   <h1 align="center">
+       <a href="https://github.com/psu-efd/pyHMT2D"><img src="logo/pyhmt2d_logo_vel_color_vector.png" alt="pyHMT2D" width="100%" onerror="this.style.visibility = 'hidden'"/></a>
+   </h1>
 
 pyHMT2D - Python Hydraulic Modeling Tools - 2D
 ==============================================
