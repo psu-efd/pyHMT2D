@@ -58,8 +58,7 @@ class RAS_2D_Data:
     
     Methods
     -------
-    get_units()    
-        Get the units used in the HEC-RAS project
+
     
     """
     
@@ -88,7 +87,7 @@ class RAS_2D_Data:
         self.short_ID = ''
         
         #get units
-        self.get_units()
+        self.units = self.get_units()
         
         #get short_ID
         self.get_shortID()
@@ -229,10 +228,13 @@ class RAS_2D_Data:
         self.load2DAreaSolutions()
         
 
-    def get_units(self):    
+    def get_units(self):
         """Get the units used in the HEC-RAS project
         
         Units used in HEC-RAS can be either 'Feet' or 'Meter'.
+
+        Parameters
+        -----------
         
         """
         
@@ -241,17 +243,18 @@ class RAS_2D_Data:
         with open(self.project_filename,'r') as project_file:
             lines = project_file.readlines()
             if "English Units" in lines[3]:
-                self.units = 'Feet'
+                return 'Feet'
             elif "SI Units" in lines[3]:
-                self.units = "Meter"
+                return "Meter"
             else:
-                self.units = "Unknown units"
+                return "Unknown units"
  
 
     def get_shortID(self):
-        """" Find the short_ID
+        """"Find the short_ID
 
         """
+
         with open(self.plan_filename,'r') as plan_file:
             for line in plan_file:
                 if self.short_identifier in line:

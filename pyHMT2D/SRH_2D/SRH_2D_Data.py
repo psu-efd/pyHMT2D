@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+""" A set of classes to handle SRH-2D data
+
+SRH-2D data include information in SRHHydro, SRHGeom, SRHMat, and simulation results.
 
 Author: Xiaofeng Liu, PhD, PE
 Penn State University
@@ -31,7 +33,18 @@ class SRH_2D_SRHHydro:
     Methods:
 
     """
+
     def __init__(self, srhhydro_filename):
+        """ Constructor for SRH_2D_SRHHydro
+
+        The SRH_2D_SRHHydro file contains all information for a SRH-2D run.
+
+        Parameters
+        ----------
+        srhhydro_filename: str
+            The name of the SRHHydro file
+        """
+
         self.srhhydro_filename = srhhydro_filename #srhhydro file name
 
         #dict to hold the content of the srhhydro file
@@ -41,9 +54,19 @@ class SRH_2D_SRHHydro:
         self.parse_srhhydro_file()
 
     def parse_srhhydro_file(self):
+        """ Parse the SRHHydro file
+
+        It will read the SRHHydro file and build the dictionary self.srhhydro_content
+
+        Returns
+        -------
+
+        """
+
         res_all = {}
         res_ManningsN = {}  # dict for ManningsN (there cuould be multiple entries)
         res_BC = {}  # dict for BC (there could be multiple entries)
+        res_MONITORING = {} #dict for monitoring lines (it is under BC in SRHHYDRO)
         res_IQParams = {}  # dict for subcritical inlet discharge boundary condition
         res_ISupCrParams = {}  # dict for supercritical inlet, the same as IQParams, with the additon of WSE
         res_EWSParamsC = {}  # dict for stage exit boundary condition (constant)
@@ -71,8 +94,11 @@ class SRH_2D_SRHHydro:
 
             if parts[0] == 'ManningsN':
                 res_ManningsN[int(parts[1])] = float(parts[2])
-            elif parts[0] == 'BC':
-                res_BC[int(parts[1])] = parts[2]
+            elif parts[0] == 'BC': #contains both boundary conditions and monitoring lines ("MONITORING")
+                if parts[2] == 'MONITORING': #this is a monitoring line, not a BC
+                    res_MONITORING[int(parts[1])] = parts[2]
+                else:                        #this is a real BC
+                    res_BC[int(parts[1])] = parts[2]
             elif parts[0] == 'IQParams':
                 res_IQParams[int(parts[1])] = [parts[2], parts[3], parts[4]]
             elif parts[0] == 'ISupCrParams': #need to check these
@@ -106,6 +132,9 @@ class SRH_2D_SRHHydro:
         if res_BC:
             res_all['BC'] = res_BC
 
+        if res_MONITORING:
+            res_all['MONITORING'] = res_MONITORING
+
         if res_IQParams:
             res_all['IQParams'] = res_IQParams
 
@@ -130,6 +159,7 @@ class SRH_2D_SRHHydro:
 
             if res_ManningsN: print(res_all['ManningsN'])
             if res_BC: print(res_all['BC'])
+            if res_MONITORING: print(res_all['MONITORING'])
             if res_IQParams: print(res_all['IQParams'])
             if res_ISupCrParams: print(res_all['ISupCrParams'])
             if res_EWSParamsC: print(res_all['EWSParamsC'])
@@ -151,6 +181,7 @@ class SRH_2D_SRHHydro:
         -------
 
         """
+
         print("Modify Manning's n value ...")
 
         if not isinstance(materialID, int):
@@ -174,7 +205,7 @@ class SRH_2D_SRHHydro:
 
 
     def write_to_file(self, new_srhhydro_file_name):
-        """Write to a SRHHYDRO file (useful for modification of the SRHHYDRO file)
+        """Write to a SRHHydro file (useful for modification of the SRHHydro file)
 
         Returns
         -------
@@ -195,6 +226,8 @@ class SRH_2D_SRHHydro:
                 for subkey, subvalue in value.items():
                     if "ManningsN" in key:
                         fid.write("ManningsN " + str(subkey) + ' ' + str(subvalue) + '\n')
+                    elif "MONITORING" in key:
+                        fid.write("BC " + str(subkey) + ' ' + str(subvalue) + '\n')
                     elif "BC" in key:
                         fid.write("BC " + str(subkey) + ' ' + str(subvalue) + '\n')
                     elif "IQParams" in key:
@@ -213,7 +246,8 @@ class SRH_2D_SRHHydro:
                     elif "NDParams" in key:      #need to check these (no reference)
                         fid.write("NDParams " + str(subkey) + ' ' + str(subvalue) + '\n' )
             else:
-                if "Case" in key or "Description" in key or "Grid" in key or "HydroMat" in key:
+                if "Case" in key or "Description" in key or "Grid" in key \
+                        or "HydroMat" in key or "MonitorPtFile" in key:
                     fid.write(str(key) + ' \"' + str(value) + '\"\n')
                 elif "OutputFormat" in key:
                     fid.write(str(key) + ' ' + str(value[0]) + ' ' + str(value[1]) + '\n')
@@ -252,17 +286,80 @@ class SRH_2D_SRHHydro:
 
         return value[1]
 
+    def get_grid_file_name(self):
+        """Get grid file name (shoudl be like "xxx.srhgeom")
+
+        Returns
+        -------
+        str
+            Name of the grid file
+
+        """
+
+        value = self.srhhydro_content["Grid"]
+
+        return value
+
+    def get_mat_file_name(self):
+        """Get material file name (shoudl be like "xxx.srhmat")
+
+        Returns
+        -------
+        str
+            Name of the material file
+
+        """
+
+        value = self.srhhydro_content["HydroMat"]
+
+        return value
+
 class SRH_2D_SRHGeom:
     """A class to handle srhgeom file for SRH-2D
 
-    Attributes:
+    Notes:
+        1. In SMS (SRH-2D), monitoring lines (ML) and monitoring points (MP) are treated seperately and differently.
+           ML is created in the same way as boundary lines. Nodes closest to the line are recorded as a NodeString
+           in SRHGEOM file. MP is created as a feature point and its coordiantes are recorded in the "srhmpoint" file.
+           Interpolation is done to probe the results at MPs.
 
+           This potentially have some drawbacks:
 
-    Methods:
+           a. The MLs and MPs have to be defined before the simulation is run, not afterwards. One can use plot over a
+              line or point, but it is not convenient and it is limited. For example, to calculate flow over a line,
+              one has to cut a line and then integrate.
+           b. The way MLs are defined if slightly limited by the mesh (node locations). To be exactly at a ML, one has
+              to interpolate the simulated solution to the points on MLs.
+
+        2. Becasue BC and ML are mixed together, we need to separate them. However, this can only be done with the BC
+           information in the srhhydro file.
+
+    Attributes
+    ----------
+
+    Methods
+    ----------
 
     """
-    def __init__(self, srhgeom_filename):
+
+    def __init__(self, srhgeom_filename, bcDict):
+        """Constructor for SRH_2D_SRHGeom
+
+        Parameters
+        ----------
+        srhgeom_filename : str
+            Name of the SRHGeom file
+        bcDict : dict
+            Boundary condtion dictionary
+        """
+
         self.srhgeom_filename = srhgeom_filename
+
+        #boundary condition dictionary. In srhgeom file, not all nodeStrings are boundary conditions. Some of them
+        #could be monitoring lines. This bcDict is passed in to distinguish the two (srhgeom does not have this
+        #information; only srhhydro has). An SRH_2D_SRHHydro object has to be previously created, and then
+        #bcDict <- srhhydro_obj.srhhydro_content["BC"].
+        self.bcDict = bcDict
 
         #mesh information:
         #   number of elements
@@ -319,7 +416,8 @@ class SRH_2D_SRHGeom:
         self.edgeElements = {} #dictionary: {edgeID: [element list]}. Here since one edge can be shared by two
                                #elements at the most, the element list's length is either 1 or 2
 
-        #edges each boundary (nodeString). boundaryID = nodeString ID
+        #edges of each boundary. Only contains real boundaries, not monitoring lines.
+        #boundaryID = nodeString ID read in from srhgeom file
         self.boundaryEdges = {} #dictionary: {boundaryID: [list of edge IDs]}
 
         #list of all boundary edge IDs (all lumped to one list)
@@ -580,8 +678,13 @@ class SRH_2D_SRHGeom:
             allBoundaryEdgeUsageFlag[boundaryEdgeID] = False
 
         #now all edges are built, we check the boundary edges
-        #loop through all boundaries (not all NodeStrings are boundaries; need to check this).
+        #loop through all boundaries.
         for nodeString in self.nodeStringsDict:
+
+            #not all NodeStrings are boundaries. Could be monitoring lines. Need to exclude them.
+            if nodeString not in self.bcDict.keys():
+                continue
+
             #list of nodes in current nodeString
             nodeString_nodeList = self.nodeStringsDict[nodeString]
 
@@ -670,10 +773,11 @@ class SRH_2D_SRHGeom:
         bHeighIncreasing = all(i < j for i, j in zip(layerHeights, layerHeights[1:]))
 
         if not bHeighIncreasing:
-            print("Values in layerHeight is not strictly increasing. Check. Exiting ...")
+            print("Values in layerHeight are not strictly increasing. Check. Exiting ...")
             sys.exit()
 
-        allBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
+        #a list for all side boundaries (not including top and bottom)
+        allSideBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
 
         #create all nodes
         #1. add the original nodes in 2D mesh
@@ -700,6 +804,10 @@ class SRH_2D_SRHGeom:
 
         #create all cells
 
+        #bottom and top boundary faces list
+        bottomBoundaryFaces = [None] * self.numOfElements
+        topBoundaryFaces = [None] * self.numOfElements
+
         cellID = 0
 
         #layer by layer
@@ -718,22 +826,37 @@ class SRH_2D_SRHGeom:
 
                 cell_list = []
 
+                top_face_node_list = []
+                bottom_face_node_list = []
+
                 #loop over all nodes of the current elment in 2D mesh (at current layer's bottom)
                 for nodeI in range(self.elementNodesCount[elementI]):
                     cell_list.append(self.elementNodesList[elementI, nodeI] + (layerI-1)*self.numOfNodes)
+
+                    #if this is the first layer, record the bottom face to bottomBoundaryFaces list
+                    if layerI == 1:
+                        bottom_face_node_list.append(self.elementNodesList[elementI, nodeI])
 
                 #now add the nodes at current layer's top.
                 for nodeI in range(self.elementNodesCount[elementI]):
                     cell_list.append(self.elementNodesList[elementI, nodeI] + layerI*self.numOfNodes)
 
+                    #if this is the last layer, record the top face to topBoundaryFaces list
+                    if layerI == nlayers:
+                        top_face_node_list.append(self.elementNodesList[elementI, nodeI] + layerI*self.numOfNodes)
+
                 allCells[cellID] = [cell_type, cell_list]
+
+                bottomBoundaryFaces[elementI] = bottom_face_node_list
+                topBoundaryFaces[elementI] = top_face_node_list
 
 
         #create all boundaries
 
-        #allBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
+        #allSideBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
 
-        #loop through all boundary lines (nodeStrings) in 2D mesh
+        #loop through all boundary lines (nodeStrings) in 2D mesh. self.boundaryEdges only
+        #contains real boundaries, not monitoring lines.
         for boundaryID in self.boundaryEdges:
 
             #list of all faces for current boundary
@@ -755,7 +878,8 @@ class SRH_2D_SRHGeom:
                     faceList.append(curFace)
 
             #now we have all faces in the current boundary
-            allBoundaryFaces[boundaryID] = faceList
+            allSideBoundaryFaces[boundaryID] = faceList
+
 
         #write to GMSH MSH file
 
@@ -775,16 +899,34 @@ class SRH_2D_SRHGeom:
 
         #write PhysicalNames:
         fid.write("$PhysicalNames\n")
-        fid.write("%d\n" % (len(allBoundaryFaces)+1))   #need to output all boundaries and the volume
+        fid.write("%d\n" % (len(allSideBoundaryFaces)+2+1))   #need to output all side boundaries,
+                                                              #top + bottom (2), and the volume (1)
 
-        #loop through all boundaries
-        for boundaryID in allBoundaryFaces:
-            boundary_name = "boundary_"+str(boundaryID)   #need to read srhhydro to get their real names (TODO)
+        # maximum side boundary ID. This is the starting point for IDs of top, bottom, and volume
+        maxSideBoundaryID = -999
+
+        #loop through all side boundaries
+        for boundaryID in allSideBoundaryFaces:
+            if boundaryID in self.bcDict.keys(): #if the current BC is defined in srhhydro
+                boundary_name = "boundary_"+str(boundaryID)+"_"+self.bcDict[boundaryID]  #name = boundary_ID_BCType
+            else:                                #else, this should be default wall boundary
+                boundary_name = "boundary_"+str(boundaryID)+"_"+"wall"                   #name = boundary_ID_wall
+
             fid.write("2 %d \"%s\"\n" % (boundaryID, boundary_name))  #dimension, physicalTag, name
+
+            maxSideBoundaryID = max(maxSideBoundaryID, boundaryID)
+
+        #output the top and bottom boundaries
+        boundary_name = "top"
+        fid.write("2 %d \"%s\"\n" % (maxSideBoundaryID+1, boundary_name))  # dimension, physicalTag, name
+
+        boundary_name = "bottom"
+        fid.write("2 %d \"%s\"\n" % (maxSideBoundaryID+2, boundary_name))  # dimension, physicalTag, name
+
 
         #output the volume
         volume_name = "channel"  #just a generic name for the volume
-        fid.write("3 %d \"%s\"\n" % (len(allBoundaryFaces)+1, volume_name))
+        fid.write("3 %d \"%s\"\n" % (maxSideBoundaryID+2+1, volume_name))
 
         fid.write("$EndPhysicalNames\n")
 
@@ -814,16 +956,38 @@ class SRH_2D_SRHGeom:
             sys.exit()
 
         #output total number of elements
-        fid.write("%d \n" % (len(self.allBoundaryEdgeIDs)*nlayers + number_of_hex + number_of_prism))
+        #                    num. of side boundary faces + num. of faces on top and bottom + num. of hex + num. of prism
+        fid.write("%d \n" % (len(self.allBoundaryEdgeIDs)*nlayers + self.numOfElements*2 + number_of_hex + number_of_prism))
 
-        #loop through all boundaries
-        for boundaryID in allBoundaryFaces:
+        #loop through all side boundaries
+        for boundaryID in allSideBoundaryFaces:
             #output each quad face's
-            for faceID in range(len(allBoundaryFaces[boundaryID])):
+            for faceID in range(len(allSideBoundaryFaces[boundaryID])):
                 elementTag_counter += 1
-                fid.write("%d 3 1 %d %d %d %d %d\n" % (elementTag_counter, boundaryID, allBoundaryFaces[boundaryID][faceID][0],
-                                    allBoundaryFaces[boundaryID][faceID][1], allBoundaryFaces[boundaryID][faceID][2],
-                                    allBoundaryFaces[boundaryID][faceID][3]))
+                fid.write("%d 3 1 %d %d %d %d %d\n" % (elementTag_counter, boundaryID, allSideBoundaryFaces[boundaryID][faceID][0],
+                                    allSideBoundaryFaces[boundaryID][faceID][1], allSideBoundaryFaces[boundaryID][faceID][2],
+                                    allSideBoundaryFaces[boundaryID][faceID][3]))
+
+        #output top and bottom boundaries
+        for faceI in topBoundaryFaces:
+            elementTag_counter += 1
+
+            if len(faceI) == 3: #triangle
+                fid.write("%d 2 1 %d %d %d %d \n" % (elementTag_counter, maxSideBoundaryID+1,
+                                                     faceI[0],faceI[1],faceI[2]))
+            elif len(faceI) == 4: #quad
+                fid.write("%d 3 1 %d %d %d %d %d \n" % (elementTag_counter, maxSideBoundaryID+1,
+                                                     faceI[0], faceI[1], faceI[2], faceI[3]))
+
+        for faceI in bottomBoundaryFaces:
+            elementTag_counter += 1
+
+            if len(faceI) == 3:  # triangle
+                fid.write("%d 2 1 %d %d %d %d \n" % (elementTag_counter, maxSideBoundaryID + 2,
+                                                     faceI[0], faceI[1], faceI[2]))
+            elif len(faceI) == 4:  # quad
+                fid.write("%d 3 1 %d %d %d %d %d \n" % (elementTag_counter, maxSideBoundaryID + 2,
+                                                        faceI[0], faceI[1], faceI[2], faceI[3]))
 
         #output the volume's tag and node list. Hex and prism need to be seperate
         #1.Hex
@@ -832,7 +996,7 @@ class SRH_2D_SRHGeom:
             for cellID in allCells:
                 if allCells[cellID][0] == MSHHEX:
                     elementTag_counter += 1
-                    fid.write("%d 5 1 %d %d %d %d %d %d %d %d %d\n" % (elementTag_counter, len(allBoundaryFaces)+1,
+                    fid.write("%d 5 1 %d %d %d %d %d %d %d %d %d\n" % (elementTag_counter, maxSideBoundaryID+2+1,
                                                                        allCells[cellID][1][0], allCells[cellID][1][1],
                                             allCells[cellID][1][2], allCells[cellID][1][3], allCells[cellID][1][4],
                                             allCells[cellID][1][5], allCells[cellID][1][6], allCells[cellID][1][7]))
@@ -843,7 +1007,7 @@ class SRH_2D_SRHGeom:
             for cellID in allCells:
                 if allCells[cellID][0] == MSHPRISM:
                     elementTag_counter += 1
-                    fid.write("%d 6 1 %d %d %d %d %d %d %d\n" % (elementTag_counter, len(allBoundaryFaces)+1,
+                    fid.write("%d 6 1 %d %d %d %d %d %d %d\n" % (elementTag_counter, maxSideBoundaryID+2+1,
                                                                  allCells[cellID][1][0], allCells[cellID][1][1],
                                                                  allCells[cellID][1][2], allCells[cellID][1][3],
                                                                  allCells[cellID][1][4], allCells[cellID][1][5]))
@@ -853,8 +1017,13 @@ class SRH_2D_SRHGeom:
         fid.close()
 
 
-    def output_flat_mesh_to_vtk(self,flatMeshVTKFileName, dir=''):
-        """output the flat 2D mesh to vtk (z=0 for all coordinates)
+    def output_2d_mesh_to_vtk(self,flatMeshVTKFileName, bFlat=False, dir=''):
+        """output the 2D mesh to vtk
+
+
+        Attributes
+        -------
+        bFlat: whether to make a flat mesh (z=0)
 
         Returns
         -------
@@ -871,7 +1040,10 @@ class SRH_2D_SRHGeom:
         # points
         pointsVTK = vtk.vtkPoints()
         flatCoordinates = np.copy(self.nodeCoordinates)
-        flatCoordinates[:,2] = 0.0
+
+        if bFlat:
+            flatCoordinates[:,2] = 0.0
+
         pointsVTK.SetData(VN.numpy_to_vtk(flatCoordinates))
 
         # cell topology information list: [num. of nodes, node0, node1, .., num. of nodes, nodexxx]
@@ -910,16 +1082,74 @@ class SRH_2D_SRHGeom:
         unstr_writer.Write()
 
 
+    def output_nodeString_line_coordinates(self, nodeStringID, nodeStringFileName, dir=''):
+        """ Output the nodeString line coordinates into a text file
+
+
+        Parameters
+        ----------
+        nodeStringID: {integer} -- the ID of the nodeString to be written out
+        nodeStringFileName: {string} -- the name of the file to be written to
+        dir: {string} -- optional directory name
+
+        Returns
+        -------
+
+        """
+
+        nodeStringFileName_final = ''
+        if len(dir) == 0:
+            nodeStringFileName_final = nodeStringFileName
+        else:
+            nodeStringFileName_final = dir + "/" + nodeStringFileName
+
+        #check whether the given nodeStringID is in the nodeStringDict
+        if nodeStringID not in self.nodeStringsDict.keys():
+            print("The given nodeStringID", nodeStringID, "is not valid. Valid nodeString IDs are: ",
+                  self.nodeStringsDict.keys())
+
+        try:
+            fid = open(nodeStringFileName_final, 'w')
+        except IOError:
+            print('NodeString file open error')
+            sys.exit()
+
+        #write the header
+        fid.write("station, x, y, z\n")
+
+        # list of nodes in current nodeString
+        nodeString_nodeList = self.nodeStringsDict[nodeStringID]
+
+        station = [0] * len(nodeString_nodeList)
+        x = [0] * len(nodeString_nodeList)
+        y = [0] * len(nodeString_nodeList)
+        z = [0] * len(nodeString_nodeList)
+
+        #loop over all nodes in the list
+        for nodeI in range(len(nodeString_nodeList)):
+            x[nodeI] = self.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 0]
+            y[nodeI] = self.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 1]
+            z[nodeI] = self.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 2]
+
+            if nodeI!=0: #if not the first node in the list, calculate the station
+                station[nodeI] = station[nodeI-1] + np.sqrt( (x[nodeI]-x[nodeI-1])**2 + (y[nodeI]-y[nodeI-1])**2 )
+
+        #write the data
+        for nodeI in range(len(nodeString_nodeList)):
+            fid.write("%f, %f, %f, %f\n" % (station[nodeI], x[nodeI], y[nodeI], z[nodeI]))
+
+        fid.close()
 
     def output_as_gmsh(self, gmshFileName, dir=''):
         """ Output SRH-2D mesh in GMESH format
 
-        Attributes:
-        -------
-        dir: {string} -- optional directory
+        Parameters
+        ----------
+        dir : str, optional
+            directory name
 
         Returns
-        -------
+        ---------
 
         """
 
@@ -1082,28 +1312,52 @@ class SRH_2D_Data:
     Attributes
     ----------
     hdf_filename : str
-        the name for the HDF result file generated by HEC-RAS
+        The name for the HDF result file generated by HEC-RAS
+    srhhydro_obj : SRH_2D_SRHHydro
+        An object to hold information in the SRHHYDRO file
+    srhgeom_obj : SRH_2D_SRHGeom
+        An object to hold information in the SRHGEOM file
+    srhmat_obj : SRH_2D_SRHMat
+        An object to hold information in the SRHMAT file
 
-    srhhydro_obj: {SRH_2D_SRHHydro} -- an object to hold information in the SRHHYDRO file
-    srhgeom_obj: {SRH_2D_Geom} -- an object to hold information in the SRHGEOM file
-    srhmat_obj: {SRH_2D_Mat} -- an object to hold information in the SRHMAT file
-    
-    
     Methods
     -------
-    get_units()    
-        Get the units used in the SRH-2D project
+
     
     """
     
-    def __init__(self, srhhydro_filename, srhgeom_filename, srhmat_filename):
+    def __init__(self, srhhydro_filename):
+        """Constructor for SRH_2D_Data
+
+        srhgeom_filename and srhmat_filename are contained in the SRHHydro file.
+
+        Parameters
+        ----------
+        srhhydro_filename : str
+            Name of the SRHHydro file
+
+        """
+
         self.srhhydro_filename = srhhydro_filename
-        self.srhgeom_filename = srhgeom_filename
-        self.srhmat_filename = srhmat_filename
+
+        #extract path in srhhydro_filename. We assume the SRHGeom and SRHMat files
+        #are located in the same directory as the SRHHydro file. In the SRHHydro file,
+        #the file names for SRHGeom and SRHMat do not contain the directory.
+        file_path, _, = os.path.split(srhhydro_filename)
+
+        #read SRH_2D_SRHHydro file and build SRH_2D_SRHHydro object
+        self.srhhydro_obj = SRH_2D_SRHHydro(self.srhhydro_filename)
+
+        #get the srhgeom_filename and srhmat_filename from srhhydro_obj
+        self.srhgeom_filename =      self.srhhydro_obj.get_grid_file_name() if len(file_path) == 0 \
+                                else file_path+"/"+self.srhhydro_obj.get_grid_file_name()
+
+        self.srhmat_filename =       self.srhhydro_obj.get_mat_file_name() if len(file_path) == 0 \
+                                else file_path+"/"+self.srhhydro_obj.get_mat_file_name()
 
         #read and build SRH_2D_SRHHydro, SRH_2D_Geom, and SRH_2D_Mat objects
         self.srhhydro_obj = SRH_2D_SRHHydro(self.srhhydro_filename)
-        self.srhgeom_obj = SRH_2D_SRHGeom(self.srhgeom_filename)
+        self.srhgeom_obj = SRH_2D_SRHGeom(self.srhgeom_filename,self.srhhydro_obj.srhhydro_content["BC"])
         self.srhmat_obj = SRH_2D_SRHMat(self.srhmat_filename)
 
         #Manning's n value at cell centers and nodes
@@ -1127,7 +1381,8 @@ class SRH_2D_Data:
 
         Returns
         -------
-        case_name: {string} -- case name
+        case_name : str
+            Case name
 
         """
         return self.srhhydro_obj.srhhydro_content["Case"]
@@ -1135,7 +1390,8 @@ class SRH_2D_Data:
     def buildManningN_cells_nodes(self):
         """ Build Manning's n values at cell centers and nodes
 
-        This calculation is based on the srhhydro and srhgeom files, not interpolation from a GeoTiff file.
+        This calculation is based on the srhhydro and srhgeom files, not interpolation from a GeoTiff file. This is the
+        Manning's n value used by SRH-2D.
 
         Returns
         -------
@@ -1160,24 +1416,97 @@ class SRH_2D_Data:
             self.ManningN_cell[cellI] = nDict[matID]
 
         #interpolate Manning's n from cell centers to nodes
+        #loop over all nodes in the mesh
+        for nodeI in range(self.srhgeom_obj.numOfNodes):
+            n_temp = 0.0
 
+            #loop over all cells that share the current node
+            for i in range(self.srhgeom_obj.nodeElementsCount[nodeI]):
+                cellI = self.srhgeom_obj.nodeElementsList[nodeI][i]
+                n_temp += self.ManningN_cell[cellI]
+
+            #take the average
+            self.ManningN_node[nodeI] = n_temp/self.srhgeom_obj.nodeElementsCount[nodeI]
+
+    def output_boundary_manning_n_profile(self, nodeStringID, nodeStringFileName, dir=''):
+        """ Output Manning's n profile for a specified boundary
+
+        Parameters
+        ----------
+        nodeStringID : int
+            nodeString ID of specified boundary
+        nodeStringFileName : str
+            name of output file
+        dir : str, optional
+            directory for the output file
+
+        Returns
+        -------
+
+        """
+
+        nodeStringFileName_final = ''
+        if len(dir) == 0:
+            nodeStringFileName_final = nodeStringFileName
+        else:
+            nodeStringFileName_final = dir + "/" + nodeStringFileName
+
+        #check whether the given nodeStringID is in the nodeStringDict
+        if nodeStringID not in self.srhgeom_obj.nodeStringsDict.keys():
+            print("The given nodeStringID", nodeStringID, "is not valid. Valid nodeString IDs are: ",
+                  self.srhgeom_obj.nodeStringsDict.keys())
+
+        try:
+            fid = open(nodeStringFileName_final, 'w')
+        except IOError:
+            print('Boundary\'s Manning n file open error')
+            sys.exit()
+
+        #write the header
+        fid.write("station, n\n")
+
+        # list of node ID (1-based) in current nodeString
+        nodeString_nodeList = self.srhgeom_obj.nodeStringsDict[nodeStringID]
+
+        station = [0] * len(nodeString_nodeList)
+        x = [0] * len(nodeString_nodeList)
+        y = [0] * len(nodeString_nodeList)
+        z = [0] * len(nodeString_nodeList)
+
+        #loop over all nodes in the list
+        for nodeI in range(len(nodeString_nodeList)):
+            x[nodeI] = self.srhgeom_obj.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 0]
+            y[nodeI] = self.srhgeom_obj.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 1]
+            z[nodeI] = self.srhgeom_obj.nodeCoordinates[nodeString_nodeList[nodeI] - 1, 2]
+
+            if nodeI!=0: #if not the first node in the list, calculate the station
+                station[nodeI] = station[nodeI-1] + np.sqrt( (x[nodeI]-x[nodeI-1])**2 + (y[nodeI]-y[nodeI-1])**2 )
+
+        #write the data
+        for nodeI in range(len(nodeString_nodeList)):
+            fid.write("%f, %f\n" % (station[nodeI], self.ManningN_node[nodeString_nodeList[nodeI] - 1])) #-1 because SRH-2D is 1-based
+
+        fid.close()
 
 
     def readSRHXMDFFile(self, xmdfFileName, bNodal):
         """ Read SRH-2D result file in XMDF format (current version 13.1.6 of SMS only support data at node).
 
-        Attributes:
-        xmdfFileName: the file name for the XMDF data
-        bNodal: bool, whether it is nodal (True) or at cell center (False)
+        Parameters
+        ----------
+        xmdfFileName : str
+            file name for the XMDF data
+        bNodal : bool
+            whether it is nodal (True) or at cell center (False)
 
         Returns
         -------
-        variable names, variable data
+
 
         """
 
         #for debug
-        dumpXMDFFileItems(xmdfFileName)
+        #dumpXMDFFileItems(xmdfFileName)
 
         if bNodal:
             if "XMDFC" in xmdfFileName:
@@ -1260,7 +1589,7 @@ class SRH_2D_Data:
                           % (np.array(xmdfFile[varName]['Values']).shape[1], self.srhgeom_obj.numOfNodes))
                     return
 
-                print(self.xmdfAllData_Nodal)
+                #print(self.xmdfAllData_Nodal)
             else: #for cell center data
                 if "Velocity" in varName:
                     if "Vel_X" in varName_temp: #vel-x
@@ -1285,22 +1614,27 @@ class SRH_2D_Data:
                           "Abort readSRHXMDFFile(...) function."
                           % (np.array(xmdfFile[varName]['Values']).shape[1], self.srhgeom_obj.numOfElements))
 
-                print(self.xmdfAllData_Cell)
+                #print(self.xmdfAllData_Cell)
 
         xmdfFile.close()
 
     def outputXMDFDataToVTK(self, bNodal, timeStep=-1,lastTimeStep=False, dir=''):
         """Output XMDF result data to VTK
 
-        This has to be called after the XMDF data have been loaded by calling readSRHXMDFFile(...)
+        This has to be called after the XMDF data have been loaded by calling readSRHXMDFFile(...).
 
-        call outputVTK(self, vtkFileName, resultVarNames, resultData, bCellData)
+        It calls outputVTK(...).
 
-        Attributes:
-          bNodal: {bool} -- whether export nodal data or cell center data. Currently, it can't output both.
-          timeStep: {int} -- optionly only the specified time step will be saved
-          lastTimeStep: {bool} -- optionally specify only the last time step
-          dir: {string} -- optional directory
+        Parameters
+        ----------
+            bNodal : bool
+                whether export nodal data or cell center data. Currently, it can't output both.
+            timeStep : int
+                optionly only the specified time step will be saved
+            lastTimeStep : bool
+                optionally specify only the last time step
+            dir : str, optional
+                directory to write to
 
         Returns
         -------
@@ -1379,7 +1713,7 @@ class SRH_2D_Data:
 
             str_extra = "_N_" if bNodal else "_C_"
 
-            vtkFileName = vtkFileName_base + str_extra + str(timeI).zfill(4) + ".vtk"
+            vtkFileName = vtkFileName_base + str_extra + str(timeI+1).zfill(4) + ".vtk"
             print("vtkFileName = ", vtkFileName)
 
             #loop through each solution variable (except Bed_Elev and ManningN, which will be added seperately)
@@ -1439,7 +1773,7 @@ class SRH_2D_Data:
             nColVel_Y = -1
 
             # First output all solution variables as scalars
-            print('The following solution variables are processed: \n')
+            print('The following solution variables are processed and saved to VTK file: \n')
             for k in range(len(resultVarNames)):
                 print('     %s\n' % resultVarNames[k])
 
@@ -1501,10 +1835,14 @@ class SRH_2D_Data:
 
         Parameters
         ----------
-        vtkFileName: name for the output vtk file
-        resultVarNames: result variable names
-        resultData: result data
-        bNodal: whether the data is nodal (True) or at cell center (False)
+        vtkFileName : str
+            name for the output vtk file
+        resultVarNames : str
+            result variable names
+        resultData : `numpy.ndarray`
+            2D array containing result data
+        bNodal : bool
+            whether the data is nodal (True) or at cell center (False)
 
 
         Returns
@@ -1581,9 +1919,9 @@ class SRH_2D_Data:
             nColVel_Y = -1
 
             # First output all solution variables as scalars
-            print('The following solution variables are processed: \n')
+            #print('The following solution variables are processed: \n')
             for k in range(len(resultVarNames)):
-                print('     %s\n' % resultVarNames[k])
+                #print('     %s\n' % resultVarNames[k])
 
                 if resultVarNames[k].find('Vel_X') != -1:
                     nColVel_X = k
@@ -1620,30 +1958,39 @@ class SRH_2D_Data:
 
         fid.close()
 
-    def output_flat_mesh_to_vtk(self, flatMeshVTKFileName, dir=''):
+    def output_2d_mesh_to_vtk(self, flatMeshVTKFileName, bFlat=False, dir=''):
         """ output the flat mesh to vtk
 
         Parameters
         ----------
-        flatMeshVTKFileName
-        dir
+        flatMeshVTKFileName : str
+            file name for the flat mesh
+        bFlat : bool
+            whether to make the 2d mesh flat (node's z coordinate -> 0)
+        dir : str, optional
+            directory to write to
 
         Returns
         -------
 
         """
         #just call srhgeom_obj's function
-        self.srhgeom_obj.output_flat_mesh_to_vtk(flatMeshVTKFileName, dir)
+        self.srhgeom_obj.output_2d_mesh_to_vtk(flatMeshVTKFileName, bFlat, dir)
 
     def readSRHFile(self, srhFileName):
         """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
 
         Note: SRH-2D outputs an extra "," to each line. As a result, Numpy's
-        genfromtext(...) function adds a column of "nan" to the end.
+        genfromtext(...) function adds a column of "nan" to the end. Need to take care of this.
+
+        Parameters
+        ----------
+        srhFileName : str
+            file name for the SRH result file
 
         Returns
         -------
-        variable names, variable data
+
 
         """
 
@@ -1658,7 +2005,8 @@ class SRH_2D_Data:
 
         Parameters
         ----------
-        tecFileName: Tecplot file name
+        tecFileName : str
+            Tecplot file name
 
         Returns
         -------
@@ -1688,6 +2036,8 @@ class SRH_2D_Data:
     def cell_center_to_vertex(self, cell_data, vertex_data):
         """Interpolate result from cell center to vertex
 
+        Not implemented yet.
+
         Returns
         -------
 
@@ -1697,45 +2047,10 @@ class SRH_2D_Data:
     def vertex_to_cell_center(self, vertex_data, cell_data):
         """Interpolate result from vertex to cell center
 
+        Not implemented yet.
+
         Returns
         -------
 
         """
         pass
-
-
-def main():
-    """ Testing SRH_2D_data class
-
-    Returns
-    -------
-
-    """
-
-    my_srh_2d_data = SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
-
-    # User specified SRH-2D result in SRH (point) or SRHC (cell center) format
-    srhFileName = 'Muncie2D_SRHC2.dat'
-
-    # whehter the data is nodal (True) or at cell center (False) (need to be correctly set by user)
-    bNodal = True
-
-    # Read SRH-2D result file
-    resultVarNames, resultData = my_srh_2d_data.readSRHFile(srhFileName)
-    # print(resultVarNames, resultData)
-
-    # output SRH-2D result to VTK
-    srhName = os.path.splitext(srhFileName)[0]
-    vtkFileName = srhName + ".vtk"
-    print("vtk file name = ", vtkFileName)
-
-    # Note: in resultData, the 1st, second, third, and fourth columns are Point_ID,
-    #      X_unit, Y_unit, and Bed_Elev_unit respectively. There is no need to save them
-    #      in vtk.
-    my_srh_2d_data.outputVTK(vtkFileName, resultVarNames, resultData[:,4:], bNodal)
-
-    print("All done!")
-
-
-if __name__ == "__main__":
-    main()

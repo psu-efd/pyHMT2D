@@ -12,7 +12,7 @@ def use_SRHC_data():
 
     """
 
-    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
+    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro")
 
     # User specified SRH-2D result in SRH (point) or SRHC (cell center) format
     srhFileName = 'Muncie2D_SRHC2.dat'
@@ -54,7 +54,7 @@ def use_XMDF_data():
 
     """
 
-    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
+    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro")
 
     # User specified SRH-2D result in XMDF format
     xmdfFileName = 'Muncie2D_XMDFC.h5'
@@ -75,7 +75,7 @@ def test_srhhydro_file():
     -------
 
     """
-    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
+    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro")
 
     #test changing Manning's n
     my_srh_2d_data.srhhydro_obj.modify_ManningsN(1,0.03)
@@ -92,7 +92,7 @@ def test_Tecplot():
     -------
 
     """
-    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro", "Muncie2D.srhgeom", "Muncie2D.srhmat")
+    my_srh_2d_data = pyHMT2D.SRH_2D.SRH_2D_Data("Muncie2D.srhhydro")
 
     #load the tecplot data and get it in vtkUnstructuredGrid format
     results = my_srh_2d_data.readTECFile("Muncie2D_TEC1.dat")
