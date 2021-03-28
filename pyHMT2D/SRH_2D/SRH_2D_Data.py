@@ -27,10 +27,16 @@ from ..Misc import printProgressBar, vtkHandler
 class SRH_2D_SRHHydro:
     """A class to handle srhhydro file for SRH-2D
 
-    Attributes:
+    Attributes
+    ----------
+    srhhydro_filename : str
+        name for the srhhydro file
+    srhhydro_content : dictionary
+        a dictionary to hold all information in the srhhydro file
 
 
-    Methods:
+    Methods
+
 
     """
 
@@ -170,12 +176,14 @@ class SRH_2D_SRHHydro:
         self.srhhydro_content = res_all
 
     def modify_ManningsN(self, materialID, newManningsNValue):
-        """Modify materialID's Manning's n value to newManningsNValue
+        """Modify materialID's Manning's n value to new value
 
         Parameters
         ----------
-        materialID: {int} -- material ID
-        newManningsNValue: {float} -- new Manning's n value
+        materialID : int
+            material ID
+        newManningsNValue : float
+            new Manning's n value
 
         Returns
         -------
@@ -207,8 +215,10 @@ class SRH_2D_SRHHydro:
     def write_to_file(self, new_srhhydro_file_name):
         """Write to a SRHHydro file (useful for modification of the SRHHydro file)
 
-        Returns
+        Parameters
         -------
+        new_srhhydro_file_name : str
+            name of the new srhhydro file
 
         """
 
@@ -264,8 +274,10 @@ class SRH_2D_SRHHydro:
 
         Returns
         -------
-        startTime (hr)
-        endTime (hr)
+        startTime : float
+            start time in hours
+        endTime : float
+            end time in hours
 
         """
 
@@ -278,7 +290,8 @@ class SRH_2D_SRHHydro:
 
         Returns
         -------
-        deltaT (s)
+        deltaT : float
+            time step size in seconds
 
         """
 
@@ -291,7 +304,7 @@ class SRH_2D_SRHHydro:
 
         Returns
         -------
-        str
+        value : str
             Name of the grid file
 
         """
@@ -305,7 +318,7 @@ class SRH_2D_SRHHydro:
 
         Returns
         -------
-        str
+        value : str
             Name of the material file
 
         """
@@ -332,7 +345,7 @@ class SRH_2D_SRHGeom:
               to interpolate the simulated solution to the points on MLs.
 
         2. Becasue BC and ML are mixed together, we need to separate them. However, this can only be done with the BC
-           information in the srhhydro file.
+           information in the srhhydro file. That is why we need to pass in bcDict in the constructor.
 
     Attributes
     ----------
@@ -431,9 +444,10 @@ class SRH_2D_SRHGeom:
         """ Get the number of elements and nodes in srhgeom mesh file
 
         Returns
-        -------
+
 
         """
+
         print("Getting numbers of elements and nodes from the SRHGEOM file ...")
 
         # read the "srhgeom" mesh file
@@ -732,18 +746,23 @@ class SRH_2D_SRHGeom:
 
 
 
-        Also writes to a GMSH MSH file. Tried MSH version 4. But it seems too complicated (entities etc.). They are not
-        necessary for our purpose. Therefore, we will stick with version 2 and OpenFOAM takes this version well.
-        https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
+        The extruded mesh is written to a GMSH MSH file. Tried MSH version 4. But it seems
+        too complicated (entities etc.). They are not necessary for our purpose.
+        Therefore, we will stick with version 2 and OpenFOAM takes this version well.
 
-        Attributes
-        -------
-        layerHeights: a list with strictly increasing heights for the layers. If bTerrainFollowing is True, only
-                      the last value is used as the top elevation.
-        mshFileName: name of the GMSH MSH file to be written
-        bTerrainFollowing: whether to follow the terrain. If False, the bottom will be at z = 0, and the layer heights
-                           are specified in layerHeights. If True, the bottom will key the terrain elevation, the top
-                           will be at layerHeights[-1] and interpolation inbetween.
+        Ref: https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
+
+        Parameters
+        ----------
+        layerHeights : list
+            a list with strictly increasing heights for the layers. If bTerrainFollowing
+            is True, only the last value is used as the top elevation.
+        mshFileName : str
+            name of the GMSH MSH file to be written
+        bTerrainFollowing : bool
+            whether to follow the terrain. If False, the bottom will be at z = 0, and the layer heights
+            are specified in layerHeights. If True, the bottom will key the terrain elevation, the top
+            will be at layerHeights[-1] and interpolation inbetween.
 
         Returns
         -------
@@ -1021,9 +1040,14 @@ class SRH_2D_SRHGeom:
         """output the 2D mesh to vtk
 
 
-        Attributes
-        -------
-        bFlat: whether to make a flat mesh (z=0)
+        Parameters
+        --------
+        flatMeshVTKFileName : str
+            VTK file name for the flat mesh
+        bFlat : bool, optional
+            whether to make a flat mesh (z=0)
+        dir : str, optional
+            directory to write the VTK file to
 
         Returns
         -------
@@ -1088,9 +1112,12 @@ class SRH_2D_SRHGeom:
 
         Parameters
         ----------
-        nodeStringID: {integer} -- the ID of the nodeString to be written out
-        nodeStringFileName: {string} -- the name of the file to be written to
-        dir: {string} -- optional directory name
+        nodeStringID : int
+            the ID of the nodeString to be written out
+        nodeStringFileName : str
+            the name of the file to be written to
+        dir : str, optional
+            directory to write the output file to
 
         Returns
         -------
@@ -1143,10 +1170,14 @@ class SRH_2D_SRHGeom:
     def output_as_gmsh(self, gmshFileName, dir=''):
         """ Output SRH-2D mesh in GMESH format
 
+        Not implemented yet.
+
         Parameters
         ----------
+        gmshFileName : str
+            GMSH MSH file name to write to
         dir : str, optional
-            directory name
+            directory name to write to
 
         Returns
         ---------
@@ -1162,18 +1193,31 @@ class SRH_2D_SRHGeom:
         print("GMESH file name = ", gmshFileName_base)
 
 
-
-
 class SRH_2D_SRHMat:
     """A class to handle srhmat file for SRH-2D
 
-    Attributes:
+    Attributes
+    ----------
+    srhmat_filename : str
+        name of the srhmat file
+    numOfMaterials : int
+        number of materials defined in the srhmat file
+    matZoneCells : dict
+        each material zone's cell list (in a dictionary: material zone ID and cell list)
 
 
-    Methods:
+    Methods
 
     """
     def __init__(self, srhmat_filename):
+        """SRH_2D_SRHMat constructor from a srhmat file
+
+        Parameters
+        ----------
+        srhmat_filename : str
+            name of the srhmat file
+        """
+
         self.srhmat_filename = srhmat_filename
 
         #number of materials (Manning's n zones)
@@ -1189,12 +1233,13 @@ class SRH_2D_SRHMat:
         self.buildMaterialZonesData()
 
     def buildMaterialZonesData(self):
-        """Build the data for material zones
+        """Build the data for material zones from reading the srhmat file
 
         Returns
         -------
 
         """
+
         print("Reading the SRHMAT file ...")
 
         # read the "srhmat" material file
@@ -1267,11 +1312,12 @@ class SRH_2D_SRHMat:
 
 
     def find_cell_material_ID(self, cellID):
-        """ Given a cell ID, find its material (Manning's n) ID
+        """Given a cell ID, find its material (Manning's n) ID
 
         Parameters
         ----------
-        cellID:
+        cellID : int
+            cell ID to find material ID for
 
         Returns
         -------

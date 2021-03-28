@@ -21,9 +21,39 @@ class Terrain:
     3. set the georeferencing by calling set_georeference(...)
     4. save the terrain to file by calling save_terrain_to_file(...)
 
+    Attributes
+    ----------
+    name : str
+        name of the terrain
+    elevation : numpy.ndarray
+        elevation of the terrain (2D numpy array)
+    geoTopLeft_x : float
+        raster's top-left corner georeferenced x-coordinate
+    geoTopLeft_y : float
+        raster's top-left corner georeferenced y-coordinate
+    pixel_width : float
+        pixel width (in x), i.e, each pixel is how many meters/feet wide?
+    pixel_height : float
+        pixel height (in y), i.e, each pixel is how many meters/feet high?
+    EPSGCode : int
+        EPSG (European Petroleum Survey Group) code that defines the coordinate reference system
+    geoTransform : list
+        affine transform for the raster image from image pixel to real coordinates
+    supportedGDALDrivers : list
+        list of supported GDAL drivers (short names only)
+
     """
 
     def __init__(self, name):
+        """Terrain class constructor
+
+        Parameters
+        ----------
+        name : str
+            name of the terrain
+
+        """
+
         self.name = name      # name of the terrain
         self.elevation = np.array([]) # elevation of the terrain, should be 2D numpy array
 
@@ -46,9 +76,11 @@ class Terrain:
 
         Returns
         -------
-        name: {string} -- name
+        name : str
+            name of the terrain
 
         """
+
         return self.name
 
     def get_elevation(self):
@@ -56,21 +88,25 @@ class Terrain:
 
         Returns
         -------
-        elevation: {numpy array} -- elevation
+        elevation : numpy.array
+            elevation 2D array
         """
+
         return self.elevation
 
     def set_elevation(self, elevation):
         """Set the elevation array
 
-        Attributes
+        Parameters
         _______
-        elevation: {numpy 2D array} -- elevation
+        elevation : numpy.ndarray
+            elevation 2D array
 
         Returns
         -------
 
         """
+
         self.elevation = elevation
 
     def set_pixel_size(self, pixel_width, pixel_height):
@@ -78,8 +114,10 @@ class Terrain:
 
         Parameters
         ----------
-        pixel_width: the width of each pixel in real world
-        pixel_height: the height of each pixel in real world
+        pixel_width : float
+            the width of each pixel in real world
+        pixel_height : float
+            the height of each pixel in real world
 
         Returns
         -------
@@ -151,9 +189,12 @@ class Terrain:
 
         Parameters
         ----------
-        geoTopLeft_x: {float} -- raster's top-left corner georeferenced x location
-        geoTopLeft_y: {float} -- raster's top-left corner georeferenced y location
-        EPSGCode: {int} - EPSG (European Petroleum Survey Group) code that defines the coordinate reference system
+        geoTopLeft_x : float
+            raster's top-left corner georeferenced x location
+        geoTopLeft_y : float
+            raster's top-left corner georeferenced y location
+        EPSGCode : int
+            EPSG (European Petroleum Survey Group) code that defines the coordinate reference system
 
         Returns
         -------

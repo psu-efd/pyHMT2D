@@ -48,6 +48,7 @@ extensions = [
     #'sphinx_gallery.gen_gallery',
     'sphinx.ext.extlinks',
     'sphinx.ext.coverage',
+    'm2r2'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -61,8 +62,8 @@ exclude_patterns = []
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
+#source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'contents'

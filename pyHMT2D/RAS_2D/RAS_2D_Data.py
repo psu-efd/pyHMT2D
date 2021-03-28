@@ -5,10 +5,10 @@ Created on Sun Feb 28 09:17:08 2021
 Convert HEC-RAS 2D mesh and data to SRH-2D. The generated SRHGEOM and SRHMAT files can be loaded in SMS. 
 However, current version of SMS (v13.1) can only handle mesh cell shapes of triangles and quadrilaterals.
 In HEC-RAS 2D, there could be polyhedrons with more than four sides. It seems SMS will discard extra
- sides and read the mesh wrong. Future versions of SMS may handle polyhydrons correctly. 
+ sides and read the mesh wrong. Future versions of SMS may handle general polygons correctly.
 
 Regardless, HEC-RAS 2D meshes can still be used with SRH-2D because the model itself can handle 
-polyhedrons. We simply have to prepare all the input files outside of SMS. And that is the purpose
+polygons. We simply have to prepare all the input files outside of SMS. And that is the purpose
  of this code.
 
 The developement of this code used/modified some of the functions in HaD-to-Py (Tomkovic 2016), e.g., 
@@ -32,12 +32,11 @@ from osgeo import gdal
 import affine
 import os.path
 
-from ..Misc import printProgressBar, vtkHandler
+from ..Misc import printProgressBar, vtkHandler, horizontalDistance
 from ..__common__ import *
 
 class RAS_2D_Data:
-    """
-    A class for HEC-RAS 2D data I/O, manipulation, and format conversion
+    """A class for HEC-RAS 2D data I/O, manipulation, and format conversion
     
     This class is designed to read HEC-RAS results in HDF format. It can 
     save RAS2D results into VTK format for visualization in Paraview, parse
@@ -63,6 +62,17 @@ class RAS_2D_Data:
     """
     
     def __init__(self, hdf_filename, terrain_filename):
+        """RAS_2D_Data class constructor
+
+        Parameters
+        ----------
+        hdf_filename : str
+            name of the HDF file that contains HEC-RAS results
+        terrain_filename : str
+            name of the terrain file (HEC-RAS's result HDF file does not have
+            elevation in point coordinates (up to v6; may change in future).
+        """
+
         self.hdf_filename = hdf_filename
         self.plan_filename = hdf_filename[:-4]
         self.plan = self.plan_filename[-3:]
@@ -268,6 +278,7 @@ class RAS_2D_Data:
         """ Get the computation, output, and map intervals
 
         """
+
         comp_indicator = "Computation Interval="
         outp_indicator = "Output Interval="
         map_indicator = "Mapping Interval="
@@ -301,7 +312,8 @@ class RAS_2D_Data:
 
         Parameters
         ----------
-        interval
+        interval : str
+            internal in string format
 
         Returns
         -------
@@ -353,6 +365,7 @@ class RAS_2D_Data:
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         
         self.TwoDAreaNames = hf['Geometry']['2D Flow Areas']['Attributes']['Name']
@@ -375,6 +388,7 @@ class RAS_2D_Data:
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         self.TwoDAreaCellCounts = hf['Geometry']['2D Flow Areas']['Attributes']['Cell Count']
         hf.close()
@@ -387,6 +401,7 @@ class RAS_2D_Data:
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellPoints = np.array(hf['Geometry']['2D Flow Areas']['Cell Points'])
         #print(hdf2DAreaCellPoints)
@@ -400,12 +415,13 @@ class RAS_2D_Data:
 
         Returns
         -------
-        hdf2DAreaBoundaryPoints: the content of the "External Faces" table in HDF, which
-                                include "BC Line ID", "Face Index", "FP Start Index", "FP End Index",
-                                "Station Start", and "Station End"
+        hdf2DAreaBoundaryPoints : numpy.ndarray
+            the content of the "External Faces" table in HDF, which
+            include "BC Line ID", "Face Index", "FP Start Index", "FP End Index", "Station Start", and "Station End"
 
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaBoundaryPoints = np.array(hf['Geometry']['Boundary Condition Lines']['External Faces'])
         #print(hdf2DAreaBoundaryPoints)
@@ -418,8 +434,8 @@ class RAS_2D_Data:
 
         Returns
         -------
-        hdf2DAreaBoundaryNamesTypes: the content of the "Attributes" table in HDF, which
-                                includes "Name", "SA-2D", "Type", and "Length"
+        hdf2DAreaBoundaryNamesTypes : list
+            the content of the "Attributes" table in HDF, which includes "Name", "SA-2D", "Type", and "Length"
 
 
         """
@@ -441,6 +457,7 @@ class RAS_2D_Data:
         -------
 
         """
+
         print("Building HEC-RAS 2D area boundaries ...")
         maxNumBC = 10          #maximum number of boundaries (adjust according to the mesh)
         maxPointsPerBC = 100   #maximum number of points per boundary
@@ -551,11 +568,12 @@ class RAS_2D_Data:
 
         Assume the data is in band 1.
 
-        This method is too slow.
+        This method is too slow (use with caution if the case is large).
 
         Attributes
         -------
-        geoTiffFileName: name for the geoTiff file
+        geoTiffFileName : str
+            name for the geoTiff file
 
         Returns
         -------
@@ -592,14 +610,18 @@ class RAS_2D_Data:
 
         Parameters
         ----------
-        geoTiffFileName: optional name of the GeoTiff file
-        pointList: list of points (x,y)
-        dataType: data type in the GeoTiff (default is numpy.float)
+        geoTiffFileName: str
+            name of the GeoTiff file
+        pointList: list
+            list of points (x,y)
+        dataType : int, optional
+            data type in the GeoTiff (default is numpy.float)
 
         Returns
         -------
 
         """
+
         # Read raster
         source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
         #print(source)
@@ -635,16 +657,18 @@ class RAS_2D_Data:
 
 
     def get2DAreaCellFacePointsIndexes(self, area):
-        """ Get 2D Flow Area cell face points indexes for a specified 2D area
+        """Get 2D Flow Area cell face points indexes for a specified 2D area
 
         Parameters
         ----------
-        area
+        area : str
+            name of the area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellFacePointsIndexes = np.array(hf['Geometry']['2D Flow Areas'][area]
                                                    ['Cells FacePoint Indexes'])
@@ -654,18 +678,20 @@ class RAS_2D_Data:
         return hdf2DAreaCellFacePointsIndexes
 
     def get2DAreaCellCenterCoordiantes(self, area):
-        """ Get 2D Flow Area cell center coordinates for a specified 2D area
+        """Get 2D Flow Area cell center coordinates for a specified 2D area
 
         Note: these coordinates only have (x,y), no z.
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename, 'r')
 
         #in HEC-RAS v5.0.7 and earlier, the 'Cells Center Coordinate' contains also the ghost cell centers
@@ -704,16 +730,18 @@ class RAS_2D_Data:
 
 
     def get2DAreaFacePointsCoordinates(self, area):
-        """ Get the face points' coordinates for a specified 2D area
+        """Get the face points' coordinates for a specified 2D area
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFacePointsCoordinates = np.array(hf['Geometry']['2D Flow Areas'][area]['FacePoints Coordinate'])
         
@@ -735,11 +763,12 @@ class RAS_2D_Data:
     
 
     def interpolateZcoord2Points(self, facePointsCoordinates3D):
-        """ Interpolate the elevation (bathymetry) to 2D area's points (z-coordinate)
+        """Interpolate the elevation (bathymetry) to 2D area's points (z-coordinate)
 
         Parameters
         ----------
-        facePointsCoordinates3D
+        facePointsCoordinates3D : numpy.ndarray
+            face points coordinates in 3D
 
         Returns
         -------
@@ -762,16 +791,18 @@ class RAS_2D_Data:
 
 
     def get2DAreaCellsFaceOrientationInfo(self, area):
-        """ Get cells face and orientation info for a specified 2D area
+        """Get cells face and orientation info for a specified 2D area
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellsFaceOrientationInfo = np.array(hf['Geometry']['2D Flow Areas'][area]['Cells Face and Orientation Info'])
         #print(hdf2DAreaCellsFaceOrientationInfo)
@@ -782,16 +813,18 @@ class RAS_2D_Data:
 
 
     def get2DAreaCellsFaceOrientationValues(self, area):
-        """ Get cells face and orientation values for a specified 2D area
+        """Get cells face and orientation values for a specified 2D area
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaCellsFaceOrientationValues = np.array(hf['Geometry']['2D Flow Areas'][area]['Cells Face and Orientation Values'])
         #print(hdf2DAreaCellsFaceOrientationValues)
@@ -802,18 +835,20 @@ class RAS_2D_Data:
     
 
     def get2DAreaFaceAreaElevationInfo(self, area):
-        """ Get faces area elevation info for a specified 2D area
+        """Get faces area elevation info for a specified 2D area
 
         Two columns: first column-starting index, second column-length of record
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFaceAreaElevationInfo = np.array(hf['Geometry']['2D Flow Areas'][area]['Faces Area Elevation Info'])
         #print(hdf2DAreaFaceAreaElevationInfo)
@@ -824,19 +859,21 @@ class RAS_2D_Data:
     
 
     def get2DAreaFaceAreaElevationValues(self, area):
-        """ Get faces area elevation values for a specified 2D area
+        """Get faces area elevation values for a specified 2D area
 
         Four columns: first column-elevation, second column-area
                      third column-wetted perimeter, fourth column-Manning's n (a constant as of now RAS version <=6)
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaFaceAreaElevationValues = np.array(hf['Geometry']['2D Flow Areas'][area]['Faces Area Elevation Values'])
         #print(hdf2DAreaFaceAreaElevationValues)
@@ -847,11 +884,12 @@ class RAS_2D_Data:
     
 
     def get2DAreaFaceFacePointIndexes(self, area):
-        """ Get face's facepoint indexes (two interger IDs)
+        """Get face's facepoint indexes (two interger IDs)
 
         Parameters
         ----------
-        area
+        area : str
+            name of area
 
         Returns
         -------
@@ -868,17 +906,20 @@ class RAS_2D_Data:
     
 
     def hdf2DAreaResultVar(self, area, varName):
-        """ Get HEC-RAS solution time series result for a given variable
+        """Get HEC-RAS solution time series result for a given variable
 
         Parameters
         ----------
-        area
-        varName
+        area : str
+            name of area
+        varName : str
+            variable name
 
         Returns
         -------
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaResultVar = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['2D Flow Areas'][area][varName])
@@ -893,12 +934,15 @@ class RAS_2D_Data:
     
 
     def get2DAreaSolutionTimes(self):
-        """ Get 2D Flow Area solution times
+        """Get 2D Flow Area solution times
 
         Returns
         -------
+        hdf2DAreaSolutionTimes : list
+            list of solution times
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaSolutionTimes = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['Time'])
@@ -910,12 +954,15 @@ class RAS_2D_Data:
     
 
     def get2DAreaSolutionTimeDates(self):
-        """ Get 2D Flow Area solution time_dates
+        """Get 2D Flow Area solution time_dates
 
         Returns
         -------
+        hdf2DAreaSolutionTimeDates : list
+            list of solution time and dates
 
         """
+
         hf = h5py.File(self.hdf_filename,'r') 
         hdf2DAreaSolutionTimeDates = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['Time Date Stamp'])
@@ -927,12 +974,13 @@ class RAS_2D_Data:
 
 
     def load2DAreaSolutions(self):
-        """ # Load solutions (cell depth and water surface elevation, node X and Y vel.) for all 2D areas
+        """Load solutions (cell depth and water surface elevation, node X and Y vel.) for all 2D areas
 
         Returns
         -------
 
         """
+
         print('Loading 2D area solutions ...')
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -959,40 +1007,14 @@ class RAS_2D_Data:
             self.TwoDAreaPointVy.append(pointVy)
             self.TwoDAreaPointVz.append(pointVx*0.0) #fake z velocity (=0)
 
-
-    def assembleVectors(self, pointVx, pointVy, pointVz):
-        """ Assemble vectors from their components and return the array
-
-        Parameters
-        ----------
-        pointVx
-        pointVy
-        pointVz
-
-        Returns
-        -------
-
-        """
-   
-        assert(len(pointVx)==len(pointVy))
-    
-        V = np.zeros((len(pointVx),3))
-    
-        for i in np.arange(len(pointVx)):
-            #print(i,V[i,0],pointVx[i])
-            V[i,0] = pointVx[i]
-            V[i,1] = pointVy[i]
-            V[i,2] = pointVz[i]
-    
-        return V
-
     def build2DAreaFaceHydraulicInformation(self):
-        """ For 2D flow area, build face hydraulic information table (face area elevation)
+        """For 2D flow area, build face hydraulic information table (face area elevation)
 
         Returns
         -------
 
         """
+
         print("Building 2D area's face hydraulic information ...")
 
         areaFaceHydraulicInformationTable = []
@@ -1037,7 +1059,7 @@ class RAS_2D_Data:
                 
             
     def build2DAreaFacePointCoordinatesList(self):
-        """ Build face point coordinates list
+        """Build face point coordinates list
 
         Returns
         -------
@@ -1057,7 +1079,7 @@ class RAS_2D_Data:
 
 
     def build2DAreaCellFaceList(self):
-        """ Build cell's face list
+        """Build cell's face list
 
         Returns
         -------
@@ -1092,23 +1114,10 @@ class RAS_2D_Data:
             self.TwoDAreaCellFaceList.append(currAreaCellFaceList)
 
 
-    def horizontalDistance(self, point1, point2):
-        """ Horizontal distance between two points
-
-        Parameters
-        ----------
-        point1
-        point2
-
-        Returns
-        -------
-
-        """
-        return np.sqrt(np.square(point2[0] - point1[0]) + np.square(point2[1] - point1[1]))
-                
-
     def build2DAreaFaceProfile(self):
-        """ Build face profile
+        """Build face profile
+
+        Face profile in HEC-RAS represents the sub-grid terrain.
 
         Returns
         -------
@@ -1175,7 +1184,8 @@ class RAS_2D_Data:
             
 
     def interpolateManningN_face_to_cell(self):
-        """ interpolate Manning's n from face to cell center
+        """interpolate Manning's n from face to cell center
+
         HEC-RAS 2D stores Manning's n value at faces, not cell centers. We need to
         interpolate its value from face to cell center. Another option is to use the
         cell center coordinates and direclty query the Manning's n layer in RAS Mapper, which
@@ -1214,11 +1224,9 @@ class RAS_2D_Data:
 
 
     def buildCellManningNFromGeoTiffHDF(self):
-        """ Build 2D flow area cell's Manning n value from HEC-RAS's GeoTiff and HDF files for Manning n.
+        """Build 2D flow area cell's Manning n value from HEC-RAS's GeoTiff and HDF files for Manning n.
 
         This method is more accurate than interpolateManningN_face_to_cell(), which uses a face to cell interpolation.
-
-
 
         Returns
         -------
@@ -1258,8 +1266,15 @@ class RAS_2D_Data:
 
         #print("cellsInManningZones = ", self.cellsInManningZones)
 
-    #build face's facepoint list
+
     def buildFace_FacePoints(self):
+        """Build face's facepoint list
+
+        Returns
+        -------
+
+        """
+
         print("Building face's facepoints list ...")
         
         #loop through each 2D areas
@@ -1274,11 +1289,12 @@ class RAS_2D_Data:
             
 
     def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,dir=''):
-        """ Save HEC-RAS 2D solutions to VTK files.
+        """Save HEC-RAS 2D solutions to VTK files.
 
         Note:
            - Each area saved separately
            - Each time saved separately
+
         The resulted files will be RAS2D_areaName_timeSequence.vtk, e.g.,
         RAS2D_SpringCreek_0001.vtk, RAS2D_SpringCreek_0002.vtk, etc.
 
@@ -1288,14 +1304,18 @@ class RAS_2D_Data:
 
         Parameters
         ----------
-        timeStep: {int} -- only the specified time step will be saved
-        lastTimeStep: {bool} -- optionally specify only the last time step
-        dir: {string} -- optional directory name
+        timeStep : int, optional
+            only the specified time step will be saved
+        lastTimeStep : bool, optional
+            specify only the last time step
+        dir : str, optional
+            directory name to write to
 
         Returns
         -------
 
         """
+
         print('Saving RAS2D results to VTK ...')
         
         #check the sanity of timeStep
@@ -1471,17 +1491,20 @@ class RAS_2D_Data:
 
 
     def exportSRHGEOMFile(self, srhgeomFileName, twoDAreaNumber = 0):
-        """ Export srhgeom file
+        """Export srhgeom file
 
         Parameters
         ----------
-        srhgeomFileName
-        twoDAreaNumber: {str} -- optional 2D flow area number (default = 0)
+        srhgeomFileName : str
+            name of the srhgeom file
+        twoDAreaNumber : int, optional
+            2D flow area number (default = 0)
 
         Returns
         -------
 
         """
+
         #only one 2D area is exported.
 
         # get the cell's FacePoint indexes
@@ -1562,11 +1585,12 @@ class RAS_2D_Data:
         
 
     def exportSRHMATFile(self, srhmatFileName):
-        """ Export the SRHMAT file
+        """Export the SRHMAT file
 
         Parameters
         ----------
-        srhmatFileName
+        srhmatFileName : str
+            name of the srhmat file to write to
 
         Returns
         -------
@@ -1617,20 +1641,22 @@ class RAS_2D_Data:
 
 
     def exportBoundariesToVTK(self, boundaryVTKFileName, dir='', twoDAreaNumber = 0):
-        """ Export boundaries of 2D area to VTK (for visual inspection in Paraview and check the ID of NodeString)
+        """Export boundaries of 2D area to VTK (for visual inspection in Paraview and check the ID of NodeString)
 
         Parameters
         ----------
-        boundaryVTKFileName
-        twoDAreaNumber: {int} -- optional 2D flow area number (default is 0)
+        boundaryVTKFileName : str
+            name of the VTK file for output
+        twoDAreaNumber : int, optional
+            2D flow area number (default is 0)
 
         Returns
         -------
 
         """
+
         #only the boundaries of one 2D area is exported.
 
-        
         fname = dir + "/" + boundaryVTKFileName + '.vtk'
         
         print('Writing RAS2D mesh boundaries to', fname)
@@ -1697,11 +1723,16 @@ class RAS_2D_Data:
 
 
     def exportFaceProfilesToVTK(self, faceProfileVTKFileName, dir='', twoDAreaNumber = 0):
-        """ Export face profile of 2D area to VTK (for visual inspection in Paraview)
+        """Export face profile of 2D area to VTK (for visual inspection in Paraview)
 
         Parameters
         ----------
-        faceProfileVTKFileName
+        faceProfileVTKFileName : str
+            name of VTK file to write to
+        dir : str, optional
+            directory to write to
+        twoDAreaNumber : int, optional
+            2D flow area number (default is 0)
 
         Returns
         -------
@@ -1768,7 +1799,7 @@ class RAS_2D_Data:
         
 
     def dump_all_data(self):
-        """ Dump all data to screen (for debugging purpose)
+        """Dump all data to screen (for debugging purpose)
 
         Returns
         -------
