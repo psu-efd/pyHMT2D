@@ -90,7 +90,7 @@ class SRH_2D_Model(HydraulicModel):
         -------
 
         """
-        self._srh_2d_data = SRH_2D_Data(srhhydro_filename, srhgeom_filename, srhmat_filename)
+        self._srh_2d_data = SRH_2D_Data(srhhydro_filename)
 
     def set_simulation_case(self, srh_2d_data):
         """Set the simulation case to srh_2D_data (if it has been created already)

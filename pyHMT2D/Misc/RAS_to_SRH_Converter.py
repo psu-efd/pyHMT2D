@@ -15,13 +15,14 @@ class RAS_to_SRH_Converter:
     3. manually create and adjust srhhydro file
     4. run SRH-2D
 
-    Attributes:
+    Attributes
     ---------
-    RASPlanResultFileName: {string} -- HEC-RAS result from a plan, such as caseName.p01.hdf
-    RASTerrainGeoTiffFileName: {string} -- HEC-RAS Terrain's GeoTiff file name
-    SRHCaseName: {string} -- case name for SRH-2D; the resulted files will be
-                              SRHCaseName.srhgeom, SRHCaseName.srhmat
-
+    RASPlanResultFileName : str
+        HEC-RAS result from a plan, such as caseName.p01.hdf
+    RASTerrainGeoTiffFileName : str
+        HEC-RAS Terrain's GeoTiff file name
+    SRHCaseName : str
+        Case name for SRH-2D; the resulted files will be SRHCaseName.srhgeom, SRHCaseName.srhmat
     """
 
     def __init__(self, RASPlanResultFileName, RASTerrainGeoTiffFileName, SRHCaseName):

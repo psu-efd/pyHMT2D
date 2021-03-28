@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% set title = _('Welcome to pyHMT2D!') %}
+{% block body %}
+  <h1>{{ _('pyHMT2D - Two-dimensional Hydraulic Modeling Tools in Python') }}</h1>
+
+  <p>This is the pyHMT2D API documentation.
+
+  <img class="biglogo" src="{{ pathto('_static/images/pyhmt2d_logo_vel_color_vector.png', 1) }}">
+
+  <h2 style="margin-bottom: 10 px">{%trans%}Start Here{%endtrans%}</h2>
+
+  <p>See the <a href="{{ pathto("contents") }}">{%trans%}table of contents{%endtrans%}</a>.</p>
+
+{% endblock %}

@@ -13,6 +13,7 @@ class Terrain:
     """A Python class for terrain data I/O, creation, and manipulation
 
     Typical work flow is as follows:
+
     1. create the Terrain object
     2. create the terrain (elevation, pixel_width/height): user can either call
        some pre-defined terrains such as constant slope, or create the terrain by themsleves
@@ -21,6 +22,7 @@ class Terrain:
     4. save the terrain to file by calling save_terrain_to_file(...)
 
     """
+
     def __init__(self, name):
         self.name = name      # name of the terrain
         self.elevation = np.array([]) # elevation of the terrain, should be 2D numpy array
@@ -107,15 +109,19 @@ class Terrain:
 
         The slope is in the x direction only. The slope in the y direction is zero.
 
-        Attributes:
-        _______
-        slope: {float} -- slope in x
-        channel_lenx: {float} -- channel length in x
-        channel_leny: {float} -- channel length in y
-        elevation_origin: {float} -- the elevation at the origin (top left; does not account for the extra fringe)
-        extra_len: {float} -- optional extra fringe length added to the channel domain (to have some free room in
-        developing 2D models in e.g., SMS or HEC-RAS
-
+        Parameters
+        -----------
+        slope : float
+            slope in x
+        channel_lenx : float
+            channel length in x
+        channel_leny : float
+            channel length in y
+        elevation_origin : float
+            the elevation at the origin (top left; does not account for the extra fringe)
+        extra_len : float
+            optional extra fringe length added to the channel domain (to
+            have some free room in developing 2D models in e.g., SMS or HEC-RAS.
 
         Returns
         -------
@@ -167,16 +173,17 @@ class Terrain:
         self.EPSGCode = EPSGCode
 
     def save_terrain_to_file(self, terrainFileName, geoDriverName = 'GTiff'):
-        """
-        save terrain to file, such as GeoTiff
+        """save terrain to file, such as GeoTiff
 
-        Attributes
-        _________
-        terrainFileName: {string} -- file name for the saved terrain
-        geoDriverName: {string} -- GDAL raster driver names, such as 'GTiff'
+        Parameters
+        -----------
+        terrainFileName : str
+            file name for the saved terrain
+        geoDriverName : str
+            GDAL raster driver names, such as 'GTiff'
 
-        :return:
         """
+
         print("Save the terrain to file:", terrainFileName)
 
         if geoDriverName not in self.supportedGDALDrivers:
