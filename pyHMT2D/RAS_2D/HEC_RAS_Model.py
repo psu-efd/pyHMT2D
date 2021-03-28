@@ -9,16 +9,40 @@ from .helpers import *
 import sys
 
 class HEC_RAS_Project(object):
-    """ Data for a HEC-RAS project (from .prj file)
+    """ HEC-RAS project class (data from .prj file)
 
     Attributes:
-        title: project title
-        currentPlanName: name of the current plan
-        geom_file_list: list of all geometry files
-        flow_file_list: list of all flow files
-        plan_file_list: list of all plan files
+        title : str
+            project title
+        currentPlanName : str
+            name of the current plan
+        geom_file_list : list
+            list of all geometry files
+        flow_file_list : list
+            list of all flow files
+        plan_file_list : list
+            list of all plan files
     """
+
     def __init__(self, title='', currentPlanName='', geom_file_list=[], flow_file_list=[], plan_file_list=[], plans=[]):
+        """HEC_RAS_Project class constructor
+
+        Parameters
+        ----------
+        title : str, optional
+            title
+        currentPlanName : str, optional
+            current plan's name
+        geom_file_list : str, optional
+            list of geometry file names
+        flow_file_list : str, optional
+            list of flow file names
+        plan_file_list : str, optional
+            list of plan file names
+        plans : str
+            list of HEC_RAS_Plan objects
+        """
+
         self.title = title
         self.currentPlanName = currentPlanName
         self.geom_file_list = geom_file_list
@@ -31,6 +55,9 @@ class HEC_RAS_Project(object):
     def __del__(self):
         """ Destructor
 
+        Clear out lists and objects (may not be necessary; but just to make sure
+        we don't cause memory leak)
+
         Returns
         -------
 
@@ -42,9 +69,21 @@ class HEC_RAS_Project(object):
         self.plans.clear()
 
     def __str__(self):
+        """Define the string representation of the object as HEC-RAS case's title
+
+        Returns
+        -------
+
+        """
         return self.title
 
     def __repr__(self):
+        """Define the object as a string representation
+
+        Returns
+        -------
+
+        """
         return 'HEC-RAS Project: title = "{}", ' \
                'current plan name = "{}", ' \
                'geometry file list = "{}", ' \
@@ -55,17 +94,38 @@ class HEC_RAS_Project(object):
                                          self.plan_file_list, self.plans)
 
 class HEC_RAS_Plan(object):
-    """ Data for a HEC-RAS plan (from .p## file)
+    """ HEC-RAS plan (data from .p## file)
 
     Attributes:
-         title: title of the plan
-         steady: {bool} -- whether it is steady or not
-         geom_file: geometry file, e.g., g01, g02, etc.
-         flow_file: flow file, e.g, u01, u02, etc.
-         plan_file: plan file, e.g., p01, p02, etc.
+         title : str
+            title of the plan
+         steady : bool
+            whether it is steady or not
+         geom_file : str
+            geometry file name, e.g., g01, g02, etc.
+         flow_file : str
+            flow file name, e.g, u01, u02, etc.
+         plan_file : str
+            plan file name, e.g., p01, p02, etc.
 
     """
     def __init__(self, title='', steady=False, geom_file='', flow_file='', plan_file=''):
+        """HEC_RAS_Plan class constructor
+
+        Parameters
+        ----------
+        title : str, optional
+            title of the plan
+        steady : bool, optional
+            whether the plan is steady or not (unsteady)
+        geom_file : str, optional
+            geometry file name
+        flow_file : str, optional
+            flow file name
+        plan_file : str, optional
+            plan file name
+        """
+
         self.title = title
         self.steady = steady
         self.geom_file = geom_file
@@ -84,34 +144,61 @@ class HEC_RAS_Plan(object):
 
 class HEC_RAS_Geometry(object):
     """ Data for a HEC-RAS geometry (from .g## file)
+
+    Not implemented yet.
     """
+
     pass
 
 class HEC_RAS_SteadyFlow(object):
     """ Data for a HEC-RAS steady flow (from .f## file)
+
+    Not implemented yet.
     """
+
     pass
 
 class HEC_RAS_UnsteadyFlow(object):
     """ Data for a HEC-RAS unsteady flow (from .u## file)
+
+    Not implemented yet.
     """
+
     pass
 
 class HEC_RAS_Model(HydraulicModel):
-    """HEC-RAS Model
+    """HEC-RAS Model class
 
-    HEC-RAS Model controls the run of HEC-RAS. A plan can be loaded and executed. Currently HEC_RAS_Model has very
-    limited capability to modify HEC-RAS project, plan, geometry, and flow data.
+    HEC-RAS Model controls the run of HEC-RAS. A plan can be loaded and executed.
+    Currently HEC_RAS_Model has very limited capability to modify HEC-RAS project,
+    plan, geometry, and flow data. It is mainly used for calibration and Monte
+    Carlo simulations.
 
     Attributes:
-        _faceless: {bool} -- whether show the HEC-RAS GUI
-        _ras_path: path to the HEC-RAS program (Ras.exe)
-        _RASController: RASController
-        _project_file_name: HEC-RAS project name (including the full path)
-        _project: HEC_RAS_Project object corresponding to current project
+        _faceless : bool
+            whether show the HEC-RAS GUI
+        _ras_path : str
+            path to the HEC-RAS program (Ras.exe)
+        _RASController: object
+            RASController
+        _project_file_name : str
+            HEC-RAS project name (including the full path)
+        _project : HEC_RAS_Project
+            HEC_RAS_Project object corresponding to current project
 
     """
+
     def __init__(self, version, faceless=False):
+        """HEC_RAS_Model constructor
+
+        Parameters
+        ----------
+        version : str
+            HEC-RAS version
+        faceless : bool, optional
+            whether to run HEC-RAS without GUI
+        """
+
         HydraulicModel.__init__(self, "HEC-RAS", version)
 
         #whether run HEC-RAS without GUI interface showing up
@@ -151,6 +238,8 @@ class HEC_RAS_Model(HydraulicModel):
         self._project = None
 
     def __del__(self):
+        """Some clean up before exit."""
+
         if self._RASController is not None:
             print("Quitting HEC-RAS ...")
             self._RASController.QuitRas()
@@ -168,6 +257,7 @@ class HEC_RAS_Model(HydraulicModel):
         -------
 
         """
+
         print("Initializing HEC-RAS ...")
 
         # Should we kill all currently running HEC-RAS instances? Probably not a good idea.
@@ -201,7 +291,8 @@ class HEC_RAS_Model(HydraulicModel):
 
         Parameters
         ----------
-        projectFileName: {string} -- project file name including the path
+        projectFileName : str
+            project file name including the path
 
         Returns
         -------
@@ -385,6 +476,7 @@ class HEC_RAS_Model(HydraulicModel):
         -------
 
         """
+
         if self._project is not None:
             self._project = None
 
@@ -397,13 +489,23 @@ class HEC_RAS_Model(HydraulicModel):
             print("Finished quitting HEC-RAS.")
 
     def get_plan_names(self, IncludeOnlyPlansInBaseDirectory):
-        """Get a list of plan names in the current project
+        """Get the list of plan names in the current project
 
         Based on this COM object function:
-        Plan_Names(self, PlanCount=defaultNamedNotOptArg, PlanNames=defaultNamedNotOptArg, IncludeOnlyPlansInBaseDirectory=defaultNamedNotOptArg)
+        Plan_Names(self, PlanCount=defaultNamedNotOptArg, PlanNames=defaultNamedNotOptArg,
+        IncludeOnlyPlansInBaseDirectory=defaultNamedNotOptArg)
+
+        Parameters
+        ----------
+        IncludeOnlyPlansInBaseDirectory : bool
+            whether only include plans in the base directory
 
         Returns
         -------
+        PlanCount : int
+            number of plans in the current project
+        PlanNames : list
+            a list of plan names in the current project
 
         """
 

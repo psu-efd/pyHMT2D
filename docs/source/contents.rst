@@ -18,19 +18,22 @@ Welcome to pyHMT2D's documentation!
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
+   
+   self
+   README
 
-pyHMT2D SRH_2D
+SRH-2D related classes and tools
 ===================
 .. automodule:: pyHMT2D.SRH_2D
    :members:
    
-pyHMT2D RAS_2D
+HEC-RAS related classes and tools
 ===================
 .. automodule:: pyHMT2D.RAS_2D
    :members:   
 
 
-pyHMT2D Misc.
+pyHMT2D's miscellaneous classes and tools
 ===================
 .. automodule:: pyHMT2D.Misc
    :members:   

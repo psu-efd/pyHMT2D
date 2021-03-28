@@ -13,25 +13,44 @@ import subprocess
 import os
 import time
 
-#from alive_progress import alive_bar
 
 class SRH_2D_Model(HydraulicModel):
-    """SRH_2D Model
+    """SRH-2D Model which can control simulation runs.
 
-    SRH_2D_Model controls the run of SRH_2D. A case can be loaded and executed.
-
-    Currently SRH_2D_Model has very limited capability to modify geometry, mesh, and flow data.
+    SRH_2D_Model controls the run of SRH-2D. A case can be loaded and executed. Currently
+    SRH_2D_Model has very limited capability to modify geometry, mesh, and flow data. One
+    of the main use scenarios is for calibration or Monte Carlo simulations.
 
     Attributes:
-        _faceless: {bool} -- whether show the SRH-2D window when it is running
-        _srh_path: path to the SRH_2D program (e.g., srh_2d.exe depending on the version)
-        _srh_pre_path: path to the SRH_2D preprocessing program (e.g., srh_2d_pre.exe depending on the version)
-
-        _project_file_name: HEC-RAS project name (including the full path)
-        _project: HEC_RAS_Project object corresponding to current project
+        _faceless : bool
+            whether show the SRH-2D window when it is running
+        _srh_path : str
+            path to the SRH_2D program (e.g., srh_2d.exe depending on the version)
+        _srh_pre_path : str
+            path to the SRH_2D preprocessing program (e.g., srh_2d_pre.exe depending on the version)
+        _extra_dll_path : str
+            path for library Dlls, such as XMDL, zlib, hdf5, and msvcr used by SRH-2D.
+        _srh_2d_data : SRH_2D_Data
+            a SRH_2D_Data object to hold the simulation case data.
 
     """
     def __init__(self, version, srh_pre_path, srh_path, extra_dll_path, faceless=False):
+        """SRH_2D_Model constructor
+
+        Parameters
+        ----------
+        version : str
+            version number of SRH-2D
+        srh_pre_path : str
+            path to the SRH_2D preprocessing program (e.g., srh_2d_pre.exe depending on the version)
+        srh_path : str
+            path to the SRH_2D program (e.g., srh_2d.exe depending on the version)
+        extra_dll_path : str
+            path for library Dlls, such as XMDL, zlib, hdf5, and msvcr used by SRH-2D
+        faceless : bool, optional
+            whether show the SRH-2D window when it is running
+        """
+
         HydraulicModel.__init__(self, "SRH-2D", version)
 
         #whether run HEC-RAS without GUI interface showing up
@@ -51,10 +70,14 @@ class SRH_2D_Model(HydraulicModel):
     def init_model(self):
         """Initialize SRH-2D model
 
+        It will check the existance of SRH-2D executable files and add extra DLL path
+        to the system PATH environment.
+
         Returns
         -------
 
         """
+
         print("Initializing SRH-2D ...")
 
         #check whether the specified srh_2d_pre.exe and srh_2d.exe exist
@@ -75,21 +98,21 @@ class SRH_2D_Model(HydraulicModel):
         extra_path = os.path.abspath(self._extra_dll_path)
         os.environ['PATH'] = extra_path + ";" + os.environ['PATH']
 
-    def open_project(self, srhhydro_filename, srhgeom_filename, srhmat_filename):
-        """Open a SRH-2D project with the specified srhhydro, srhgeom, and srhmat files
+    def open_project(self, srhhydro_filename):
+        """Open a SRH-2D project with the specified srhhydro file
 
-        A SRH_2D_Data object will be created to hold the project information
+        A SRH_2D_Data object will be created to hold the project information.
 
         Parameters
         ----------
-        srhhydro_filename: srhhydro file name
-        srhgeom_filename: srhgeom file name
-        srhmat_filename: srhmat file name
+        srhhydro_filename : str
+            name of the srhhydro file (which contains srhgeom_filename and srhmat_filename)
 
         Returns
         -------
 
         """
+
         self._srh_2d_data = SRH_2D_Data(srhhydro_filename)
 
     def set_simulation_case(self, srh_2d_data):
@@ -97,30 +120,39 @@ class SRH_2D_Model(HydraulicModel):
 
         Parameters
         ----------
-        srh_2d_data: an object from class SRH_2D_Data, which should be created before calling
+        srh_2d_data : SRH_2D_Data
+            an object from class SRH_2D_Data, which should be created before calling
 
         Returns
         -------
 
         """
+
         self._srh_2d_data = srh_2d_data
 
     def close_project(self):
         """Close the opened SRH-2D project (if any)
 
+        It will set _srh_2d_data to None.
+
         Returns
         -------
 
         """
+
         self._srh_2d_data = None
 
     def run_model(self):
         """Run the SRH-2D model
 
+        It will run the current SRH-2D project (case) and show a progress bar. The case
+        has to be created before with open_project(...) or set_simulation_case().
+
         Returns
         -------
 
         """
+
         cmd = self._srh_path
         case_srhhydro_file_name = self._srh_2d_data.get_case_name() + ".DAT"
         case_INF_file_name = self._srh_2d_data.get_case_name() + "_INF.DAT"
@@ -196,6 +228,8 @@ class SRH_2D_Model(HydraulicModel):
 
     def run_pre_model(self):
         """Run SRH-2D Pre to preprocess the simulation case
+
+        Run SRH-2D's preprocessing step for current case.
 
         Returns
         -------

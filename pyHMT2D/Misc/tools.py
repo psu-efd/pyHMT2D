@@ -14,6 +14,54 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 
+
+def horizontalDistance(point1, point2):
+    """ Horizontal distance between two points
+
+    Parameters
+    ----------
+    point1 : list or numpy.ndarray
+        point1's coordinates
+    point2 : list or numpy.ndarray
+        point2's coordinates
+
+    Returns
+    -------
+
+    """
+    return np.sqrt(np.square(point2[0] - point1[0]) + np.square(point2[1] - point1[1]))
+
+def assembleVectors(pointVx, pointVy, pointVz):
+    """Assemble vectors from their components and return the numpy array
+
+    Parameters
+    ----------
+    pointVx : list or numpy array
+        x-component
+    pointVy : list or numpy array
+        y-component
+    pointVz : list or numpy array
+        z-component
+
+    Returns
+    -------
+    V : numpy.ndarray
+        assembled vector array
+
+    """
+
+    assert (len(pointVx) == len(pointVy))
+
+    V = np.zeros((len(pointVx), 3))
+
+    for i in np.arange(len(pointVx)):
+        # print(i,V[i,0],pointVx[i])
+        V[i, 0] = pointVx[i]
+        V[i, 1] = pointVy[i]
+        V[i, 2] = pointVz[i]
+
+    return V
+
 def setNumpyArrayValueToNaN(array, value):
     # for numpy array value to NaN if it equals to value
     array[array==value]=np.nan

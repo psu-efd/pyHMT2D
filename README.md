@@ -5,9 +5,10 @@
 
 <p align="center">2D Hydraulic Modeling Tools in Python.</p>
 
-# pyHMT2D - <ins>Py</ins>thon <ins>H</ins>ydraulic <ins>M</ins>odeling <ins>T</ins>ools - 2D
+# pyHMT2D - Python Hydraulic Modeling Tools - 2D
 
 pyHMT2D is a Python package developed to control and (semi)automate 2D hydraulic modeling, and pre-/postprocessing simulation results. Currently, the following 2D hydraulic models are supported:
+
 - SRH-2D
 - HEC-RAS 2D
 
@@ -24,12 +25,14 @@ Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling
 ## Features
 
 For SRH-2D modeling:
+
 - read SRH-2D results if they are not in VTK format
 - convert SRH-2D results to VTK format
 - sample and probe simulation results (with the functionalities of VTK library)
 - control SRH-2D simulations (TODO)
 
 For HEC-RAS 2D modeling:
+
 - read RAS2D results (HDF files)
 - convert RAS2D results to VTK, one of the most popular format for scientific data
   - point and cell center data (depht, water surface elevation, velocity, etc.)
@@ -40,16 +43,19 @@ For HEC-RAS 2D modeling:
 - control HEC-RAS 2D simulations (TODO)
 
 With the control and automation capability above, it is much easier to do the following:
+
 - automatic calibration of models with any available optimzation and calibration Python packages
 - Monte-Carlo simulations with scripting and Python's statistic libraries
 - ...
 
 Other features:
+
 - calculate the difference between simulation results (if they are on the same mesh)
 
 ## Requirements
 
 This package uses the following libraries:
+
 - [h5py](https://www.h5py.org/)
 - [vtk](https://github.com/Kitware/VTK)
 
@@ -62,9 +68,11 @@ More examples can be found in the "test" directory.
 ## Limitations
 
 For SRH-2D:
+
 - This package is developed and tested with SRH-2D v3.3; other versions may work but has not been tested.
 
 For HEC-RAS 2D:
+
 - Only one 2D flow area is supported.
 - Only 2D flow area information is processed; others such as 1D channels and structures are ignored.
 - Only flow data is processes; others such as sediment and water quality are ignored.
@@ -77,6 +85,7 @@ proper copyright laws and their licenses (see the copies of their original licen
 acknowledge their contributions.
 
 In particular, the following packages were used:
+
 - [PyRAS - Python for River AnalysiS](https://github.com/solomonvimal/pyras)
 - [HaD-to-Py](https://github.com/latomkovic/HaD-to-Py)
 
