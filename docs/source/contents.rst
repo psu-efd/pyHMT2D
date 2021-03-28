@@ -7,36 +7,19 @@
 
 .. raw:: html
 
-    <div class="banner">
+    <div class="banner" style="text-align:center">
         <a href="https://github.com/psu-efd/pyHMT2D"><img src="_static/images/pyhmt2d_logo_vel_color_vector.png" alt="pyHMT2D" width="100%"/></a>
-        <h2>pyHMT2D: a Python tool library for two-dimensional hydraulic modeling</h2>
+        <h1>pyHMT2D: a Python tool library for two-dimensional hydraulic modeling</h1>
     </div>
 
-Welcome to pyHMT2D's documentation!
-===================================
+This is a short documentation of pyHMT2D and its API. More detailed information about how to use pyHMT2D, algoritms, implementations, and some of the theoretical background are in the user manual. 
 
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
    
-   self
-   README
-
-SRH-2D related classes and tools
-===================
-.. automodule:: pyHMT2D.SRH_2D
-   :members:
-   
-HEC-RAS related classes and tools
-===================
-.. automodule:: pyHMT2D.RAS_2D
-   :members:   
-
-
-pyHMT2D's miscellaneous classes and tools
-===================
-.. automodule:: pyHMT2D.Misc
-   :members:   
+   README.rst
+   pyHMT2D_API
 
 
 Indices and tables
