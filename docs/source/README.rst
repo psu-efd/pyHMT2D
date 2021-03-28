@@ -1,11 +1,7 @@
-.. raw:: html
+﻿.. raw:: html
 
    <h1 align="center">
-       <a href="https://github.com/psu-efd/pyHMT2D"><img src="_static/images/pyhmt2d_logo_vel_color_vector.png" width="100%" onerror="this.width = '0%' "/></a>
-   </h1>
-
-   <h1 align="center">
-       <a href="https://github.com/psu-efd/pyHMT2D"><img src="logo/pyhmt2d_logo_vel_color_vector.png" width="100%" onerror="this.width = '0%'"/></a>
+       <a href="https://github.com/psu-efd/pyHMT2D"><img src="_static/images/pyhmt2d_logo_vel_color_vector.png" width="100%" onerror="this.width = '0%'"/></a>
    </h1>
 
 pyHMT2D - Python Hydraulic Modeling Tools - 2D
@@ -74,7 +70,7 @@ For HEC-RAS 2D modeling:
    -  interpolate between point and cell data
    -  face data (e.g., subterrain data)
 
--  convert RAS2D mesh, boundary conditions, and Manning’s n data into
+-  convert RAS2D mesh, boundary conditions, and Manningâ€™s n data into
    SRH-2D format such that SRH-2D and HEC-RAS 2D can run a case with
    exactly the same mesh for comparison purpose. Additionally, HEC-RAS
    2D can be used as a mesh generator for SRH-2D.
@@ -87,9 +83,9 @@ do the following:
 
 -  automatic calibration of models with any available optimzation and
    calibration Python packages
--  Monte-Carlo simulations with scripting and Python’s statistic
+-  Monte-Carlo simulations with scripting and Pythonâ€™s statistic
    libraries
--  …
+-  â€¦
 
 Other features:
 
@@ -110,7 +106,7 @@ Installation
 Example Usage
 -------------
 
-More examples can be found in the “examples” directory.
+More examples can be found in the â€œexamplesâ€ directory.
 
 Limitations
 -----------
@@ -135,7 +131,7 @@ Acknowledgements and references
 
 pyHMT2D utilizes and benefits from several open source codes. The usage
 of these codes follows the proper copyright laws and their licenses (see
-the copies of their original licenses in the “licenses” directory). We
+the copies of their original licenses in the â€œlicensesâ€ directory). We
 acknowledge their contributions.
 
 In particular, the following packages were used:
