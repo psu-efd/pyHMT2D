@@ -9,7 +9,7 @@ import os
 import win32api
 import win32con
 
-from ..__common__ import yes_or_no
+from ..Misc import yes_or_no
 
 
 def get_supported_hec_ras_versions():

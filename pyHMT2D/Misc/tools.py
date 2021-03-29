@@ -315,3 +315,75 @@ def generate_rating_curve_based_on_Mannings_equation(station_profile, zprofile, 
                         (Area[pointI]/Pwet[pointI])**(2.0/3.0)*np.sqrt(slope)
 
     return stage, Q, Area, Pwet, station_resample, z_resample
+
+def yes_or_no(question):
+    """ a utility tool to ask the user yes/no question
+
+    Parameters
+    ----------
+    question : str
+        the text for the question
+
+    Returns
+    -------
+    value : bool
+        True or False
+
+    """
+    while True:
+        answer = input(question + ' (y/n): ').lower().strip()
+        if answer in ('y', 'yes', 'n', 'no'):
+            return answer in ('y', 'yes')
+        else:
+            print('You must answer y, yes, n, or no.')
+
+
+def dumpXMDFFileItems(xmdfFileName):
+    """Print the items in the XMDF file.
+
+    Parameters
+    ----------
+    xmdfFileName : str
+        name of the xmdf file
+
+    Returns
+    -------
+
+
+    """
+
+    print("The content in the XMDF result file: ")
+
+    xmdfFile = h5py.File(xmdfFileName, "r")
+
+    xmdfFile.visititems(h5py_visitor_func)
+
+    xmdfFile.close()
+
+
+def h5py_visitor_func(name, node):
+    """
+
+    Reference:
+    https://stackoverflow.com/questions/57013771/how-to-display-elements-of-arrays-in-a-mat-file-in-python/57067674#57067674
+
+    Parameters
+    ----------
+    name : str
+        name in HDF
+    node : str
+        node in HDF
+
+    Returns
+    -------
+
+    """
+    if isinstance(node, h5py.Group):
+        print(node.name, 'is a Group')
+    elif isinstance(node, h5py.Dataset):
+        if (node.dtype == 'object'):
+            print(node.name, 'is an object Dataset')
+        else:
+            print(node.name, 'is a Dataset')
+    else:
+        print(node.name, 'is an unknown type')

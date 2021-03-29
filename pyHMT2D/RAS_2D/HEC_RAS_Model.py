@@ -3,7 +3,7 @@ RAS_2D_Model:
 """
 
 import win32com.client as win32
-from pyHMT2D.__common__ import HydraulicModel
+from pyHMT2D.HydraulicModel import HydraulicModel
 
 from .helpers import *
 import sys

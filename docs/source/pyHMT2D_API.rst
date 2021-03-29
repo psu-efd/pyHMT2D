@@ -1,18 +1,38 @@
 pyHMT2D API
 ===========
 
+pyHMT2D base classes, constants, and tools
+------------------------------------------
+.. automodule:: pyHMT2D.HydraulicModel
+   :imported-members:
+   :members:  
+
+.. autodata:: pyHMT2D.__common__.gMax_Nodes_per_Element
+   :annotation:
+   
+.. autodata:: pyHMT2D.__common__.gMax_Elements_per_Node
+   :annotation:   
+
+
 SRH-2D related classes and tools
 --------------------------------
+
+Package summary for SRH-2D:
+
 .. automodule:: pyHMT2D.SRH_2D
-   :members:
+   :members:         
    
 HEC-RAS related classes and tools
 ---------------------------------
+
+Package summary for RAS-2D:
+
 .. automodule:: pyHMT2D.RAS_2D
    :members:   
 
 Miscellaneous classes and tools
 -------------------------------
+Package summary for Misc
+
 .. automodule:: pyHMT2D.Misc
    :members:   
-   

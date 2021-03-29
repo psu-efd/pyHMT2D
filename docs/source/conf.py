@@ -41,8 +41,11 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',  #suppport for NumPy and Google stype docstrings
+    #'sphinx_autodoc_typehints', # Automatically document param types (less noise in class signature)
+    'nbsphinx',  # Integrate Jupyter Notebooks and Sphinx
     'sphinx.ext.doctest',
-    'sphinx.ext.autosummary',
+    #'sphinx.ext.autosummary',
+    #'sphinx_autopackagesummary',
     #'notfound.extension',
     'sphinx_copybutton',
     #'sphinx_gallery.gen_gallery',
@@ -50,6 +53,15 @@ extensions = [
     'sphinx.ext.coverage',
     'm2r2'
 ]
+
+#autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+html_show_sourcelink = False  # Remove 'view source code' from top of page (for html, not python)
+autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
+set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
+nbsphinx_allow_errors = True  # Continue through Jupyter errors
+#autodoc_typehints = "description" # Sphinx-native method. Not as good as sphinx_autodoc_typehints
+add_module_names = False # Remove namespaces from class/method signatures
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -193,7 +205,12 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+#intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+}
 
 def setup(app):
     app.add_css_file('css/custom.css')
+    
+#html_css_files = ["readthedocs-custom.css"] # Override some CSS settings    
