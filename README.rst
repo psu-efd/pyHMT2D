@@ -108,6 +108,16 @@ Example Usage
 
 More examples can be found in the “examples” directory.
 
+Test
+----
+To test the validity of the package, we use *pytest*. In the *pyHMT2D* project directory, do the following:
+
+.. code-block:: bash
+
+   $ pytest -m pytest tests
+
+which will run all tests in the "test" directory. The *pytest* configuration is in the ``pytest.ini'' file. Make sure the test is successful.
+
 Limitations
 -----------
 
@@ -139,6 +149,16 @@ In particular, the following packages were used:
 -  `PyRAS - Python for River
    AnalysiS <https://github.com/solomonvimal/pyras>`__
 -  `HaD-to-Py <https://github.com/latomkovic/HaD-to-Py>`__
+
+Some of the examples and tests use dataset from public or authorized sources:
+
+- Munice case data from HEC-RAS example data set (public domain)
+- Duck Pond case data from Penn State University (with authorization for research and teaching purposes only)
+- `Lidar data set from USGS <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ (public domain)
+
+The inclusion of these data sets in *pyHMT2D* is strictly for demonstration purpose only. Reuse or
+repurpose of these dataset without explicit authorization from the origianl owner or copyright
+holder is not permitted.
 
 License
 -------

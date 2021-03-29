@@ -82,7 +82,7 @@ class SRH_2D_SRHHydro:
 
         #check whether the srhhydro file exists
         if not path.isfile(self.srhhydro_filename):
-            print("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exitting ...")
+            print("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exiting ...")
             sys.exit()
 
         for line in open(self.srhhydro_filename):
