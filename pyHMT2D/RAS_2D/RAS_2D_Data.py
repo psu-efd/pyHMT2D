@@ -278,6 +278,11 @@ class RAS_2D_Data:
         """ Get the computation, output, and map intervals
 
         """
+        print(os.getcwd())
+        #check whether the plan file exists
+        if not os.path.isfile(self.plan_filename):
+            print("The HEC-RAS plan file", self.plan_filename, "does not exists. Exiting ...")
+            sys.exit()
 
         comp_indicator = "Computation Interval="
         outp_indicator = "Output Interval="
@@ -621,6 +626,11 @@ class RAS_2D_Data:
         -------
 
         """
+
+        #check whether the geoTiff file exists
+        if not os.path.isfile(geoTiffFileName):
+            print("The geoTiff file", geoTiffFileName, "does not exists. Exiting ...")
+            sys.exit()
 
         # Read raster
         source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
