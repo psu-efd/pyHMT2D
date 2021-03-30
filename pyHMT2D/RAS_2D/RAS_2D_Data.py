@@ -32,10 +32,12 @@ from osgeo import gdal
 import affine
 import os.path
 
+from pyHMT2D.HydraulicData import HydraulicData
+
 from ..Misc import printProgressBar, vtkHandler, horizontalDistance
 from ..__common__ import *
 
-class RAS_2D_Data:
+class RAS_2D_Data(HydraulicData):
     """A class for HEC-RAS 2D data I/O, manipulation, and format conversion
     
     This class is designed to read HEC-RAS results in HDF format. It can 
@@ -72,6 +74,8 @@ class RAS_2D_Data:
             name of the terrain file (HEC-RAS's result HDF file does not have
             elevation in point coordinates (up to v6; may change in future).
         """
+
+        HydraulicData.__init__(self, "HEC-RAS")
 
         self.hdf_filename = hdf_filename
         self.plan_filename = hdf_filename[:-4]

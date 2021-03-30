@@ -9,7 +9,9 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 
-class Terrain:
+from pyHMT2D.HydraulicData import HydraulicData
+
+class Terrain(HydraulicData):
     """A Python class for terrain data I/O, creation, and manipulation
 
     Typical work flow is as follows:
@@ -53,6 +55,8 @@ class Terrain:
             name of the terrain
 
         """
+
+        HydraulicData.__init__(self, "Terrain")
 
         self.name = name      # name of the terrain
         self.elevation = np.array([]) # elevation of the terrain, should be 2D numpy array

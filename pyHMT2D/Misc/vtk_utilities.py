@@ -282,10 +282,13 @@ class vtkHandler:
 
         Parameters
         ----------
-        lineVTK: {vtkLineSource} -- coordinates of points in the vtkLineSource; the points don't need to ordered,
-        thus they can be just a bunch of points
-        readerUnstructuredGridVTK: {vtkUnstructuredGridReader} -- Unstructured Grid VTK reader
-        varName: name of the variable to be probed
+        lineVTK : vtkLineSource or vtkPoints
+            coordinates of points in the vtkLineSource; the points don't need to ordered,
+            thus they can be just a bunch of points
+        readerUnstructuredGridVTK : vtkUnstructuredGridReader
+            Unstructured Grid VTK reader
+        varName : str
+            name of the variable to be probed
 
         Returns
         -------
