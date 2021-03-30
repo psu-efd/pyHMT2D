@@ -19,6 +19,8 @@ import shlex
 import vtk
 from vtk.util import numpy_support as VN
 
+from pyHMT2D.HydraulicData import HydraulicData
+
 from .helpers import *
 from ..__common__ import *
 from ..Misc.vtk_utilities import vtkCellTypeMap
@@ -1346,7 +1348,7 @@ class SRH_2D_SRHMat:
             #sys.exit()
 
 
-class SRH_2D_Data:
+class SRH_2D_Data(HydraulicData):
     """
     A class for SRH-2D data I/O, manipulation, and format conversion
     
@@ -1383,6 +1385,8 @@ class SRH_2D_Data:
             Name of the SRHHydro file
 
         """
+
+        HydraulicData.__init__(self, "SRH-2D")
 
         self.srhhydro_filename = srhhydro_filename
 

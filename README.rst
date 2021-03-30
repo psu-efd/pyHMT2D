@@ -103,10 +103,30 @@ This package uses the following libraries:
 Installation
 ------------
 
+There are several ways to install `pyHMT2D`.
+
+- Directly install from GitHub with `pip`
+
+.. code-block:: bash
+
+   $ pip install git+https://github.com/psu-efd/pyHMT2D.git
+
+- Clone the GitHub repository to your local machine and
+  add the local `pyHMT2D`'s directory to your Python path
+
+.. code-block:: bash
+
+   $ git clone https://github.com/psu-efd/pyHMT2D.git
+
+.. code-block:: python
+
+    import sys
+    sys.path.append("/path/to/pyHMT2D")
+
 Example Usage
 -------------
 
-More examples can be found in the “examples” directory.
+More examples can be found in the ''examples'' directory.
 
 Test
 ----
@@ -116,7 +136,7 @@ To test the validity of the package, we use *pytest*. In the *pyHMT2D* project d
 
    $ pytest -m pytest tests
 
-which will run all tests in the "test" directory. The *pytest* configuration is in the ``pytest.ini'' file. Make sure the test is successful.
+which will run all tests in the ''tests'' directory. The *pytest* configuration is in the ``pytest.ini'' file. Make sure the test is successful.
 
 Limitations
 -----------
