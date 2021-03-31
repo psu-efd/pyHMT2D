@@ -182,18 +182,20 @@ class Backwater_1D_Data(HydraulicData):
             if materialID == self.ManningNZones[zoneI]["materialID"]:
                 bFound = True
 
-                print("    Old Manning's n value =", self.ManningNZones[zoneI][materialID], "for material ID = ",
-                                  materialID, "zone name = ", self.ManningNZones["name"])
+                print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
+                                  materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
 
-                self.ManningNZones[materialID] = newManningsNValue
+                self.ManningNZones[zoneI]["n"] = newManningsNValue
 
-                print("    New Manning's n value =", self.ManningNZones[materialID], "for material ID = ",
-                                  materialID, "zone name = ", self.ManningNZones["name"])
+                print("    New Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
+                                  materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
 
         #if didn't find the specified materialID, something is wrong
         if not bFound:
             raise Exception("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
 
+        #update the Manning's n interpolator
+        self.build_ManningNFunc()
 
 
     def outputResultToVTK(self, dir=''):
@@ -235,7 +237,7 @@ class Backwater_1D_Data(HydraulicData):
         else:
             raise Exception("Units system is not set.")
 
-        print("All nodal solution variable names: ", resultVarNames)
+        #print("All nodal solution variable names: ", resultVarNames)
 
         # numpy array for all solution variables (except velocity)
         resultData = np.zeros((self.nGrid, len(resultVarNames)-1), dtype="float32")

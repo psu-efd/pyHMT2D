@@ -122,6 +122,8 @@ class Calibrator(object):
             result = OP.minimize(self.func_to_minimize, ManningN_initial, args=(ManningN_MaterialIDs,), method='COBYLA',
                               options={'maxiter': 10000, 'rhobeg': 20})
 
+            print(result)
+
     def func_to_minimize(self, ManningNs, ManningN_MaterialIDs):
         """Function to minimize (the score)
 

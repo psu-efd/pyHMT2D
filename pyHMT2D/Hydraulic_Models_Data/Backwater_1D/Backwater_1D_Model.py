@@ -152,7 +152,7 @@ class Backwater_1D_Model(HydraulicModel):
         # critical flow depth
         criticalDepth = (specificDischarge ** 2 / 9.81) ** (1.0 / 3.0)
 
-        print("Hn, Hc = ", normalDepth, criticalDepth)
+        #print("Hn, Hc = ", normalDepth, criticalDepth)
 
         x = np.linspace(startx, startx + riverLength, nGrid)
 
