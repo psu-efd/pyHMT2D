@@ -19,6 +19,7 @@ import numpy as np
 
 # map from number of nodes to cell type in VTK (see VTK documentation)
 vtkCellTypeMap = {
+  2: 3,     # line
   3: 5,     # triangle
   4: 9,     # quad
   5: 7,     # poly
@@ -310,7 +311,16 @@ class vtkHandler:
 
         ### flatten the input in case it's not already flat ###
         i_flat = vtk.vtkTransformFilter()
-        i_flat.SetInputConnection(lineVTK.GetOutputPort())
+
+        if isinstance(lineVTK, vtk.vtkLineSource):
+            i_flat.SetInputConnection(lineVTK.GetOutputPort())
+        elif isinstance(lineVTK, vtk.vtkPoints):
+            polydata_temp = vtk.vtkPolyData()
+            polydata_temp.SetPoints(lineVTK)
+            i_flat.SetInputData(polydata_temp)
+        else:
+            raise Exception("lineVTK type,", type(lineVTK),", not supported. Only vtkLineSource and vtkPoints are supported.")
+
         i_flat.SetTransform(flattener)
 
         ### transfer z elevation values to the source's point scalar data ###

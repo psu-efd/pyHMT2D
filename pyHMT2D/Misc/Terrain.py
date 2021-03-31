@@ -9,7 +9,7 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 
-from pyHMT2D.HydraulicData import HydraulicData
+from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
 class Terrain(HydraulicData):
     """A Python class for terrain data I/O, creation, and manipulation
