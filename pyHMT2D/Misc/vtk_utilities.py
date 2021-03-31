@@ -303,7 +303,7 @@ class vtkHandler:
         data = readerUnstructuredGridVTK.GetOutput()
         bounds = data.GetBounds()
 
-        print("Unstructured Grid VTK bounds = ", bounds)
+        #print("Unstructured Grid VTK bounds = ", bounds)
 
         ### make a transform to set all Z values to zero ###
         flattener = vtk.vtkTransform()
@@ -345,7 +345,7 @@ class vtkHandler:
         probe.Update()
 
         # get the data from the VTK-object (probe) to an numpy array
-        print("varName =", varName)
+        #print("varName =", varName)
 
         varProbedValues = VN.vtk_to_numpy(probe.GetOutput().GetPointData().GetArray(varName))
 
