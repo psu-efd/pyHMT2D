@@ -2,6 +2,8 @@ import numpy as np
 import csv
 import vtk
 
+from vtk.util import numpy_support as VN
+
 import pyHMT2D
 
 from ..__common__ import pyHMT2D_SCALAR, pyHMT2D_VECTOR
@@ -67,27 +69,19 @@ class PointMeasurement(Measurement):
 
     """
 
-    def __init__(self, name, weight, pointMeasurement_filename):
+    def __init__(self, name, pointMeasurement_filename):
         """PointMeasurement class constructor
 
         Parameters
         ----------
         name  : str
             name of the point measurement, e.g., "stage", "velocity"
-        weight : float
-            weight associated with this point measurement, in [0, 1]
         pointMeasurement_filename : str
             name of the file that contains point measurement.
 
         """
 
         Measurement.__init__(self, name, "point")
-
-        #check weight range in [0, 1]
-        if weight < 0.0 or weight > 1.0:
-            raise ValueError("Weight is not in the range of 0 and 1. Exiting...")
-
-        self.weight = weight
 
         self.pointMeasurement_filename = pointMeasurement_filename
 
@@ -102,6 +96,9 @@ class PointMeasurement(Measurement):
 
         #load the measurement data
         self.load_measurement_data()
+
+        #debug
+        self.outputToVTK()
 
     def load_measurement_data(self):
         """Load the measurement data in the specified file (in csv format)
@@ -134,7 +131,7 @@ class PointMeasurement(Measurement):
                 self.rows.append(row)
 
             # get total number of measurement points
-            print("Total no. of measurement points: %d" % (csvreader.line_num))
+            print("Total number of measurement points: %d" % (csvreader.line_num-1))
 
         # printing the field names in the file
         print('Header names are:' + ', '.join(field for field in self.fields))
@@ -170,8 +167,8 @@ class PointMeasurement(Measurement):
         points = vtk.vtkPoints()
 
         for pointI in range(len(self.rows)):
-            points.InsertNextPoint(self.rows[pointI][1],
-                                   self.rows[pointI][2],
+            points.InsertNextPoint(float(self.rows[pointI][1]),
+                                   float(self.rows[pointI][2]),
                                    0.0)
 
         return points
@@ -201,3 +198,78 @@ class PointMeasurement(Measurement):
                 measurement_data[pointI, 1] = mag * np.cos(np.deg2rad(angle))
 
         return  measurement_data
+
+    def outputToVTK(self, dir=''):
+        """Output point measurement data to vtkUnstructuredGrid
+
+
+        Parameters
+        ----------
+            dir : str, optional
+                directory to write to
+
+        Returns
+        -------
+        vtkFileName : str
+            name of the output vTK file
+
+        """
+        print("Output point measurement data", self.name, "to VTK ...")
+
+        vtkFileName = ''
+
+        if dir!='':
+            vtkFileName = dir + '/' + 'PointMeasurement_' + self.name + '.vtk' #use the case name
+        else:
+            vtkFileName = 'PointMeasurement_' + self.name + '.vtk'
+        print("vtkFileName = ", vtkFileName)
+
+        #build result variable name
+        resultVarName = self.fields[3] if self.data_type == pyHMT2D_SCALAR else self.fields[4]
+
+        print("Measurement variable name: ", resultVarName)
+
+        # numpy array for measurement data
+        resultData_scalar = np.zeros(len(self.rows), dtype="float32")
+
+        resultData_vector = np.zeros((len(self.rows),3), dtype="float32")
+
+        if self.data_type == pyHMT2D_SCALAR:
+            for pointI in range(len(self.rows)):
+                resultData_scalar[pointI] = float(self.rows[pointI][3])
+
+        elif self.data_type == pyHMT2D_VECTOR:
+            for pointI in range(len(self.rows)):
+                angle = float(self.rows[pointI][3])
+                mag = float(self.rows[pointI][4])
+
+                resultData_vector[pointI, 0] = mag * np.sin(np.deg2rad(angle))
+                resultData_vector[pointI, 1] = mag * np.cos(np.deg2rad(angle))
+                resultData_vector[pointI, 2] = 0.0
+
+        # build VTK object:
+        # points
+        pointsVTK = self.get_measurement_points_as_vtkPoints()
+
+        polydataVTK = vtk.vtkPolyData()
+        polydataVTK.SetPoints(pointsVTK)
+
+        point_data = polydataVTK.GetPointData()  # This holds point data
+
+        if self.data_type == pyHMT2D_SCALAR:
+            temp_point_data_array = VN.numpy_to_vtk(resultData_scalar)
+            temp_point_data_array.SetName(resultVarName)
+            point_data.AddArray(temp_point_data_array)
+        elif self.data_type == pyHMT2D_VECTOR:
+            temp_point_data_array = VN.numpy_to_vtk(resultData_vector)
+            temp_point_data_array.SetName(resultVarName)
+            point_data.AddArray(temp_point_data_array)
+
+
+        # write to vtk file
+        unstr_writer = vtk.vtkPolyDataWriter()
+        unstr_writer.SetFileName(vtkFileName)
+        unstr_writer.SetInputData(polydataVTK)
+        unstr_writer.Write()
+
+        return vtkFileName

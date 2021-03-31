@@ -32,10 +32,10 @@ from osgeo import gdal
 import affine
 import os.path
 
-from pyHMT2D.HydraulicData import HydraulicData
+from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
-from ..Misc import printProgressBar, vtkHandler, horizontalDistance
-from ..__common__ import *
+from pyHMT2D.Misc import printProgressBar, vtkHandler, horizontalDistance
+from pyHMT2D.__common__ import *
 
 class RAS_2D_Data(HydraulicData):
     """A class for HEC-RAS 2D data I/O, manipulation, and format conversion
