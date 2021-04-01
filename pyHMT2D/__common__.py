@@ -1,4 +1,7 @@
 
+gVerbose = False
+"""bool to define verbose or not"""
+
 gMax_Nodes_per_Element = 8
 """maximum number of nodes for an element"""
 
@@ -10,3 +13,4 @@ pyHMT2D_SCALAR = 1
 
 pyHMT2D_VECTOR = 2
 """vector type in pyHMT2D (with x and y components)"""
+
