@@ -83,7 +83,8 @@ class Backwater_1D_Model(HydraulicModel):
 
         """
 
-        print("Running Backwater-1D ...")
+
+        if gVerbose: print("Running Backwater-1D ...")
 
         #check whether the case has been set up
         if not self._backwater_1d_data:
@@ -105,6 +106,7 @@ class Backwater_1D_Model(HydraulicModel):
                                                  self._backwater_1d_data.nGrid,
                                                  self._backwater_1d_data.specificDischarge
                                                  )
+
 
 
     def _ocf_1D_backwater_curve(self, slope, ManningNFunc, startx, startH, startZ,

@@ -387,3 +387,29 @@ def h5py_visitor_func(name, node):
             print(node.name, 'is a Dataset')
     else:
         print(node.name, 'is an unknown type')
+
+
+def json_dict_type_correction(aDict):
+    """ Correct data type and value in dictionary loaded from JSON
+
+    In JSON, we can't use some of Python's data type. For example, None has to be written as "None" in JSON,
+    and True/False has to be strings similarly. This function corrects that in dictionary derived from JSON.
+
+    Parameters
+    ----------
+        aDict : dict
+            a dictionary
+
+    Returns
+    -------
+
+    """
+
+    # loop through the items in the dictionary
+    for key, value in aDict.items():
+        if value == "None":
+            aDict[key] = None
+        elif value == "True":
+            aDict[key] = True
+        elif value == "False":
+            aDict[key] = False

@@ -87,8 +87,8 @@ class Backwater_1D_Data(HydraulicData):
         #print(self.configuration)
 
         #print some information about the calibration configuration
-        print("Configuration for the Backwater-1D model:")
-        print(json.dumps(self.configuration["Backwater-1D"], indent=4, sort_keys=False))
+        if gVerbose: print("Configuration for the Backwater-1D model:")
+        if gVerbose: print(json.dumps(self.configuration["Backwater-1D"], indent=4, sort_keys=False))
 
         self.case_name = self.configuration["Backwater-1D"]["case_name"]
         self.units = self.configuration["Backwater-1D"]["units"]
@@ -165,7 +165,7 @@ class Backwater_1D_Data(HydraulicData):
 
         """
 
-        print("Modify Manning's n value ...")
+        if gVerbose: print("Modify Manning's n value ...")
 
         if not isinstance(materialID, int):
             print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
@@ -182,12 +182,12 @@ class Backwater_1D_Data(HydraulicData):
             if materialID == self.ManningNZones[zoneI]["materialID"]:
                 bFound = True
 
-                print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
+                if gVerbose: print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
                                   materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
 
                 self.ManningNZones[zoneI]["n"] = newManningsNValue
 
-                print("    New Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
+                if gVerbose: print("    New Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
                                   materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
 
         #if didn't find the specified materialID, something is wrong
@@ -214,7 +214,8 @@ class Backwater_1D_Data(HydraulicData):
             name of the output vTK file
 
         """
-        print("Output result data to VTK ...")
+
+        if gVerbose: print("Output result data to VTK ...")
 
         if (len(self.waterDepth) == 0):
             print("Empty solution arrays. Run the model first. Exiting ...")
@@ -226,7 +227,7 @@ class Backwater_1D_Data(HydraulicData):
             vtkFileName = dir + '/' + 'Backwater1D_' + self.case_name + '.vtk' #use the case name
         else:
             vtkFileName = 'Backwater1D_' + self.case_name + '.vtk'
-        print("vtkFileName = ", vtkFileName)
+        if gVerbose: print("vtkFileName = ", vtkFileName)
 
         #build result variable names
         resultVarNames = []

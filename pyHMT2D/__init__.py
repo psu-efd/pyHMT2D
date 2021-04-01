@@ -13,6 +13,7 @@ __all__ = [
     "RAS_2D",
     "Calibration",
     "Misc",
+    "gVerbose",
     "gMax_Nodes_per_Element",
     "gMax_Elements_per_Node",
     "__version__"

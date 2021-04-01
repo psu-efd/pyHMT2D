@@ -6,7 +6,7 @@ from vtk.util import numpy_support as VN
 
 import pyHMT2D
 
-from ..__common__ import pyHMT2D_SCALAR, pyHMT2D_VECTOR
+from ..__common__ import pyHMT2D_SCALAR, pyHMT2D_VECTOR, gVerbose
 
 class Measurement(object):
     """ Measurement data base class
@@ -108,7 +108,7 @@ class PointMeasurement(Measurement):
 
         """
 
-        print("Load point measurement data file", self.pointMeasurement_filename)
+        if gVerbose: print("Load point measurement data file", self.pointMeasurement_filename)
 
         with open(self.pointMeasurement_filename, 'r') as csvfile:
             # creating a csv reader object
@@ -131,15 +131,15 @@ class PointMeasurement(Measurement):
                 self.rows.append(row)
 
             # get total number of measurement points
-            print("Total number of measurement points: %d" % (csvreader.line_num-1))
+            if gVerbose: print("Total number of measurement points: %d" % (csvreader.line_num-1))
 
         # printing the field names in the file
-        print('Header names are:' + ', '.join(field for field in self.fields))
+        if gVerbose: print('Header names are:' + ', '.join(field for field in self.fields))
 
         #  printing all rows
-        print('\nPoint measurement data:\n')
+        if gVerbose: print('\nPoint measurement data:\n')
         for row in self.rows:
-            print(', '.join(col for col in row))
+            if gVerbose: print(', '.join(col for col in row))
 
     def get_measurement_points(self):
         """Get the measurement points in the form of Numpy 2D array
@@ -214,7 +214,8 @@ class PointMeasurement(Measurement):
             name of the output vTK file
 
         """
-        print("Output point measurement data", self.name, "to VTK ...")
+
+        if gVerbose: print("Output point measurement data", self.name, "to VTK ...")
 
         vtkFileName = ''
 
@@ -222,12 +223,12 @@ class PointMeasurement(Measurement):
             vtkFileName = dir + '/' + 'PointMeasurement_' + self.name + '.vtk' #use the case name
         else:
             vtkFileName = 'PointMeasurement_' + self.name + '.vtk'
-        print("vtkFileName = ", vtkFileName)
+        if gVerbose: print("vtkFileName = ", vtkFileName)
 
         #build result variable name
         resultVarName = self.fields[3] if self.data_type == pyHMT2D_SCALAR else self.fields[4]
 
-        print("Measurement variable name: ", resultVarName)
+        if gVerbose: print("Measurement variable name: ", resultVarName)
 
         # numpy array for measurement data
         resultData_scalar = np.zeros(len(self.rows), dtype="float32")

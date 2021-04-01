@@ -192,7 +192,7 @@ class SRH_2D_SRHHydro:
 
         """
 
-        print("Modify Manning's n value ...")
+        if gVerbose: print("Modify Manning's n value ...")
 
         if not isinstance(materialID, int):
             print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
@@ -206,9 +206,9 @@ class SRH_2D_SRHHydro:
         nDict = self.srhhydro_content["ManningsN"]
 
         if materialID in nDict:
-            print("    Old Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+            if gVerbose: print("    Old Manning's n value =", nDict[materialID], "for material ID = ", materialID)
             nDict[materialID] = newManningsNValue
-            print("    New Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+            if gVerbose: print("    New Manning's n value =", nDict[materialID], "for material ID = ", materialID)
         else:
             print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
 
