@@ -9,10 +9,10 @@ pyHMT2D - Python Hydraulic Modeling Tools - 2D
 
 pyHMT2D is a Python package developed to control and (semi)automate 2D
 hydraulic modeling, and pre-/postprocessing simulation results.
-Currently, the following 2D hydraulic models are supported:
+Currently, the following hydraulic models are supported:
 
 -  SRH-2D
--  HEC-RAS 2D
+-  HEC-RAS
 
 Motivations
 -----------
