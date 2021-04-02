@@ -698,6 +698,10 @@ class SRH_2D_SRHGeom:
             if nodeString not in self.bcDict.keys():
                 continue
 
+            #also exclude internal BC nodeStrings such as weir
+            if 'WEIR' in self.bcDict[nodeString]:
+                continue
+
             #list of nodes in current nodeString
             nodeString_nodeList = self.nodeStringsDict[nodeString]
 
@@ -784,15 +788,13 @@ class SRH_2D_SRHGeom:
         nlayers = len(layerHeights)
 
         if nlayers == 0:
-            print("layerHeight is empty. Check. Exiting ...")
-            sys.exit()
+            raise Exception("layerHeight is empty. Please check. Exiting ...")
 
         #check the values in the list layerHeights are strictly increasing
         bHeighIncreasing = all(i < j for i, j in zip(layerHeights, layerHeights[1:]))
 
         if not bHeighIncreasing:
-            print("Values in layerHeight are not strictly increasing. Check. Exiting ...")
-            sys.exit()
+            raise Exception("Values in layerHeight are not strictly increasing. Please check. Exiting ...")
 
         #a list for all side boundaries (not including top and bottom)
         allSideBoundaryFaces = {} #dict: {boundaryID: [list of faces]}. Here face is a list of nodes.
