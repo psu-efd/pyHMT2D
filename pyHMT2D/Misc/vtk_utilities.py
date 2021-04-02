@@ -13,7 +13,6 @@ from vtk.util import numpy_support as VN
 
 import sys
 import os
-import copy
 
 import numpy as np
 

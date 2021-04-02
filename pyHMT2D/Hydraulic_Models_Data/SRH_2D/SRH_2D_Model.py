@@ -7,7 +7,6 @@ from pyHMT2D.Misc.tools import printProgressBar
 
 from .SRH_2D_Data import *
 
-from .helpers import *
 import sys
 import subprocess
 import os

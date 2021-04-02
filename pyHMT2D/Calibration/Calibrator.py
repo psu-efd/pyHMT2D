@@ -1,11 +1,10 @@
 import numpy as np
-import csv
 
 import json
 
 import pyHMT2D
 
-from ..__common__ import pyHMT2D_SCALAR, pyHMT2D_VECTOR, gVerbose
+from ..__common__ import gVerbose
 
 class Calibrator(object):
     """Calibrator class to handle calibration process
@@ -181,6 +180,9 @@ class Calibrator(object):
 
             #write out the optimizer's calibration intermediate steps' parameter values and calibration errors
             self.optimizer.write_optimization_results_to_csv()
+
+            #write out the simulation results at measurement locations (for postprocessing)
+            self.objectives.outputSimulationResultToCSV()
 
             print("Calibration ended.")
 

@@ -12,8 +12,6 @@ import os
 import copy
 import numpy as np
 import h5py
-from scipy import interpolate
-from osgeo import gdal
 from os import path
 import shlex
 import vtk
@@ -21,10 +19,9 @@ from vtk.util import numpy_support as VN
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
-from .helpers import *
 from pyHMT2D.__common__ import *
 from pyHMT2D.Misc.vtk_utilities import vtkCellTypeMap
-from pyHMT2D.Misc import printProgressBar, vtkHandler
+from pyHMT2D.Misc import vtkHandler
 
 class SRH_2D_SRHHydro:
     """A class to handle srhhydro file for SRH-2D

@@ -1,10 +1,6 @@
-import sys
+
 import numpy as np
-import vtk
-from vtk.util import numpy_support as VN
-from scipy import interpolate
 from scipy import integrate
-import os.path
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
 
