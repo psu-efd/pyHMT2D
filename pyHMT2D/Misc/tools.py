@@ -11,8 +11,6 @@ from scipy import interpolate
 import xml.etree.cElementTree as ET
 
 from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
 
 
 def horizontalDistance(point1, point2):

@@ -1,9 +1,3 @@
-import numpy as np
-import csv
-
-import pyHMT2D
-
-from ..__common__ import pyHMT2D_SCALAR, pyHMT2D_VECTOR
 
 from ..Misc import json_dict_type_correction
 

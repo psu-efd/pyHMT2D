@@ -1,5 +1,4 @@
 import numpy as np
-import csv
 
 import pyHMT2D
 
@@ -25,7 +24,7 @@ class Objective(object):
 
     """
 
-    def __init__(self, solVarName, measurement, weight, norm_order=2):
+    def __init__(self, solVarName, measurement, weight, errorMethod, norm_order=2):
         """Objective class constructor
 
         Parameters
@@ -55,6 +54,12 @@ class Objective(object):
         # Order of the norm to calculate the error
         self.norm_order = norm_order
 
+        # relative error or absolute error for the score calculation
+        self.errorMethod = errorMethod
+
+        if self.errorMethod != "relative" and self.errorMethod != "absolute":
+            raise Exception("errorMethod in objective should be either relative or absolute. Please check. Exiting ...")
+
         # Objective score = norm of error
         self.score = 0.0
 
@@ -79,16 +84,43 @@ class Objective(object):
         vtk_handler = pyHMT2D.Misc.vtkHandler()
 
         # sample on the sampling points
-        points, varValues, elev_srh_2d = vtk_handler.probeUnstructuredGridVTKOverLine(
+        points, varValues, bed_elev = vtk_handler.probeUnstructuredGridVTKOverLine(
                                             sampling_points, vtkUnstructuredGridReader,
                                             self.solVarName)
 
+        # save a copy of the simulation result at sampling points
+        self.measurement.set_simulation_results(varValues)
+
         # calculate the difference
         if self.measurement.data_type == pyHMT2D_SCALAR:
-            error = varValues - self.measurement.get_measurement_data()
+            measurementData = self.measurement.get_measurement_data()
+            error = varValues - measurementData
 
-            self.score = np.linalg.norm(error, self.norm_order)
+            if self.errorMethod == "absolute":
+                self.score = np.linalg.norm(error, self.norm_order)
+            elif self.errorMethod == "relative":
+                #It makes no sense to calculate relative error for WSE. It only makes sense to calcualte
+                #relative error for water depth. The reason is the WSE = h + zb. So it depends on the datum.
+                #Here, if the solution is WSE, we need to subtract out the bed elevation so we are calculating
+                #the relative error of water depth. WSE is signifited by the variable name.
 
+                if "Water_Elev" in self.solVarName: #this is WSE
+                    relative_error = error / (measurementData-bed_elev)
+                else:
+                    relative_error = error / measurementData
+
+                self.score = np.linalg.norm(relative_error, self.norm_order)
+
+    def outputSimulationResultToCSV(self):
+        """
+
+        Returns
+        -------
+
+        """
+
+        if self.measurement.type == "point":
+            self.measurement.outputSimulationResultsToCSV()
 
 class Objectives(object):
     """ Calibration objectives class
@@ -145,7 +177,8 @@ class Objectives(object):
                                                                        objectiveDict["file"])
 
                 #construct the Objective object
-                currObjective = Objective(objectiveDict["solVarName"], currMeasurement, objectiveDict["weight"])
+                currObjective = Objective(objectiveDict["solVarName"], currMeasurement,
+                                          objectiveDict["weight"], objectiveDict["errorMethod"],)
 
                 #append the Objective object to the list
                 self.objective_list.append(currObjective)
@@ -183,3 +216,14 @@ class Objectives(object):
             self.total_score += objectiveI.score * objectiveI.weight
 
         self.total_score /= total_weight
+
+    def outputSimulationResultToCSV(self):
+        """
+
+        Returns
+        -------
+
+        """
+
+        for objectiveI in self.objective_list:
+            objectiveI.outputSimulationResultToCSV()

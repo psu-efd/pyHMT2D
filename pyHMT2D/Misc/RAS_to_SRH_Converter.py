@@ -2,8 +2,6 @@
 A Python class to convert HEC-RAS case, mainly mesh and material (Manning's n), to SRH-2D case
 """
 
-import sys
-
 import pyHMT2D
 
 class RAS_to_SRH_Converter:

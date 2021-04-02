@@ -3,7 +3,6 @@ import numpy as np
 import vtk
 from vtk.util import numpy_support as VN
 from scipy import interpolate
-import os.path
 
 import json
 
