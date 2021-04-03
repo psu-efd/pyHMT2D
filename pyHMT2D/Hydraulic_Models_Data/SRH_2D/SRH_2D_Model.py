@@ -129,6 +129,21 @@ class SRH_2D_Model(HydraulicModel):
 
         self._srh_2d_data = srh_2d_data
 
+    def get_simulation_case(self):
+        """Get the simulation case to srh_2D_data
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        srh_2d_data : SRH_2D_Data
+            an object from class SRH_2D_Data, which should be created before calling
+
+        """
+
+        return  self._srh_2d_data
+
     def close_project(self):
         """Close the opened SRH-2D project (if any)
 

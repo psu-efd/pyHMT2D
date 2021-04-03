@@ -10,15 +10,22 @@ class Parameter(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, active=True):
         """Parameter class constructor
 
         Parameters
         ----------
+        active : bool, optional
+            whether this calibration parameter is active or not (default: True)
+
 
         """
 
+        #type
         self.type = "Parameter_Base"
+
+        #active or not (default: True)
+        self.active = active
 
 class Parameter_ManningN(Parameter):
     """ ManningN calibration parameter class
@@ -52,6 +59,9 @@ class Parameter_ManningN(Parameter):
         # materialID of the Manning's n
         self.materialID = parameterDict["materialID"]
 
+        # material name
+        self.material_name = parameterDict["material_name"]
+
         # initial guess for the optimizer
         self.initial_guess = parameterDict["initial_guess"]
 
@@ -66,6 +76,14 @@ class Parameter_ManningN(Parameter):
             raise Exception("In ManningN calibration parameter specification, either the min is larger than"
                             " the max, or the initial guess is not in the [min, max] range. Check. Exiting ...")
 
+        if "active" in parameterDict:
+            if parameterDict["active"] == "True":
+                self.active = True
+            elif parameterDict["active"] == "False":
+                self.active = False
+            else:
+                raise  Exception("In Parameter dictionary, \"active\" should be either \"True\" or \"False\". "
+                                 "Please check. Exiting ...")
 
 
 class Parameters(object):
@@ -146,10 +164,9 @@ class Parameters(object):
         ManningN_min_list = []
         ManningN_max_list =[]
 
-
         #loop through all calibration parameter objects (whose type is "ManningN")
         for parameterI in self.parameter_list:
-            if parameterI.type == "ManningN":
+            if parameterI.type == "ManningN" and parameterI.active:
                 materialID_list.append(parameterI.materialID)
                 initial_guess_list.append(parameterI.initial_guess)
                 ManningN_min_list.append(parameterI.min)
