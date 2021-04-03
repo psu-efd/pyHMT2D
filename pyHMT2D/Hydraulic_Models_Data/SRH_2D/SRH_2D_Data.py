@@ -81,8 +81,7 @@ class SRH_2D_SRHHydro:
 
         #check whether the srhhydro file exists
         if not path.isfile(self.srhhydro_filename):
-            print("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exiting ...")
-            sys.exit()
+            raise Exception("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exiting ...")
 
         for line in open(self.srhhydro_filename):
             #parts = line.strip().split(' ')
@@ -447,14 +446,13 @@ class SRH_2D_SRHGeom:
 
         """
 
-        print("Getting numbers of elements and nodes from the SRHGEOM file ...")
+        if gVerbose: print("Getting numbers of elements and nodes from the SRHGEOM file ...")
 
         # read the "srhgeom" mesh file
         try:
             srhgeomfile = open(self.srhgeom_filename, 'r')
         except:
-            print('Failed openning the SRHGEOM file', self.srhgeom_filename)
-            sys.exit()
+            raise Exception('Failed openning the SRHGEOM file %s' % self.srhgeom_filename)
 
         count = 0
         elemCount = 0
@@ -493,7 +491,7 @@ class SRH_2D_SRHGeom:
         self.numOfNodes = nodeCount
         self.numOfNodeStrings = nodeStringCount
 
-        print("There are %d elements, %d nodes, and %d node strings in the mesh." % (self.numOfElements,
+        if gVerbose: print("There are %d elements, %d nodes, and %d node strings in the mesh." % (self.numOfElements,
                                                                                     self.numOfNodes, self.numOfNodeStrings))
 
 
@@ -508,14 +506,13 @@ class SRH_2D_SRHGeom:
 
         """
 
-        print("Reading the SRHGEOM file ...")
+        if gVerbose: print("Reading the SRHGEOM file ...")
 
         # read the "srhgeom" mesh file
         try:
             srhgeomfile = open(self.srhgeom_filename, 'r')
         except:
-            print('Failed openning srhgeom file', self.srhgeom_filename)
-            sys.exit()
+            raise Exception('Failed openning srhgeom file %s' % self.srhgeom_filename)
 
         count = 0
         elemCount = 0
@@ -589,7 +586,7 @@ class SRH_2D_SRHGeom:
 
         self.twoDMeshBoundingbox = [xmin, ymin, zmin, xmax, ymax, zmax]
 
-        print("2D mesh's bounding box = ", self.twoDMeshBoundingbox)
+        if gVerbose: print("2D mesh's bounding box = ", self.twoDMeshBoundingbox)
 
         if False:
             print("elementNodesList = ", self.elementNodesList)
@@ -607,7 +604,7 @@ class SRH_2D_SRHGeom:
 
         """
 
-        print("Building mesh's node, elements, and topology ...")
+        if gVerbose: print("Building mesh's node, elements, and topology ...")
 
         #create an emptp list of lists for all nodes
         self.nodeElementsList = [[] for _ in range(self.numOfNodes)]
@@ -907,7 +904,7 @@ class SRH_2D_SRHGeom:
             mshFileName_base = dir + '/' + mshFileName
         else:
             mshFileName_base = mshFileName
-        print("Write to GMESH MSH file with name = ", mshFileName_base)
+        if gVerbose: print("Write to GMESH MSH file with name = ", mshFileName_base)
 
 
         fid = open(mshFileName_base, 'w')
@@ -1191,7 +1188,7 @@ class SRH_2D_SRHGeom:
             gmshFileName_base = dir + '/' + gmshFileName
         else:
             gmshFileName_base = gmshFileName
-        print("GMESH file name = ", gmshFileName_base)
+        if gVerbose: print("GMESH file name = ", gmshFileName_base)
 
 
 class SRH_2D_SRHMat:
@@ -1241,7 +1238,7 @@ class SRH_2D_SRHMat:
 
         """
 
-        print("Reading the SRHMAT file ...")
+        if gVerbose: print("Reading the SRHMAT file ...")
 
         # read the "srhmat" material file
         try:
@@ -1447,11 +1444,11 @@ class SRH_2D_Data(HydraulicData):
 
         """
 
-        print("Building Manning's n values for cells and nodes in SRH-2D mesh ...")
+        if gVerbose: print("Building Manning's n values for cells and nodes in SRH-2D mesh ...")
 
         #Manning's n dictionary in srhhydro
         nDict = self.srhhydro_obj.srhhydro_content["ManningsN"]
-        print("nDict = ", nDict)
+        if gVerbose: print("nDict = ", nDict)
 
         #loop over all cells in the mesh
         for cellI in range(self.srhgeom_obj.numOfElements):
@@ -1504,6 +1501,7 @@ class SRH_2D_Data(HydraulicData):
         if nodeStringID not in self.srhgeom_obj.nodeStringsDict.keys():
             print("The given nodeStringID", nodeStringID, "is not valid. Valid nodeString IDs are: ",
                   self.srhgeom_obj.nodeStringsDict.keys())
+            sys.exit()
 
         try:
             fid = open(nodeStringFileName_final, 'w')
@@ -1559,14 +1557,14 @@ class SRH_2D_Data(HydraulicData):
 
         if bNodal:
             if "XMDFC" in xmdfFileName:
-                print("Warning: bNodal indices the result is for nodal values. However, the XMDF file name contains "
+                if gVerbose: print("Warning: bNodal indices the result is for nodal values. However, the XMDF file name contains "
                       "\"XMDFC\", which indicates it is for cell center values. Please double check.")
         else:
             if "XMDFC" not in xmdfFileName:
-                print("Warning: bNodal indices the result is for cell centers. However, the XMDF file name "
+                if gVerbose: print("Warning: bNodal indices the result is for cell centers. However, the XMDF file name "
                       "does not contain \"XMDFC\", which indicates it is for nodal values. Please double check.")
 
-        print("Reading the XMDF file ...\n")
+        if gVerbose: print("Reading the XMDF file ...\n")
 
         xmdfFile = h5py.File(xmdfFileName, "r")
 
@@ -1593,21 +1591,21 @@ class SRH_2D_Data(HydraulicData):
             print("There is no solution varialbes in the XMDF file. Exiting ...")
             sys.exit()
 
-        print("Variables in the XMDF file: ", varNameList)
+        if gVerbose: print("Variables in the XMDF file: ", varNameList)
 
         #build the 1d array of time for the solution
         #It seems all solution variables share the same time (although
         #each has their own recrod of "Time"). So only get one is sufficient.
         if bNodal:
             self.xmdfTimeArray_Nodal = np.array(xmdfFile[varNameList[0]]['Times'])
-            print("Time values for the solutions: ", self.xmdfTimeArray_Nodal)
+            if gVerbose: print("Time values for the solutions: ", self.xmdfTimeArray_Nodal)
         else:
             self.xmdfTimeArray_Cell = np.array(xmdfFile[varNameList[0]]['Times'])
-            print("Time values for the solutions: ", self.xmdfTimeArray_Cell)
+            if gVerbose: print("Time values for the solutions: ", self.xmdfTimeArray_Cell)
 
         #result for all varialbes and at all times in a dictionary (varName : numpy array)
         for varName in varNameList:
-            print("varName =", varName)
+            if gVerbose: print("varName =", varName)
 
             varName_temp = varName
 
@@ -1687,9 +1685,11 @@ class SRH_2D_Data(HydraulicData):
 
         Returns
         -------
+            vtkFileNameList : list
+                a list of vtkFileName (for each time step)
 
         """
-        print("Output all data in the XMDF file to VTK ...")
+        if gVerbose: print("Output all data in the XMDF file to VTK ...")
 
         if (bNodal and (not self.xmdfAllData_Nodal)) or ((not bNodal) and (not self.xmdfAllData_Cell)):
             print("Empty XMDF data arrays. Call readSRHXMDFFile() function first. Exiting ...")
@@ -1714,7 +1714,7 @@ class SRH_2D_Data(HydraulicData):
             # SRH-2D case
         else:
             vtkFileName_base = 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"]  # use the case name of the SRH-2D case
-        print("vtkFileName_base = ", vtkFileName_base)
+        if gVerbose: print("vtkFileName_base = ", vtkFileName_base)
 
         #build result variable names
         resultVarNames = list(self.xmdfAllData_Nodal.keys()) if bNodal else list(self.xmdfAllData_Cell.keys())
@@ -1731,7 +1731,7 @@ class SRH_2D_Data(HydraulicData):
         #of the terrain because cell center elevation is averaged from nodal elevations.
         #get the units of the results
         units = self.srhhydro_obj.srhhydro_content['OutputFormat'][1]
-        print("SRH-2D result units:", units)
+        if gVerbose: print("SRH-2D result units:", units)
         bedElevationVarName = ''
         velocityVarName = ''
         if units == "SI":
@@ -1741,7 +1741,10 @@ class SRH_2D_Data(HydraulicData):
             bedElevationVarName = "Bed_Elev_ft"
             velocityVarName = "Velocity_ft_p_s"
 
-        print("Nodal bed elevation name: ", bedElevationVarName)
+        if gVerbose: print("Nodal bed elevation name: ", bedElevationVarName)
+
+        #list of vtkFileName (to be returned to caller)
+        vtkFileNameList = []
 
         #loop through each time step
         timeArray = self.xmdfTimeArray_Nodal if bNodal else self.xmdfTimeArray_Cell
@@ -1754,7 +1757,7 @@ class SRH_2D_Data(HydraulicData):
             if (timeStep != -1) and (timeI != timeStep):
                 continue
 
-            print("timeI and time = ", timeI, timeArray[timeI])
+            if gVerbose: print("timeI and time = ", timeI, timeArray[timeI])
 
             #numpy array for all solution variables at one time
             resultData =      np.zeros((self.srhgeom_obj.numOfNodes, len(resultVarNames)), dtype="float32") if bNodal \
@@ -1763,11 +1766,11 @@ class SRH_2D_Data(HydraulicData):
             str_extra = "_N_" if bNodal else "_C_"
 
             vtkFileName = vtkFileName_base + str_extra + str(timeI+1).zfill(4) + ".vtk"
-            print("vtkFileName = ", vtkFileName)
+            if gVerbose: print("vtkFileName = ", vtkFileName)
 
             #loop through each solution variable (except Bed_Elev and ManningN, which will be added seperately)
             for varName, varI in zip(resultVarNames, range(len(resultVarNames))):
-                print("varName = ", varName)
+                if gVerbose: print("varName = ", varName)
                 #get the values of current solution varialbe at current time
                 resultData[:,varI] =      self.xmdfAllData_Nodal[varName][timeI,:] if bNodal \
                                      else self.xmdfAllData_Cell[varName][timeI,:]
@@ -1822,9 +1825,9 @@ class SRH_2D_Data(HydraulicData):
             nColVel_Y = -1
 
             # First output all solution variables as scalars
-            print('The following solution variables are processed and saved to VTK file: \n')
+            if gVerbose: print('The following solution variables are processed and saved to VTK file: \n')
             for k in range(len(resultVarNames)):
-                print('     %s\n' % resultVarNames[k])
+                if gVerbose: print('     %s\n' % resultVarNames[k])
 
                 #if it is a veloctiy component, only record its location
                 #not output to VTK by itself, will be assembed to vector.
@@ -1875,6 +1878,12 @@ class SRH_2D_Data(HydraulicData):
             unstr_writer.SetInputData(uGrid)
             unstr_writer.Write()
 
+            #add the vtkFileName to vtkFileNameList
+            vtkFileNameList.append(vtkFileName)
+
+        #vtkFileNameList
+        return vtkFileNameList
+
 
     def outputVTK(self, vtkFileName, resultVarNames, resultData, bNodal):
         """ Output result to VTK file
@@ -1899,7 +1908,7 @@ class SRH_2D_Data(HydraulicData):
 
         """
 
-        print("Output to VTK ...")
+        if gVerbose: print("Output to VTK ...")
 
         try:
             fid = open(vtkFileName, 'w')
@@ -1909,7 +1918,7 @@ class SRH_2D_Data(HydraulicData):
 
         #get the units of the results
         units = self.srhhydro_obj.srhhydro_content['OutputFormat'][1]
-        print("SRH-2D result units:", units)
+        if gVerbose: print("SRH-2D result units:", units)
 
         fid.write('# vtk DataFile Version 3.0\n')
         fid.write('Results from SRH-2D Modeling Run\n')
@@ -2043,7 +2052,7 @@ class SRH_2D_Data(HydraulicData):
 
         """
 
-        print("Reading the SRH/SRHC result file ...")
+        if gVerbose: print("Reading the SRH/SRHC result file ...")
 
         data = np.genfromtxt(srhFileName, delimiter=',', names=True)
 

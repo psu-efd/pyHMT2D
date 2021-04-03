@@ -111,8 +111,7 @@ class Calibrator(object):
 
         """
 
-        # create a Backwater_1D_Model object
-        if self.model_name == "Backwater-1D":
+        if self.model_name == "Backwater-1D": # create a Backwater_1D_Model object and open the simulation case
             self.hydraulic_model = pyHMT2D.Hydraulic_Models_Data.Backwater_1D_Model()
 
             # load Backwater_1D_Data configuration data
@@ -120,6 +119,33 @@ class Calibrator(object):
 
             # set the simulation case in the Backwater_1D_Model object
             self.hydraulic_model.set_simulation_case(self.hydraulic_data)
+
+        elif self.model_name == "SRH-2D": # create a SRH_2D_Model object and open the simulation case
+            version = self.configuration["SRH-2D"]["version"]
+            srh_pre_path = self.configuration["SRH-2D"]["srh_pre_path"]
+            srh_path = self.configuration["SRH-2D"]["srh_path"]
+            extra_dll_path = self.configuration["SRH-2D"]["extra_dll_path"]
+
+            # create a SRH-2D model instance
+            self.hydraulic_model = pyHMT2D.SRH_2D.SRH_2D_Model(version, srh_pre_path,
+                                                          srh_path, extra_dll_path, faceless=False)
+
+            # initialize the SRH-2D model
+            self.hydraulic_model.init_model()
+
+            if gVerbose: print("Hydraulic model name: ", self.hydraulic_model.getName())
+            if gVerbose: print("Hydraulic model version: ", self.hydraulic_model.getVersion())
+
+            # open the simulation case
+            self.hydraulic_model.open_project(self.configuration["SRH-2D"]["case"])
+
+            self.hydraulic_data = self.hydraulic_model.get_simulation_case()
+
+        elif self.model_name == "HEC-RAS":
+            raise NotImplemented
+
+        else:
+            raise Exception("The specified model: %s, is not supported", self.model_name)
 
 
     def create_optimizer(self):
@@ -161,7 +187,6 @@ class Calibrator(object):
             if self.optimizer.method == "Nelder-Mead":
                 result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,),
                                  method=self.optimizer.method,
-                                 tol=self.optimizer.tol,
                                  callback=self.callback,
                                  options=self.optimizer.options
                                  )
@@ -200,7 +225,7 @@ class Calibrator(object):
             #set the Manning's n with the new values
             for zoneI in range(len(ManningN_MaterialIDs)):
                 self.hydraulic_model.get_simulation_case().modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                          ManningNs[zoneI])
+                                                                            ManningNs[zoneI])
 
             # run the Backwater_1D_Model model
             self.hydraulic_model.run_model()
@@ -215,6 +240,52 @@ class Calibrator(object):
             if gVerbose: print("Total score = ", self.objectives.total_score)
 
             total_score = self.objectives.total_score
+
+        elif self.model_name == "SRH-2D":
+            # set the Manning's n with the new values
+            for zoneI in range(len(ManningN_MaterialIDs)):
+                self.hydraulic_data.srhhydro_obj.modify_ManningsN(ManningN_MaterialIDs[zoneI],
+                                                                  ManningNs[zoneI])
+
+            srhhydro_filename = self.hydraulic_data.srhhydro_obj.srhhydro_filename
+
+            self.hydraulic_data.srhhydro_obj.write_to_file(srhhydro_filename)
+
+            # run SRH-2D Pre to preprocess the case
+            self.hydraulic_model.run_pre_model()
+
+            # run the SRH-2D model's current project
+            self.hydraulic_model.run_model()
+
+            # output the result to VTK
+            # read SRH-2D result in XMDF format (*.h5)
+            # Whether the XMDF result is nodal or cell center. In SRH-2D's ".srhhydro" file,
+            # the output option for "OutputFormat" can be manually changed before simulation.
+            # Options are "XMDF" (results at at nodes), "XMDFC" (results are at cell centers), etc.
+            # For example, "OutputFormat XMDFC EN". The following lines show that the SRH-2D simulation
+            # was run with "XMDFC" as output format (see the "XMDFC" part of the result file name) and thus
+            # we set "bNodal = False".
+            bNodal = False
+
+            self.hydraulic_data.readSRHXMDFFile(self.hydraulic_data.get_case_name() + "_XMDFC.h5", bNodal)
+
+            # export the SRH-2D result to VTK: lastTimeStep=True means we only want to deal with the last time step.
+            # See the code documentation of outputXMDFDataToVTK(...) for more options. It returns a list of vtk file names.
+            vtkFileNameList = self.hydraulic_data.outputXMDFDataToVTK(bNodal, lastTimeStep=True, dir='')
+
+            # calculate the total score of the calibration run for all specified objectives
+            # The score is calculated by comparing sampled result on VTK and measurement
+            self.objectives.calculate_total_score(vtkFileNameList[-1])  #only take the last vtk result file
+
+            if gVerbose: print("Total score = ", self.objectives.total_score)
+
+            total_score = self.objectives.total_score
+
+        elif self.model_name == "HEC-RAS":
+            raise NotImplemented
+        else:
+            raise Exception("The specified model: %s, is not supported", self.model_name)
+
 
         # updating the optimizer's lists for record. Pass to optimizer without arguments or parentheses.
         # ref: https://stackoverflow.com/questions/16739065/how-to-display-progress-of-scipy-optimize-function
