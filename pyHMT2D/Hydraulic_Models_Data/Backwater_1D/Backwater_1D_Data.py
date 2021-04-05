@@ -149,7 +149,7 @@ class Backwater_1D_Data(HydraulicData):
         with open(json_file_name, "w") as json_file:
             json.dump(self.configuration, json_file, indent=4, sort_keys=False)
 
-    def modify_ManningsN(self, materialID, newManningsNValue):
+    def modify_ManningsN(self, materialID, newManningsNValue, materialName):
         """Modify materialID's Manning's n value to new value
 
         Parameters
@@ -158,6 +158,8 @@ class Backwater_1D_Data(HydraulicData):
             material ID
         newManningsNValue : float
             new Manning's n value
+        materialName : str
+            name of the material
 
         Returns
         -------
@@ -182,7 +184,7 @@ class Backwater_1D_Data(HydraulicData):
                 bFound = True
 
                 if gVerbose: print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
-                                  materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
+                                  materialID, "zone name = ", self.ManningNZones[zoneI]["material_name"])
 
                 self.ManningNZones[zoneI]["n"] = newManningsNValue
 
@@ -191,7 +193,8 @@ class Backwater_1D_Data(HydraulicData):
 
         #if didn't find the specified materialID, something is wrong
         if not bFound:
-            raise Exception("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
+            raise Exception("The specified materialID", materialID, "is not in the Manning's n list. "
+                            "Please check both material ID and material name, and make sure they are consistent.")
 
         #update the Manning's n interpolator
         self.build_ManningNFunc()

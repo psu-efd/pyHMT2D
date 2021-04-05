@@ -31,6 +31,7 @@ from scipy import interpolate
 from osgeo import gdal
 import affine
 import os.path
+import copy
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
@@ -139,7 +140,7 @@ class RAS_2D_Data(HydraulicData):
         #get 2D area boundary names, types, and other information
         #e.g., TwoDAreaBoundaryNamesTypes[0] is list with info on ["Name", "SA-2D", "Type", "Length"]
         self.TwoDAreaBoundaryNamesTypes = self.get2DAreaBoundaryNamesTypes()
-        
+
         #build boundary information for 2D flow areas
         #totalBoundaries: total number of boundaries
         #boundaryIDList: a list boundary IDs (0, 1, 2, etc.)
@@ -388,6 +389,8 @@ class RAS_2D_Data(HydraulicData):
         #        continue
         #    else:
         #        self.TwoDAreaNames.append(key) # List of 2D Area names
+
+        hf.close()
         
 
     def get2DAreaCellCounts(self):
@@ -450,12 +453,24 @@ class RAS_2D_Data(HydraulicData):
         """
         hf = h5py.File(self.hdf_filename,'r')
         hdf2DAreaBoundaryNamesTypes = hf['Geometry']['Boundary Condition Lines']['Attributes']
+
+        #print(type(hdf2DAreaBoundaryNamesTypes))
         #print(hdf2DAreaBoundaryNamesTypes)
+        #print(hdf2DAreaBoundaryNamesTypes[0])
 
-        #don't close (?) so the result can be queries outside of this function. Danger?
-        #hf.close()
+        #temp list of lists: each is for one boundary [Name, SA-2D, Type, Length]
+        temp_2DAreaBoundaryNamesTypes = []
 
-        return hdf2DAreaBoundaryNamesTypes
+        for areaI in range(len(hdf2DAreaBoundaryNamesTypes)):
+            temp_2DAreaBoundaryNamesTypes.append([hdf2DAreaBoundaryNamesTypes["Name"][areaI],
+                                                  hdf2DAreaBoundaryNamesTypes["SA-2D"][areaI],
+                                                  hdf2DAreaBoundaryNamesTypes["Type"][areaI],
+                                                  hdf2DAreaBoundaryNamesTypes["Length"][areaI]
+                                                 ])
+
+        hf.close()
+
+        return temp_2DAreaBoundaryNamesTypes
 
     
 
@@ -467,7 +482,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print("Building HEC-RAS 2D area boundaries ...")
+        if gVerbose: print("Building HEC-RAS 2D area boundaries ...")
         maxNumBC = 10          #maximum number of boundaries (adjust according to the mesh)
         maxPointsPerBC = 100   #maximum number of points per boundary
 
@@ -506,10 +521,10 @@ class RAS_2D_Data(HydraulicData):
         boundary2DFlowAreaNameList = []
         boundaryTypeList = []
 
-        for k in range(self.TwoDAreaBoundaryNamesTypes.shape[0]):
-            boundaryNameList.append(self.TwoDAreaBoundaryNamesTypes["Name"][k])
-            boundary2DFlowAreaNameList.append(self.TwoDAreaBoundaryNamesTypes["SA-2D"][k])
-            boundaryTypeList.append(self.TwoDAreaBoundaryNamesTypes["Type"][k])
+        for k in range(len(self.TwoDAreaBoundaryNamesTypes)):
+            boundaryNameList.append(self.TwoDAreaBoundaryNamesTypes[k][0])
+            boundary2DFlowAreaNameList.append(self.TwoDAreaBoundaryNamesTypes[k][1])
+            boundaryTypeList.append(self.TwoDAreaBoundaryNamesTypes[k][2])
 
         
         #print("Total number of boundaries: ", totalBoundaries)
@@ -535,8 +550,8 @@ class RAS_2D_Data(HydraulicData):
 
         hf.close()
 
-        print("Land Cover Filename = ", self.landcover_filename)
-        print("Land Cover Layername = ", self.landcover_layername)
+        if gVerbose: print("Land Cover Filename = ", self.landcover_filename)
+        if gVerbose: print("Land Cover Layername = ", self.landcover_layername)
 
         #Some time HEC-RAS does not save land cover filename and layername to HDF because the
         #geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
@@ -567,9 +582,98 @@ class RAS_2D_Data(HydraulicData):
         for i in range(len(IDs)):
             self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
 
-        print("self.ManningNZones = ", self.ManningNZones)
+        if gVerbose: print("self.ManningNZones = ", self.ManningNZones)
 
         hfManningN.close()
+
+    def modify_ManningsN(self, materialID, newManningsNValue,materialName):
+        """Modify materialID's Manning's n value to new value
+
+        Parameters
+        ----------
+        materialID : int
+            material ID
+        newManningsNValue : float
+            new Manning's n value
+        materialName : str
+            name of the material
+
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify Manning's n value ...")
+
+        if not isinstance(materialID, int):
+            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
+                  ". Exit.\n")
+
+        if not isinstance(newManningsNValue, float):
+            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValue),
+                  ". Exit.\n")
+
+        #get land cover (Manning's n) file name and layer name
+        hf = h5py.File(self.hdf_filename, 'r')
+
+        self.landcover_filename = hf['Geometry'].attrs['Land Cover Filename']
+        self.landcover_layername = hf['Geometry'].attrs['Land Cover Layername']
+
+        hf.close()
+
+        if gVerbose: print("Land Cover Filename = ", self.landcover_filename)
+        if gVerbose: print("Land Cover Layername = ", self.landcover_layername)
+
+        #Some time HEC-RAS does not save land cover filename and layername to HDF because the
+        #geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
+        #computation has been done.
+        if len(self.landcover_filename) == 0 or len(self.landcover_layername) == 0:
+            print("Land Cover Filename or Land Cover Layername in result HDF is empty. Check. Exiting ...")
+            sys.exit()
+
+        #read the Manning n zones (land cover zones)
+        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+
+        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r')
+
+        dset = hfManningN['IDs']
+
+        with dset.astype(np.uint8):
+            IDs = dset[:]
+
+        IDs = IDs.tolist()
+
+        ManningN = np.array(hfManningN['ManningsN'])
+        Names = hfManningN['Names']
+
+        #make a copy of the original Manning's n values
+        ManningN_new = copy.deepcopy(ManningN)
+
+        #print("IDs =", IDs)
+        #print("ManningN =", ManningN)
+        #print("Names =", Names)
+
+        if materialID in IDs:
+            #also check whether the name is consistent
+            if materialName == Names[IDs.index(materialID)].decode("ASCII"):
+                if gVerbose: print("    Old Manning's n value =", ManningN[IDs.index(materialID)], "for material ID = ", materialID)
+                ManningN_new[IDs.index(materialID)] = newManningsNValue
+                if gVerbose: print("    New Manning's n value =", ManningN_new[IDs.index(materialID)], "for material ID = ", materialID)
+            else:
+                raise Exception("The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
+                                "You can check the content of the Manning's n HDF file with HDFViewer.")
+        else:
+            raise Exception("The specified materialID %d is not in the Manning's n list. Please check." % materialID )
+
+
+        ManningN[...] = ManningN_new # assign new values to data
+
+        #save and close the HDF file
+        hfManningN.close()
+
+        #need to re-build 2D Manning's n zones information after update
+        self.build2DManningNZones()
 
 
     def build2DInterpolatorFromGeoTiff(self, geoTiffFileName):
@@ -588,7 +692,7 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
-        print('Building 2D interpolator from GeoTiff file ...')
+        if gVerbose: print('Building 2D interpolator from GeoTiff file ...')
 
         # Read raster
         source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
@@ -995,7 +1099,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print('Loading 2D area solutions ...')
+        if gVerbose: print('Loading 2D area solutions ...')
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
             #print("2D Flow Area = ", area)
@@ -1029,7 +1133,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print("Building 2D area's face hydraulic information ...")
+        if gVerbose: print("Building 2D area's face hydraulic information ...")
 
         areaFaceHydraulicInformationTable = []
 
@@ -1080,7 +1184,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print("Building 2D area's face point coordinates list ...")
+        if gVerbose: print("Building 2D area's face point coordinates list ...")
 
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -1099,7 +1203,7 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
-        print("Building 2D area's cell face list ...")
+        if gVerbose: print("Building 2D area's cell face list ...")
 
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -1137,7 +1241,7 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
-        print("Building 2D area's face profile ...")
+        if gVerbose: print("Building 2D area's face profile ...")
 
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -1213,7 +1317,7 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
-        print("Interpolating Manning's n from face to cell center ...")
+        if gVerbose: print("Interpolating Manning's n from face to cell center ...")
 
         #clear the list up in case this function has been called before
         self.TwoDAreaCellManningN = []
@@ -1246,7 +1350,7 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
-        print("Building cell's Manning n values from GeoTiff and HDF ...")
+        if gVerbose: print("Building cell's Manning n values from GeoTiff and HDF ...")
 
         self.TwoDAreaCellManningN = []
         self.TwoDAreaCellManningN.append(np.zeros(self.TwoDAreaCellCounts[0]))
@@ -1289,7 +1393,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print("Building face's facepoints list ...")
+        if gVerbose: print("Building face's facepoints list ...")
         
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
@@ -1330,7 +1434,7 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        print('Saving RAS2D results to VTK ...')
+        if gVerbose: print('Saving RAS-2D results to VTK ...')
         
         #check the sanity of timeStep
         if (timeStep != -1) and (not timeStep in range(len(self.solution_time))):
@@ -1340,7 +1444,7 @@ class RAS_2D_Data(HydraulicData):
         #get units for variable name appendix (like SRH-2D)
         varLengthNameAppendix = ''
         varVelocityNameAppendix = ''
-        print("HEC-RAS project units =",self.units)
+        if gVerbose: print("HEC-RAS project units =",self.units)
         if self.units == 'Feet':
             varLengthNameAppendix = '_ft'
             varVelocityNameAppendix = '_ft_p_s'
@@ -1377,6 +1481,9 @@ class RAS_2D_Data(HydraulicData):
             #print("self.TwoDAreaCellDepth = ", self.TwoDAreaCellDepth)
             #print("type(cellDepth) =", type(cellDepth))
             #print("cellDepth =", cellDepth)
+
+            # list of vtkFileName (to be returned to caller)
+            vtkFileNameList = []
             
             #loop through solution times 
             for timeI in range(len(self.solution_time)):
@@ -1388,7 +1495,7 @@ class RAS_2D_Data(HydraulicData):
                 if (timeStep != -1) and (timeI != timeStep):
                     continue
                 
-                print("timeI = ", timeI)
+                if gVerbose: print("timeI = ", timeI)
 
                 #points
                 pointsVTK = vtk.vtkPoints()
@@ -1503,6 +1610,12 @@ class RAS_2D_Data(HydraulicData):
                 unstr_writer.SetInputData(uGrid)
                 unstr_writer.Write()
 
+                # add the vtkFileName to vtkFileNameList
+                vtkFileNameList.append(vtkFileName)
+
+            # vtkFileNameList
+            return vtkFileNameList
+
 
     def exportSRHGEOMFile(self, srhgeomFileName, twoDAreaNumber = 0):
         """Export srhgeom file
@@ -1532,7 +1645,7 @@ class RAS_2D_Data(HydraulicData):
         
         #write out to srhgeom file
         fname = srhgeomFileName + '.srhgeom'
-        print("Writing SRHGEOM file: ", fname)
+        if gVerbose: print("Writing SRHGEOM file: ", fname)
     
         try:
             fid = open(fname, 'w')
@@ -1613,15 +1726,15 @@ class RAS_2D_Data(HydraulicData):
         #only the first 2D area is exported.
         cell_ManningN = self.TwoDAreaCellManningN[0]  #cell Manning's n
         
-        print("cell_ManningN", cell_ManningN)
+        if gVerbose: print("cell_ManningN", cell_ManningN)
         
         #number of Manning's n zones
         nManningNZones = len(self.ManningNZones)
         
-        print("nManningNZones", nManningNZones)
+        if gVerbose: print("nManningNZones", nManningNZones)
         
         fname = srhmatFileName + '.srhmat'
-        print("Writing SRHMAT file: ", fname)
+        if gVerbose: print("Writing SRHMAT file: ", fname)
     
         try:
             fid = open(fname, 'w')
@@ -1673,7 +1786,7 @@ class RAS_2D_Data(HydraulicData):
 
         fname = dir + "/" + boundaryVTKFileName + '.vtk'
         
-        print('Writing RAS2D mesh boundaries to', fname)
+        if gVerbose: print('Writing RAS2D mesh boundaries to', fname)
         
         try:
             fid = open(fname, 'w')
@@ -1762,7 +1875,7 @@ class RAS_2D_Data(HydraulicData):
         
         fname = dir + "/" + faceProfileVTKFileName + '.vtk'
         
-        print('\nWriting all face profiles to', fname)
+        if gVerbose: print('\nWriting all face profiles to', fname)
         
         try:
             fid = open(fname, 'w')
@@ -1853,8 +1966,7 @@ class RAS_2D_Data(HydraulicData):
         print("    TwoDAreapointVx = \n", self.TwoDAreaPointVx)
         print("    TwoDAreapointVy = \n", self.TwoDAreaPointVy)
         print("    TwoDAreapointVz = \n", self.TwoDAreaPointVz)
-        
-        
+
 
 
 def main():
@@ -1864,7 +1976,7 @@ def main():
     -------
 
     """
-    my_ras_2d_data = RAS_2D_Data("Muncie2DOnly_SI.p01.hdf","subterrain_exported.tif")
+    my_ras_2d_data = RAS_2D_Data("Muncie2D.p01.hdf","subterrain_exported.tif")
     
     #print(my_ras_2d_data.TwoDAreaFace_FacePoints[0])
     

@@ -141,14 +141,17 @@ class Parameters(object):
 
         This function returns the following:
         1. a list of calibration materialIDs
-        2. a list of corresponding Manning's n initial guess values
-        3. a list of corresponding Manning's n minimum value
-        4. a list of corresponding Manning's n maximum value
+        2. a list of corresponding material names
+        3. a list of corresponding Manning's n initial guess values
+        4. a list of corresponding Manning's n minimum value
+        5. a list of corresponding Manning's n maximum value
 
         Returns
         -------
         materialID_list : list
             a list of calibration materialIDs
+        materialName_list : list
+            a list of calibration material name
         initial_guess_list : list
             a list of Manning's n initial guesses
         ManningN_min_list : list
@@ -160,6 +163,7 @@ class Parameters(object):
         """
 
         materialID_list = []
+        materialName_list = []
         initial_guess_list = []
         ManningN_min_list = []
         ManningN_max_list =[]
@@ -168,6 +172,7 @@ class Parameters(object):
         for parameterI in self.parameter_list:
             if parameterI.type == "ManningN" and parameterI.active:
                 materialID_list.append(parameterI.materialID)
+                materialName_list.append(parameterI.material_name)
                 initial_guess_list.append(parameterI.initial_guess)
                 ManningN_min_list.append(parameterI.min)
                 ManningN_max_list.append(parameterI.max)
@@ -177,4 +182,4 @@ class Parameters(object):
         if len(materialID_list) > len(set(materialID_list)):
             raise Exception("Manning's n calibration materailIDs are not unique. Please check. Exiting ...")
 
-        return materialID_list, initial_guess_list, ManningN_min_list, ManningN_max_list
+        return materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list
