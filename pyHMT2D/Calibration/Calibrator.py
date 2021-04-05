@@ -1,4 +1,7 @@
 import numpy as np
+from pathlib import Path
+import os
+import h5py
 
 import json
 
@@ -141,8 +144,32 @@ class Calibrator(object):
 
             self.hydraulic_data = self.hydraulic_model.get_simulation_case()
 
-        elif self.model_name == "HEC-RAS":
-            raise NotImplemented
+        elif self.model_name == "HEC-RAS": # create a HEC_RAS_Model object and open the simulation case
+            version = self.configuration["HEC-RAS"]["version"]
+
+            # whether to run HEC-RAS faceless
+            if (self.configuration["HEC-RAS"]["faceless"] == "True"):
+                faceless = True
+            elif (self.configuration["HEC-RAS"]["faceless"] == "False"):
+                faceless = False
+            else:
+                raise Exception("faceless should be either True or False. Please check.")
+
+            # create a HEC-RAS model instance
+            self.hydraulic_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version, faceless)
+
+            # initialize the HEC-RAS model
+            self.hydraulic_model.init_model()
+
+            print("Hydraulic model name: ", self.hydraulic_model.getName())
+            print("Hydraulic model version: ", self.hydraulic_model.getVersion())
+
+            # open the simulation case
+            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
+                                              self.configuration["HEC-RAS"]["terrainFileName"])
+
+            self.hydraulic_data = self.hydraulic_model.get_simulation_case()
+
 
         else:
             raise Exception("The specified model: %s, is not supported", self.model_name)
@@ -174,7 +201,7 @@ class Calibrator(object):
 
 
             # get the Manning's n calibration information
-            materialID_list, initial_guess_list, ManningN_min_list, ManningN_max_list = \
+            materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list = \
                 self.calibration_parameters.get_ManningN_Info_list()
 
             # build bounds
@@ -185,14 +212,16 @@ class Calibrator(object):
 
             #for methods bounds are not allowed:
             if self.optimizer.method == "Nelder-Mead":
-                result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,),
+                result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,
+                                                                                      materialName_list,),
                                  method=self.optimizer.method,
                                  callback=self.callback,
                                  options=self.optimizer.options
                                  )
             #for methods bounds are allowd:
             elif self.optimizer.method == "L-BFGS-B":
-                result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,),
+                result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,
+                                                                                      materialName_list,),
                                  method=self.optimizer.method,
                                  jac=self.optimizer.jac,
                                  hess=self.optimizer.hess,
@@ -211,7 +240,7 @@ class Calibrator(object):
 
             print("Calibration ended.")
 
-    def func_to_minimize(self, ManningNs, ManningN_MaterialIDs):
+    def func_to_minimize(self, ManningNs, ManningN_MaterialIDs, ManningN_MaterialNames):
         """Function to minimize (the score, i.e., the cost function)
 
         Returns
@@ -225,7 +254,8 @@ class Calibrator(object):
             #set the Manning's n with the new values
             for zoneI in range(len(ManningN_MaterialIDs)):
                 self.hydraulic_model.get_simulation_case().modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                            ManningNs[zoneI])
+                                                                            ManningNs[zoneI],
+                                                                            ManningN_MaterialNames[zoneI])
 
             # run the Backwater_1D_Model model
             self.hydraulic_model.run_model()
@@ -245,7 +275,8 @@ class Calibrator(object):
             # set the Manning's n with the new values
             for zoneI in range(len(ManningN_MaterialIDs)):
                 self.hydraulic_data.srhhydro_obj.modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                  ManningNs[zoneI])
+                                                                  ManningNs[zoneI],
+                                                                  ManningN_MaterialNames[zoneI])
 
             srhhydro_filename = self.hydraulic_data.srhhydro_obj.srhhydro_filename
 
@@ -282,7 +313,41 @@ class Calibrator(object):
             total_score = self.objectives.total_score
 
         elif self.model_name == "HEC-RAS":
-            raise NotImplemented
+            # set the Manning's n with the new values
+            for zoneI in range(len(ManningN_MaterialIDs)):
+                self.hydraulic_data.modify_ManningsN(ManningN_MaterialIDs[zoneI],
+                                                                  ManningNs[zoneI],
+                                                     ManningN_MaterialNames[zoneI])
+
+            #update the time stamp of the Manning's n GeoTiff file (to force HEC-RAS to re-compute 2D flow area's
+            #properties table.
+            fileBase = str.encode(os.path.dirname(self.hydraulic_data.hdf_filename) + '/')
+            full_landcover_filename = (fileBase + self.hydraulic_data.landcover_filename).decode("ASCII")
+
+            Path(full_landcover_filename).touch()
+
+            # run the HEC-RAS model's current project
+            self.hydraulic_model.run_model()
+
+            # read the HEC-RAS simulation result
+            # Need to pass in the result HDF file and the terrain because HEC-RAS HDF file does not have elevation for vertexes
+            #currentPlanFile = self.hydraulic_model.get_current_project().currentPlanFile
+
+            self.hydraulic_data.load2DAreaSolutions()
+
+            #my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data(currentPlanFile + ".hdf", "Terrain/TerrainMuncie_composite.tif")
+
+            # save the HEC-RAS simulation result to VTK. It returns a list of VTK files
+            vtkFileNameList = self.hydraulic_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
+
+            # calculate the total score of the calibration run for all specified objectives
+            # The score is calculated by comparing sampled result on VTK and measurement
+            self.objectives.calculate_total_score(vtkFileNameList[-1])  #only take the last vtk result file
+
+            if gVerbose: print("Total score = ", self.objectives.total_score)
+
+            total_score = self.objectives.total_score
+
         else:
             raise Exception("The specified model: %s, is not supported", self.model_name)
 
@@ -345,3 +410,22 @@ class Calibrator(object):
         print(s1)
 
         self.optimizer.callback_count += 1
+
+    def close_and_cleanup(self):
+        """Close the calibration process and clean up
+
+        Returns
+        -------
+
+        """
+
+        if self.model_name == "Backwater-1D":
+            pass
+        elif self.model_name == "SRH-2D":
+            pass
+        elif self.model_name == "HEC-RAS":
+            #close project
+            self.hydraulic_model.close_project()
+
+            #quit HEC-RAS
+            self.hydraulic_model.exit_model()

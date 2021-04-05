@@ -5,6 +5,10 @@ RAS_2D_Model:
 import win32com.client as win32
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
 
+from pyHMT2D.__common__ import gVerbose
+
+from pyHMT2D.Hydraulic_Models_Data.RAS_2D import RAS_2D_Data
+
 from .helpers import *
 import sys
 
@@ -24,7 +28,8 @@ class HEC_RAS_Project(object):
             list of all plan files
     """
 
-    def __init__(self, title='', currentPlanName='', geom_file_list=[], flow_file_list=[], plan_file_list=[], plans=[]):
+    def __init__(self, title='', currentPlanName='', currentPlanFile='', geom_file_list=[],
+                 flow_file_list=[], plan_file_list=[], plans=[]):
         """HEC_RAS_Project class constructor
 
         Parameters
@@ -33,6 +38,8 @@ class HEC_RAS_Project(object):
             title
         currentPlanName : str, optional
             current plan's name
+        currentPlanFile : str, optional
+            current plan's file name
         geom_file_list : str, optional
             list of geometry file names
         flow_file_list : str, optional
@@ -45,12 +52,31 @@ class HEC_RAS_Project(object):
 
         self.title = title
         self.currentPlanName = currentPlanName
+        self.currentPlanFile = currentPlanFile
         self.geom_file_list = geom_file_list
         self.flow_file_list = flow_file_list
         self.plan_file_list = plan_file_list
 
         #Plans in the opened HEC-RAS project: a list of HEC_RAS_Plan objects
         self.plans = plans
+
+    def set_current_plan_file_name(self, currentPlanName, currentPlanFile):
+        """
+
+        Parameters
+        ----------
+        currentPlanName : str, optional
+            current plan's name
+        currentPlanFile : str, optional
+            current plan's file name
+
+        Returns
+        -------
+
+        """
+
+        self.currentPlanName = currentPlanName
+        self.currentPlanFile = currentPlanFile
 
     def __del__(self):
         """ Destructor
@@ -237,18 +263,14 @@ class HEC_RAS_Model(HydraulicModel):
         #An HEC_RAS_Project object for the opened HEC-RAS project
         self._project = None
 
+        #RAS_2D_Data object to hold information about simulation case
+        #including mesh, boundary, and results
+        self._ras_2d_data = None
+
     def __del__(self):
         """Some clean up before exit."""
 
-        if self._RASController is not None:
-            print("Quitting HEC-RAS ...")
-            self._RASController.QuitRas()
-
-            self._RASController = None
-
-            self._project = None
-
-            print("Finished quitting HEC-RAS.")
+        pass
 
     def init_model(self):
         """ Initialize a HEC-RAS instance
@@ -270,6 +292,7 @@ class HEC_RAS_Model(HydraulicModel):
 
             return
 
+        # Difference between Dispatch and DispatchEx: the latter launches a new instance
         # Two options: not too much of difference for a user
         # late binding: python does not know what the object (HEC-RAS) can do
         # ras = win32.Dispatch("RAS5x.HECRASController")
@@ -277,25 +300,44 @@ class HEC_RAS_Model(HydraulicModel):
         # early binding: python knows what the object (HEC-RAS) can do
 
         if (self.getVersion() == '5.0.7'):
-            self._RASController = win32.gencache.EnsureDispatch('RAS507.HECRASController')
+            #self._RASController = win32.gencache.EnsureDispatch('RAS507.HECRASController')
+            #self._RASController = win32.Dispatch("RAS507.HECRASController")
+            self._RASController = win32.DispatchEx("RAS507.HECRASController")
+
         elif (self.getVersion() == '6.0.1'):
             # As of 03/21, "RAS5x.HECRASController" is the prog_id for HEC-RAS version 6 beta 1 and 2
             # This may change (check in future).
             self._RASController = win32.gencache.EnsureDispatch('RAS5x.HECRASController')
 
-            # print and confirm the HEC-RAS version
-            print('Successfully launched HEC-RAS version ', self._RASController.HECRASVersion())
+        # show HEC-RAS main window
+        if not self._faceless:
+            self._RASController.ShowRas()
 
-    def open_project(self,projectFileName):
+        # print and confirm the HEC-RAS version
+        print('Successfully launched HEC-RAS version ', self._RASController.HECRASVersion())
+
+        #_ = input("Press ENTER to continue:")
+
+
+    def open_project(self,projectFileName, terrainFileName):
         """ open the specified HEC-RAS project
 
         Parameters
         ----------
         projectFileName : str
             project file name including the path
+        terrainFileName : str
+            file name for the terrain (not necessarily the terrain used by HEC-RAS for the project). This
+            terrain file (in GeoTiff format) is used to interpolate the elevation at face points (which HEC-RAS
+            does not export to result HDF files). This GeoTiff terrain file can be converted from the terrain used
+            in the HEC-RAS project. (TODO: convert in this function internally without user input).
 
         Returns
         -------
+            currentPlanFile : str
+                name of current plan file
+            currentPlanName: str
+                name of current plan
 
         """
 
@@ -317,9 +359,6 @@ class HEC_RAS_Model(HydraulicModel):
 
         title = self._RASController.CurrentProjectTitle()
 
-        # show HEC-RAS main window
-        if not self._faceless:
-            self._RASController.ShowRas()
 
         ###########################################
         # Build data for the HEC_RAS_Project object
@@ -406,12 +445,50 @@ class HEC_RAS_Model(HydraulicModel):
         if self._project is not None:
             self._project = None
 
-        self._project = HEC_RAS_Project(title, currentPlanName, geom_file_list, flow_file_list, plan_file_list, plans)
+        self._project = HEC_RAS_Project(title, currentPlanName, currentPlanFile, geom_file_list,
+                                        flow_file_list, plan_file_list, plans)
 
         #dump _project content to screen
-        print(self._project)
+        #print(self._project)
+
+        #create RAS_2D_Data object
+        self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
 
         print("Finished building all the plans in the project.")
+
+        return currentPlanName, currentPlanFile
+
+    def get_simulation_case(self):
+        """Get the simulation case to RAS_2D_data
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        ras_2d_data : RAS_2D_Data
+            an object from class RAS_2D_Data, which should be created before calling
+
+        """
+
+        if self._ras_2d_data is None:
+            raise  Exception("The requested SRH_2D_Data object is None. It should be created before requesting. Please check.")
+
+        return self._ras_2d_data
+
+    def get_current_project(self):
+        """Get the current opened project
+
+        Returns
+        -------
+
+        """
+
+        if (self._project is not None):
+            return self._project
+        else:
+            raise Exception("HEC-RAS has no project opend. Open the project first.")
+
 
     def close_project(self):
         """Close the current project (if any)
