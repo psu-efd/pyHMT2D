@@ -169,3 +169,96 @@ class Optimizer_ScipyOptimizeLocal(Optimizier):
             fid.write("%10.5e\n" % self.list_callback_res[iterationI])
 
         fid.close()
+
+
+class Optimizer_ScipyOptimizeGlobal(Optimizier):
+    """ Optimizer using scipy.optimize.global class
+
+    Using scipy.optimize's global optimization, e.g., use the "brute(...)" function
+
+    Attributes
+    ----------
+
+    """
+
+    def __init__(self, optimizerDict):
+        """Optimizer_ScipyOptimizeGlobal class constructor
+
+        Parameters
+        ----------
+
+        """
+
+        Optimizier.__init__(self, optimizerDict)
+
+        # type
+        self.type = "ScipyOptimizeGlobal"
+
+        # method: default "brute".
+        self.method = "brute"
+
+        #options:
+
+        # dictionary for the options of the particular method
+        self.options = {}
+
+        # load optimizer configuration from dictionary
+        self.load_from_optimizer_dict()
+
+        # for callback: record the data during the optimization such as number of function calls,
+        # ref: https://stackoverflow.com/questions/16739065/how-to-display-progress-of-scipy-optimize-function
+        self.num_calls = 0  # how many times the cost function has been called
+        self.callback_count = 0  # number of times callback has been called (= iteration count)
+        self.list_calls_inp = []  # input of all calls
+        self.list_calls_res = []  # result of all calls
+        self.decreasing_list_calls_inp = []  # input of calls that resulted in decrease
+        self.decreasing_list_calls_res = []  # result of calls that resulted in decrease
+        self.list_callback_inp = []  # only appends inputs on callback, as such they correspond to the iterations
+        self.list_callback_res = []  # only appends results on callback, as such they correspond to the iterations
+
+    def load_from_optimizer_dict(self):
+        """ Load configuration of the optimizer from the dictionary
+
+        Returns
+        -------
+
+        """
+
+        if "method" in self.optimizerDict:
+            self.method = self.optimizerDict["method"]
+
+        if "options" in self.optimizerDict:
+            self.options = self.optimizerDict["options"]
+
+            #correct
+            json_dict_type_correction(self.options)
+
+
+    def write_optimization_results_to_csv(self, parameterNames=[]):
+        """ Write optimization results to files in csv format
+
+        Returns
+        -------
+
+        """
+
+        #write out the calibration parameters' values and calibration errors for all iterations
+        fid = open(self.type+"_"+self.method+"_calibration_results"+".csv", "w")
+
+        #loop through all parameters
+        for parameterI in range(len(self.list_callback_inp[0])):
+            if len(parameterNames) == 0:
+                fid.write("Parameter-%d," % parameterI)
+            else:
+                fid.write("%s," % parameterNames[parameterI])
+
+        fid.write("Calibration-Error\n")
+
+        #loop through all iterations
+        for iterationI in range(len(self.list_callback_inp)):
+            for parameterI in range(len(self.list_callback_inp[0])):
+                fid.write("%10.5e," % self.list_callback_inp[iterationI][parameterI])
+
+            fid.write("%10.5e\n" % self.list_callback_res[iterationI])
+
+        fid.close()

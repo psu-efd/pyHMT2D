@@ -586,17 +586,17 @@ class RAS_2D_Data(HydraulicData):
 
         hfManningN.close()
 
-    def modify_ManningsN(self, materialID, newManningsNValue,materialName):
-        """Modify materialID's Manning's n value to new value
+    def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
+        """Modify materialID's Manning's n values to new values
 
         Parameters
         ----------
-        materialID : int
-            material ID
-        newManningsNValue : float
-            new Manning's n value
-        materialName : str
-            name of the material
+        materialIDs : list
+            material ID list
+        newManningsNValues : list
+            new Manning's n values in a list
+        materialNames : list
+            names of the material in a list
 
 
         Returns
@@ -606,12 +606,12 @@ class RAS_2D_Data(HydraulicData):
 
         if gVerbose: print("Modify Manning's n value ...")
 
-        if not isinstance(materialID, int):
-            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
+        if not isinstance(materialIDs[0], int):
+            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]),
                   ". Exit.\n")
 
-        if not isinstance(newManningsNValue, float):
-            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValue),
+        if not isinstance(newManningsNValues[0], float):
+            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
                   ". Exit.\n")
 
         #get land cover (Manning's n) file name and layer name
@@ -635,7 +635,7 @@ class RAS_2D_Data(HydraulicData):
         #read the Manning n zones (land cover zones)
         fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
 
-        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r')
+        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r+')
 
         dset = hfManningN['IDs']
 
@@ -644,7 +644,9 @@ class RAS_2D_Data(HydraulicData):
 
         IDs = IDs.tolist()
 
-        ManningN = np.array(hfManningN['ManningsN'])
+        ManningN_dataset = hfManningN['ManningsN']
+        ManningN = np.array(ManningN_dataset)
+
         Names = hfManningN['Names']
 
         #make a copy of the original Manning's n values
@@ -654,20 +656,25 @@ class RAS_2D_Data(HydraulicData):
         #print("ManningN =", ManningN)
         #print("Names =", Names)
 
-        if materialID in IDs:
-            #also check whether the name is consistent
-            if materialName == Names[IDs.index(materialID)].decode("ASCII"):
-                if gVerbose: print("    Old Manning's n value =", ManningN[IDs.index(materialID)], "for material ID = ", materialID)
-                ManningN_new[IDs.index(materialID)] = newManningsNValue
-                if gVerbose: print("    New Manning's n value =", ManningN_new[IDs.index(materialID)], "for material ID = ", materialID)
+        for i in range(len(materialIDs)):
+            materialID = materialIDs[i]
+            if materialID in IDs:
+                # also check whether the name is consistent
+                if materialNames[i] == Names[IDs.index(materialID)].decode("ASCII"):
+                    if gVerbose: print("    Old Manning's n value =", ManningN[IDs.index(materialID)],
+                                       "for material ID = ", materialID)
+                    ManningN_new[IDs.index(materialID)] = newManningsNValues[i]
+                    if gVerbose: print("    New Manning's n value =", ManningN_new[IDs.index(materialID)],
+                                       "for material ID = ", materialID)
+                else:
+                    raise Exception(
+                        "The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
+                        "You can check the content of the Manning's n HDF file with HDFViewer.")
             else:
-                raise Exception("The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
-                                "You can check the content of the Manning's n HDF file with HDFViewer.")
-        else:
-            raise Exception("The specified materialID %d is not in the Manning's n list. Please check." % materialID )
+                raise Exception(
+                    "The specified materialID %d is not in the Manning's n list. Please check." % materialID)
 
-
-        ManningN[...] = ManningN_new # assign new values to data
+        ManningN_dataset[...] = ManningN_new # assign new values to data
 
         #save and close the HDF file
         hfManningN.close()

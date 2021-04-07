@@ -173,15 +173,17 @@ class SRH_2D_SRHHydro:
 
         self.srhhydro_content = res_all
 
-    def modify_ManningsN(self, materialID, newManningsNValue):
+    def modify_ManningsN(self, materialIDs, newManningsNValues,ManningN_MaterialNames):
         """Modify materialID's Manning's n value to new value
 
         Parameters
         ----------
-        materialID : int
-            material ID
-        newManningsNValue : float
-            new Manning's n value
+        materialIDs : list
+            material ID list
+        newManningsNValues : list
+            new Manning's n value list
+        ManningN_MaterialNames : list
+            name of materials list
 
         Returns
         -------
@@ -190,24 +192,26 @@ class SRH_2D_SRHHydro:
 
         if gVerbose: print("Modify Manning's n value ...")
 
-        if not isinstance(materialID, int):
-            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
+        if not isinstance(materialIDs[0], int):
+            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]),
                   ". Exit.\n")
 
-        if not isinstance(newManningsNValue, float):
-            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValue),
+        if not isinstance(newManningsNValues[0], float):
+            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
                   ". Exit.\n")
 
 
         nDict = self.srhhydro_content["ManningsN"]
 
-        if materialID in nDict:
-            if gVerbose: print("    Old Manning's n value =", nDict[materialID], "for material ID = ", materialID)
-            nDict[materialID] = newManningsNValue
-            if gVerbose: print("    New Manning's n value =", nDict[materialID], "for material ID = ", materialID)
-        else:
-            print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
+        for i in range(len(materialIDs)):
+            materialID = materialIDs[i]
 
+            if materialID in nDict:
+                if gVerbose: print("    Old Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+                nDict[materialID] = newManningsNValues[i]
+                if gVerbose: print("    New Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+            else:
+                print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
 
 
     def write_to_file(self, new_srhhydro_file_name):
