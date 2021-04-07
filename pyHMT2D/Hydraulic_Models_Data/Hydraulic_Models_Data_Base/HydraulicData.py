@@ -44,3 +44,22 @@ class HydraulicData(object):
 
         """
         pass
+
+    def modify_ManningsN(self, materialID, newManningsNValue, materialName):
+        """Modify materialID's Manning's n value to new value
+
+        Parameters
+        ----------
+        materialID : int
+            material ID
+        newManningsNValue : float
+            new Manning's n value
+        materialName : str
+            name of the material
+
+        Returns
+        -------
+
+        """
+
+        pass

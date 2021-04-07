@@ -9,6 +9,28 @@ import pyHMT2D
 
 from ..__common__ import gVerbose
 
+import logging
+
+# Create a custom logger
+logger = logging.getLogger(__name__)
+
+# Create handlers
+c_handler = logging.StreamHandler()
+f_handler = logging.FileHandler('calibration.log', mode='w')
+
+# Create formatters and add it to handlers
+c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+c_handler.setFormatter(c_format)
+f_handler.setFormatter(f_format)
+
+# Add handlers to the logger
+logger.addHandler(c_handler)
+logger.addHandler(f_handler)
+
+logger.setLevel(logging.INFO)
+
+
 class Calibrator(object):
     """Calibrator class to handle calibration process
 
@@ -165,10 +187,10 @@ class Calibrator(object):
             print("Hydraulic model version: ", self.hydraulic_model.getVersion())
 
             # open the simulation case
-            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
-                                              self.configuration["HEC-RAS"]["terrainFileName"])
+            #self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
+            #                                  self.configuration["HEC-RAS"]["terrainFileName"])
 
-            self.hydraulic_data = self.hydraulic_model.get_simulation_case()
+            #self.hydraulic_data = self.hydraulic_model.get_simulation_case()
 
 
         else:
@@ -185,6 +207,10 @@ class Calibrator(object):
 
         if self.optimizer_name == "scipy.optimize.local":
             self.optimizer = pyHMT2D.Calibration.Optimizer_ScipyOptimizeLocal(self.configuration["calibration"]["scipy.optimize.local"])
+        elif self.optimizer_name == "scipy.optimize.global":
+            self.optimizer = pyHMT2D.Calibration.Optimizer_ScipyOptimizeGlobal(self.configuration["calibration"]["scipy.optimize.global"])
+        else:
+            raise Exception("Specified optimizer is not supported.")
 
     def calibrate(self):
         """ Calibrate the model
@@ -196,16 +222,15 @@ class Calibrator(object):
 
         print("Calibration starts ...")
 
+        # get the Manning's n calibration information
+        materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list = \
+            self.calibration_parameters.get_ManningN_Info_list()
+
         if self.optimizer_name == "scipy.optimize.local":
             import scipy.optimize as OP
 
-
-            # get the Manning's n calibration information
-            materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list = \
-                self.calibration_parameters.get_ManningN_Info_list()
-
             # build bounds
-            ManningN_bounds = OP.Bounds(ManningN_min_list, ManningN_max_list)
+            ManningN_bounds = OP.Bounds(np.array(ManningN_min_list), np.array(ManningN_max_list))
 
             # scipy.optimize.minimize's arguments are different for different categories of methods. Need to
             # separate them.
@@ -218,7 +243,7 @@ class Calibrator(object):
                                  callback=self.callback,
                                  options=self.optimizer.options
                                  )
-            #for methods bounds are allowd:
+            #for methods bounds are allowed:
             elif self.optimizer.method == "L-BFGS-B":
                 result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,
                                                                                       materialName_list,),
@@ -229,16 +254,62 @@ class Calibrator(object):
                                  bounds=ManningN_bounds,
                                  options=self.optimizer.options
                                  )
+            elif self.optimizer.method == "Powell":
+                result = OP.minimize(self.func_to_minimize, initial_guess_list, args=(materialID_list,
+                                                                                      materialName_list,),
+                                 method=self.optimizer.method,
+                                 callback=self.callback,
+                                 bounds=ManningN_bounds,
+                                 options=self.optimizer.options
+                                 )
+            else:
+                raise Exception("The optimization method %s is not supported." % self.optimizer.method)
 
             print(result)
 
-            #write out the optimizer's calibration intermediate steps' parameter values and calibration errors
-            self.optimizer.write_optimization_results_to_csv()
+        elif self.optimizer_name == "scipy.optimize.global":
+            import scipy.optimize as OP
 
-            #write out the simulation results at measurement locations (for postprocessing)
-            self.objectives.outputSimulationResultToCSV()
+            # build ranges (tuples)
+            ManningN_ranges = tuple(zip(ManningN_min_list, ManningN_max_list))
 
-            print("Calibration ended.")
+            #get the "full_output" option
+            if self.configuration["calibration"]["scipy.optimize.global"]["full_output"] == "True":
+                full_output = True
+            elif self.configuration["calibration"]["scipy.optimize.global"]["full_output"] == "False":
+                full_output = False
+            else:
+                raise Exception("Optinmization parameter full_output can only be True or False. Please check.")
+
+            if self.optimizer.method == "brute":
+                result = OP.brute(self.func_to_minimize, ManningN_ranges, args=(materialID_list,
+                                                                                materialName_list,),
+                                  Ns=self.configuration["calibration"]["scipy.optimize.global"]["Ns"],
+                                  #finish=self.configuration["calibration"]["scipy.optimize.global"]["finish"],
+                                  finish=None,   #hard-wired here to not allow "brute" to go beyond the range
+                                  full_output=full_output
+                                 )
+
+                # send information to logger for the record or restart
+                msg = "\nThe optimized parameters:: " + ", ".join(map(str, result[0])) \
+                      + "\nThe function value at optimized parameters:  " + ", ".join(map(str, result[1]))
+                logger.info(msg)
+
+            else:
+                raise Exception("The optimization method %s is not supported." % self.optimizer.method)
+
+        else:
+            raise  Exception("The optimizer name %s is not supported." % self.optimizer_name)
+
+
+
+        #write out the optimizer's calibration intermediate steps' parameter values and calibration errors
+        self.optimizer.write_optimization_results_to_csv()
+
+        #write out the simulation results at measurement locations (for postprocessing)
+        self.objectives.outputSimulationResultToCSV()
+
+        print("Calibration ended.")
 
     def func_to_minimize(self, ManningNs, ManningN_MaterialIDs, ManningN_MaterialNames):
         """Function to minimize (the score, i.e., the cost function)
@@ -252,10 +323,9 @@ class Calibrator(object):
 
         if self.model_name == "Backwater-1D":
             #set the Manning's n with the new values
-            for zoneI in range(len(ManningN_MaterialIDs)):
-                self.hydraulic_model.get_simulation_case().modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                            ManningNs[zoneI],
-                                                                            ManningN_MaterialNames[zoneI])
+            self.hydraulic_model.get_simulation_case().modify_ManningsN(ManningN_MaterialIDs,
+                                                                        ManningNs,
+                                                                        ManningN_MaterialNames)
 
             # run the Backwater_1D_Model model
             self.hydraulic_model.run_model()
@@ -273,10 +343,9 @@ class Calibrator(object):
 
         elif self.model_name == "SRH-2D":
             # set the Manning's n with the new values
-            for zoneI in range(len(ManningN_MaterialIDs)):
-                self.hydraulic_data.srhhydro_obj.modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                  ManningNs[zoneI],
-                                                                  ManningN_MaterialNames[zoneI])
+            self.hydraulic_data.srhhydro_obj.modify_ManningsN(ManningN_MaterialIDs,
+                                                              ManningNs,
+                                                              ManningN_MaterialNames)
 
             srhhydro_filename = self.hydraulic_data.srhhydro_obj.srhhydro_filename
 
@@ -313,29 +382,32 @@ class Calibrator(object):
             total_score = self.objectives.total_score
 
         elif self.model_name == "HEC-RAS":
+            # open the simulation case
+            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
+                                              self.configuration["HEC-RAS"]["terrainFileName"])
+
+            self.hydraulic_data = self.hydraulic_model.get_simulation_case()
+
             # set the Manning's n with the new values
-            for zoneI in range(len(ManningN_MaterialIDs)):
-                self.hydraulic_data.modify_ManningsN(ManningN_MaterialIDs[zoneI],
-                                                                  ManningNs[zoneI],
-                                                     ManningN_MaterialNames[zoneI])
+            self.hydraulic_data.modify_ManningsN(ManningN_MaterialIDs,
+                                                            ManningNs,
+                                               ManningN_MaterialNames)
 
             #update the time stamp of the Manning's n GeoTiff file (to force HEC-RAS to re-compute 2D flow area's
-            #properties table.
+            #properties table. (No need? The above Manning's modification already updatet the time stamp.)
             fileBase = str.encode(os.path.dirname(self.hydraulic_data.hdf_filename) + '/')
             full_landcover_filename = (fileBase + self.hydraulic_data.landcover_filename).decode("ASCII")
 
             Path(full_landcover_filename).touch()
 
+            #save the current project before run it
+            self.hydraulic_model.save_project()
+
             # run the HEC-RAS model's current project
             self.hydraulic_model.run_model()
 
             # read the HEC-RAS simulation result
-            # Need to pass in the result HDF file and the terrain because HEC-RAS HDF file does not have elevation for vertexes
-            #currentPlanFile = self.hydraulic_model.get_current_project().currentPlanFile
-
             self.hydraulic_data.load2DAreaSolutions()
-
-            #my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data(currentPlanFile + ".hdf", "Terrain/TerrainMuncie_composite.tif")
 
             # save the HEC-RAS simulation result to VTK. It returns a list of VTK files
             vtkFileNameList = self.hydraulic_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
@@ -348,8 +420,19 @@ class Calibrator(object):
 
             total_score = self.objectives.total_score
 
+            #close project
+            self.hydraulic_model.close_project()
+
+
         else:
             raise Exception("The specified model: %s, is not supported", self.model_name)
+
+
+        #send information to logger for the record or restart
+        msg =   "ManningN_MaterialIDs: " + ", ".join(map(str, ManningN_MaterialIDs))\
+              + " ManningNs: " + ", ".join(map(str, ManningNs)) \
+              + " total_score: " + str(total_score)
+        logger.info(msg)
 
 
         # updating the optimizer's lists for record. Pass to optimizer without arguments or parentheses.
@@ -424,8 +507,5 @@ class Calibrator(object):
         elif self.model_name == "SRH-2D":
             pass
         elif self.model_name == "HEC-RAS":
-            #close project
-            self.hydraulic_model.close_project()
-
-            #quit HEC-RAS
+            # quit HEC-RAS
             self.hydraulic_model.exit_model()

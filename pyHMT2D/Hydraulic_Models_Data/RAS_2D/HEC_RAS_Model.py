@@ -341,7 +341,7 @@ class HEC_RAS_Model(HydraulicModel):
 
         """
 
-        print("HEC-RAS opens project: ", projectFileName)
+        if gVerbose: print("HEC-RAS opens project: ", projectFileName)
 
         # check whether the HEC-RAS model has been initialized. If not, call init_model()
         if self._RASController is None:
@@ -489,6 +489,18 @@ class HEC_RAS_Model(HydraulicModel):
         else:
             raise Exception("HEC-RAS has no project opend. Open the project first.")
 
+
+    def save_project(self):
+        """Save the current project
+
+        Returns
+        -------
+
+        """
+
+        if (self._RASController is not None)  and (self._project is not None):
+            print("Saving project: ", self._RASController.CurrentProjectTitle())
+            self._RASController.Project_Save()
 
     def close_project(self):
         """Close the current project (if any)
