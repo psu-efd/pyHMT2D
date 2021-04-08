@@ -21,7 +21,7 @@ ManningsN 4 0.045
 ManningsN 5 0.05
 ManningsN 6 0.055
 ManningsN 7 0.06
-BC 1 EXIT-ND
+BC 1 EXIT-H
 BC 2 INLET-Q
 IQParams 2 20000.0 EN CONVEYANCE
-NDParams 1 -1 0.00064
+EWSParamsC 1 930.0 EN C
