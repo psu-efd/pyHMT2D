@@ -1,0 +1,23 @@
+{
+    "model": "Backwater-1D",
+    "Backwater-1D": {
+        "case_name": "test",
+        "units": "SI",
+        "startx": 269601,
+        "startH": 2,
+        "startZ": 0,
+        "riverLength": 10000,
+        "slope": 0.00001,
+        "ManningNZones": [
+            {
+                "materialID": 1,
+                "name": "zone1",
+                "startx": 269601,
+                "endx": 279601,
+                "n": 0.03
+            }
+        ],
+        "nGrid": 1001,
+        "specificDischarge": 0.48
+    }
+}
