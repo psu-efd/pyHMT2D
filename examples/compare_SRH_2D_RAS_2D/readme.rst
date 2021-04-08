@@ -9,12 +9,14 @@ used as a mesh generator for SRH-2D.
 
 The workflow is typicallly as follows:
 
-- Prepare data files such as bathymetry for HEC-RAS, for example 
-    - use the Terrain class to create terrain GeoTiff file
+- Prepare data files such as bathymetry for HEC-RAS, for example
+    - use the Terrain class to create a terrain GeoTiff file, or
+    - obtain terrain data from your sources or survey
+
 - In HEC-RAS, create a case:
     - load terrain data
     - create geometry with only one 2D flow area and generate the mesh
-    - create boundary condition
+    - create boundary conditions
     - create Manning's n layer if Manning's n is spatially varying
     - create unsteady flow
     - create simulation plan
@@ -24,8 +26,15 @@ The workflow is typicallly as follows:
       and "srhmat" files. The srhhydro file needs to be created manually (see SRH-2D and SMS examples for reference)
     - convert RAS 2D result to VTK (for further processing and comparsion with SRH-2D)
 - In SRH-2D,
-    - make necessary modifications to the SRH-2D case files (srhhydro, srhgeom, srhmat, etc.)
-    - run SRH-2D preprocessing and solver
+    - make necessary modifications to the SRH-2D case files (srhhydro, srhgeom, srhmat, etc.), and make sure they are \
+      error free.
+    - run SRH-2D preprocessing and solver, e.g.,
+
+    .. code-block:: console
+
+      $ /path/to/SRH_Pre_Console.exe 3 backwater.srhhydro
+      $ /path/to/SRH-2D_v330_Console.exe backwater_curve.DAT
+
 - Process SRH-2D data:
     - convert SRH-2D result to VTk
 - Compare and plot results
@@ -38,6 +47,6 @@ Example cases:
 ##############
 
 - Backwater curve
-- Muncie
+- Muncie2D
 
     
