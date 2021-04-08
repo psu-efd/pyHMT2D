@@ -7,7 +7,6 @@ import sys
 
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
