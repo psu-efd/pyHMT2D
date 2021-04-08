@@ -11,9 +11,9 @@ To perform the comparison, the order of steps is as follows:
 -  Run "compare_SRH_2D_HEC_RAS_2D.py": it will read the two VTK result files from both SRH-2D and HEC-RAS 2D, sample the water surface profile, run a simple Backwater-1D solver, and finally plot all profiles in one figure.
 
 .. figure:: backwater_1D_comparison.png
-    :width: 400px
+    :width: 300px
     :align: center
-    :height: 300px
+    :height: 270px
     :alt: backwater curve
     :figclass: align-center
 
