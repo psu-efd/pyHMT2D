@@ -3,6 +3,7 @@ This script compare results (in VTK format) from SRH-2D and HEC-RAS 2D
 """
 
 import numpy as np
+from scipy import interpolate
 
 from matplotlib import pyplot as plt
 
@@ -16,7 +17,7 @@ def plot_1D_profile():
     vtk_handler = pyHMT2D.Misc.vtkHandler()
 
     # Define the filename of VTK file
-    srh_filename = 'SRH-2D/backwater_curve_N_0024.vtk'
+    srh_filename = 'SRH-2D/SRH2D_backwater_curve_C_0024.vtk'
     hec_filename = 'HEC-RAS-2D/RAS2D_channel_0012.vtk'
 
     # Set the points between which the line is constructed.
@@ -48,7 +49,7 @@ def plot_1D_profile():
     reader = vtk_handler.readVTK_UnstructuredGrid(hec_filename)  # read the VTKfile
     line = vtk_handler.createVtkLine(p1, p2, numPoints)  # Create the line
     points, U, elev_ras_2d = vtk_handler.probeUnstructuredGridVTKOverLine(line, reader,
-                                                                          'WSE')  # interpolate the data over the line
+                                                                          'Water_Elev_m')  # interpolate the data over the line
     # print(points)
     # print(U)
 
@@ -63,28 +64,39 @@ def plot_1D_profile():
     # plot the bottom
     plt.plot((points[:, 0] - max_x) / 1000, elev_ras_2d, color='k')
 
-    # 1D backwater calculation
-    slope = 1e-5
-    ManningN = 0.03
-    startx = 269601
-    startH = 2.0
-    startZ = 0.0
-    riverLength = 10000
-    nGrid = 1001
-    specificDischarge = 0.48  # = 300 cms/625 m (the inlet discharge in HEC-RAS and SRH-2D is 300 cms and the inlet
-    # width is 625 m
+    # Also perform a 1D backwater calculation
 
-    normalDepth, criticalDepth, x, waterDepth, WSE = pyHMT2D.Misc.ocf_1D_backwater_curve(slope,
-                                                                                         ManningN, startx, startH,
-                                                                                         startZ, riverLength, nGrid,
-                                                                                         specificDischarge)
+    #load Backwater_1D_Data configuration data
+    my_backwater_1D_data = pyHMT2D.Hydraulic_Models_Data.Backwater_1D_Data("Backwater-1D/backwater_1d.json")
 
-    negX = -(x - startx) / 1000
-    print("negX, WSE = ", negX, WSE)
+    #create a Backwater_1D_Model object
+    my_backwater_1D_model = pyHMT2D.Hydraulic_Models_Data.Backwater_1D_Model()
 
-    plt.scatter(negX[::50], WSE[::50], marker='^', facecolor='none', edgecolor='blue', s=10, linewidths=1,
-                label='1D Backwater')
-    # plt.plot(negX,WSE)
+    #set the simulation case in the Backwater_1D_Model object
+    my_backwater_1D_model.set_simulation_case(my_backwater_1D_data)
+
+    #run the Backwater_1D_Model model
+    my_backwater_1D_model.run_model()
+
+    #sample some results as manufactured solution
+    xmin = np.min(my_backwater_1D_data.gridx)
+    xmax = np.max(my_backwater_1D_data.gridx)
+
+    #make some sampling points
+    sampling_points = np.linspace(xmin+100,xmax-100,30)
+
+    #build the WSE interpolator
+    f_WSE = interpolate.interp1d(my_backwater_1D_data.gridx, my_backwater_1D_data.WSE)
+
+    #sample the WSE
+    sampled_WSE = f_WSE(sampling_points)
+
+
+    negX = -(sampling_points - my_backwater_1D_data.startx) / 1000
+    #print("negX, WSE = ", negX, sampled_WSE)
+
+    plt.scatter(negX, sampled_WSE, marker='^', facecolor='none', edgecolor='blue', s=10, linewidths=1,
+                label='Backwater-1D')
 
     plt.xlabel('x (km)', fontsize=16)
     plt.ylabel('Elevation (m)', fontsize=16)
@@ -99,6 +111,9 @@ def plot_1D_profile():
 
     plt.legend(loc='upper right', fontsize=14, frameon=False)
 
+    #save the plot to file
+    plt.savefig("backwater_1D_comparison.png", dpi=300, bbox_inches='tight', pad_inches=0)
+
     plt.show()
 
 def calculate_2D_difference():
@@ -109,7 +124,7 @@ def calculate_2D_difference():
     option in its GUI interface. The SRHHYDRO file can be modified manually.
 
     As of now, all calculations will be at cell centers. If a specified variable in a VTk file is nodal, it will be
-    converted to cell center first.
+    interpolated to cell center first.
 
     Returns
     -------
@@ -118,7 +133,7 @@ def calculate_2D_difference():
 
     vtk_handler = pyHMT2D.Misc.vtkHandler()
 
-    vtkFileName1 = "SRH-2D/backwater_curve_C_0023.vtk"
+    vtkFileName1 = "SRH-2D/SRH2D_backwater_curve_C_0024.vtk"
     vtkFileName2 = "HEC-RAS-2D/RAS2D_channel_0012.vtk"
 
     #water depth
@@ -166,6 +181,6 @@ if __name__ == "__main__":
 
     calculate_2D_difference()
 
-    #plot_1D_profile()
+    plot_1D_profile()
 
     print("All done!")
