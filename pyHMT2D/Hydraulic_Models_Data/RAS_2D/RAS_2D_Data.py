@@ -538,6 +538,10 @@ class RAS_2D_Data(HydraulicData):
     def build2DManningNZones(self):
         """ Build 2D flow area's Manning n zones from the land cover (Manning's n) HDF file
 
+        Assume that there is "Land Cover Filename" and "Land Cover Layername" in the result HDF file.
+        If they don't exist (mostly for the case that the whole domain uses the default, constant
+        Manning's n value in ["Geometry"]["2D Flow Areas"][0][1]), just use that constant.
+
         Returns
         -------
 
@@ -548,8 +552,6 @@ class RAS_2D_Data(HydraulicData):
         self.landcover_filename = hf['Geometry'].attrs['Land Cover Filename']
         self.landcover_layername = hf['Geometry'].attrs['Land Cover Layername']
 
-        hf.close()
-
         if gVerbose: print("Land Cover Filename = ", self.landcover_filename)
         if gVerbose: print("Land Cover Layername = ", self.landcover_layername)
 
@@ -557,37 +559,49 @@ class RAS_2D_Data(HydraulicData):
         #geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
         #computation has been done.
         if len(self.landcover_filename) == 0 or len(self.landcover_layername) == 0:
-            print("Land Cover Filename or Land Cover Layername in result HDF is empty. Check. Exiting ...")
-            sys.exit()
+            print("Land Cover Filename or Land Cover Layername in result HDF is empty. "
+                  "Will use the default Manning's n value.")
 
-        #read the Manning n zones (land cover zones)
-        self.ManningNZones = {}   #clear the dictionary just in case
+            self.ManningNZones = {}  # clear the dictionary just in case
 
-        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+            #take the default Manning's n value in row 0 and column 1.
+            self.ManningNZones[0] = [b'default', hf['Geometry']['2D Flow Areas']['Attributes'][0][1]]
 
-        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r')
+        else:
+            # read the Manning n zones (land cover zones)
+            self.ManningNZones = {}  # clear the dictionary just in case
 
-        dset = hfManningN['IDs']
+            fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
-        with dset.astype(np.uint8):
-            IDs = dset[:]
+            hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
 
-        ManningN = np.array(hfManningN['ManningsN'])
-        Names = hfManningN['Names']
+            dset = hfManningN['IDs']
 
-        #print("IDs =", IDs)
-        #print("ManningN =", ManningN)
-        #print("Names =", Names)
+            with dset.astype(np.uint8):
+                IDs = dset[:]
 
-        for i in range(len(IDs)):
-            self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+            ManningN = np.array(hfManningN['ManningsN'])
+            Names = hfManningN['Names']
 
-        if gVerbose: print("self.ManningNZones = ", self.ManningNZones)
+            # print("IDs =", IDs)
+            # print("ManningN =", ManningN)
+            # print("Names =", Names)
 
-        hfManningN.close()
+            for i in range(len(IDs)):
+                self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+
+            if gVerbose: print("self.ManningNZones = ", self.ManningNZones)
+
+            hfManningN.close()
+
+        hf.close()
 
     def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
         """Modify materialID's Manning's n values to new values
+
+        Assume that there is "Land Cover Filename" and "Land Cover Layername" in the result HDF file.
+        If they don't exist (mostly for the case that the whole domain uses the default, constant
+        Manning's n value in ["Geometry"]["2D Flow Areas"][0][1]), just use newManningsNValues[0].
 
         Parameters
         ----------
@@ -629,58 +643,61 @@ class RAS_2D_Data(HydraulicData):
         #geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
         #computation has been done.
         if len(self.landcover_filename) == 0 or len(self.landcover_layername) == 0:
-            print("Land Cover Filename or Land Cover Layername in result HDF is empty. Check. Exiting ...")
-            sys.exit()
+            print("Land Cover Filename or Land Cover Layername in result HDF is empty. "
+                  "Will use the default Manning's n value.")
 
-        #read the Manning n zones (land cover zones)
-        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+            raise Exception("Modification of default constant Manning's n has not been implemented.")
 
-        hfManningN = h5py.File(fileBase+self.landcover_layername+b'.hdf', 'r+')
+        else:
+            # read the Manning n zones (land cover zones)
+            fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
-        dset = hfManningN['IDs']
+            hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r+')
 
-        with dset.astype(np.uint8):
-            IDs = dset[:]
+            dset = hfManningN['IDs']
 
-        IDs = IDs.tolist()
+            with dset.astype(np.uint8):
+                IDs = dset[:]
 
-        ManningN_dataset = hfManningN['ManningsN']
-        ManningN = np.array(ManningN_dataset)
+            IDs = IDs.tolist()
 
-        Names = hfManningN['Names']
+            ManningN_dataset = hfManningN['ManningsN']
+            ManningN = np.array(ManningN_dataset)
 
-        #make a copy of the original Manning's n values
-        ManningN_new = copy.deepcopy(ManningN)
+            Names = hfManningN['Names']
 
-        #print("IDs =", IDs)
-        #print("ManningN =", ManningN)
-        #print("Names =", Names)
+            # make a copy of the original Manning's n values
+            ManningN_new = copy.deepcopy(ManningN)
 
-        for i in range(len(materialIDs)):
-            materialID = materialIDs[i]
-            if materialID in IDs:
-                # also check whether the name is consistent
-                if materialNames[i] == Names[IDs.index(materialID)].decode("ASCII"):
-                    if gVerbose: print("    Old Manning's n value =", ManningN[IDs.index(materialID)],
-                                       "for material ID = ", materialID)
-                    ManningN_new[IDs.index(materialID)] = newManningsNValues[i]
-                    if gVerbose: print("    New Manning's n value =", ManningN_new[IDs.index(materialID)],
-                                       "for material ID = ", materialID)
+            # print("IDs =", IDs)
+            # print("ManningN =", ManningN)
+            # print("Names =", Names)
+
+            for i in range(len(materialIDs)):
+                materialID = materialIDs[i]
+                if materialID in IDs:
+                    # also check whether the name is consistent
+                    if materialNames[i] == Names[IDs.index(materialID)].decode("ASCII"):
+                        if gVerbose: print("    Old Manning's n value =", ManningN[IDs.index(materialID)],
+                                           "for material ID = ", materialID)
+                        ManningN_new[IDs.index(materialID)] = newManningsNValues[i]
+                        if gVerbose: print("    New Manning's n value =", ManningN_new[IDs.index(materialID)],
+                                           "for material ID = ", materialID)
+                    else:
+                        raise Exception(
+                            "The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
+                            "You can check the content of the Manning's n HDF file with HDFViewer.")
                 else:
                     raise Exception(
-                        "The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
-                        "You can check the content of the Manning's n HDF file with HDFViewer.")
-            else:
-                raise Exception(
-                    "The specified materialID %d is not in the Manning's n list. Please check." % materialID)
+                        "The specified materialID %d is not in the Manning's n list. Please check." % materialID)
 
-        ManningN_dataset[...] = ManningN_new # assign new values to data
+            ManningN_dataset[...] = ManningN_new  # assign new values to data
 
-        #save and close the HDF file
-        hfManningN.close()
+            # save and close the HDF file
+            hfManningN.close()
 
-        #need to re-build 2D Manning's n zones information after update
-        self.build2DManningNZones()
+            # need to re-build 2D Manning's n zones information after update
+            self.build2DManningNZones()
 
 
     def build2DInterpolatorFromGeoTiff(self, geoTiffFileName):
@@ -1353,6 +1370,9 @@ class RAS_2D_Data(HydraulicData):
 
         This method is more accurate than interpolateManningN_face_to_cell(), which uses a face to cell interpolation.
 
+        Also need to consider the case where the "Land Cover Filename" is empty and the whole domain uses the
+        default constant Manning's n.
+
         Returns
         -------
 
@@ -1374,7 +1394,11 @@ class RAS_2D_Data(HydraulicData):
         fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
         full_landcover_filename = fileBase+self.landcover_filename
 
-        ManningN_IDs = self.interpolatorFromGeoTiff(full_landcover_filename, cell_center_coordinates)
+        if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
+            ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]
+
+        else:
+            ManningN_IDs = self.interpolatorFromGeoTiff(full_landcover_filename, cell_center_coordinates)
 
         #set the Manning's n values for each cells
         for cellI in range(self.TwoDAreaCellCounts[0]):
@@ -1698,7 +1722,7 @@ class RAS_2D_Data(HydraulicData):
 
             #check the current boundary is used by the current 2D flow area and its type
             if self.TwoDAreaBoundaryNamesTypes[k][1] != self.TwoDAreaNames[twoDAreaNumber] or \
-               self.TwoDAreaBoundaryNamesTypes[k][2] != "External":
+               self.TwoDAreaBoundaryNamesTypes[k][2] != b"External":
                 continue
 
             boundaryName = self.TwoDAreaBoundaryNamesTypes[k][0]

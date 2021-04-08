@@ -1,7 +1,21 @@
 # user data
 *.vtk
 *.dat
-examples/
+examples/calibration
+examples/HEC_RAS_Model
+examples/misc
+examples/RAS_2D_Data
+examples/sandbox
+examples/SRH_2D_Data
+examples/SRH_2D_Model
+examples/SRH_2D_to_OpenFOAM
+
+#exclude SRH-2D results and output files
+*RST*.dat
+*SOF.dat
+*TSO.dat
+*_XMDF.h5
+*_XMDFC.h5
 
 
 # HEC-RAS

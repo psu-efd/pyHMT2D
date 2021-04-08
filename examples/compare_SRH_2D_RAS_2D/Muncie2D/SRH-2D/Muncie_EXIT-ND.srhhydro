@@ -1,0 +1,27 @@
+SRHHYDRO 30
+Case "Muncie"
+Description "Muncie"
+RunType FLOW
+ModelTemp OFF
+UnsteadyOutput UNSTEADY
+SimTime 0.0 10.0 6.0
+TurbulenceModel PARABOLIC
+ParabolicTurbulence 0.7
+InitCondOption DRY
+Grid "Muncie.srhgeom"
+HydroMat "Muncie.srhmat"
+OutputFormat XMDFC EN
+OutputOption 1
+OutputInterval 1.0
+ManningsN 0 0.03
+ManningsN 1 0.03
+ManningsN 2 0.03
+ManningsN 3 0.04
+ManningsN 4 0.045
+ManningsN 5 0.05
+ManningsN 6 0.055
+ManningsN 7 0.06
+BC 1 EXIT-ND
+BC 2 INLET-Q
+IQParams 2 20000.0 EN CONVEYANCE
+NDParams 1 -1 0.00064

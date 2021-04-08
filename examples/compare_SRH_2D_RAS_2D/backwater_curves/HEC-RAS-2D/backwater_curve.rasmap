@@ -1,0 +1,90 @@
+<RASMapper>
+  <Version>2.0.0</Version>
+  <RASProjectionFilename Filename=".\Projection.prj" />
+  <Features>
+    <Layer Name="Profile Lines" Type="PolylineFeatureLayer" Filename=".\Features\Profile Lines.shp">
+      <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="Name" Position="3" Color="-16777216" />
+    </Layer>
+  </Features>
+  <Geometries Checked="True" Expanded="True">
+    <Layer Name="channel" Type="RASGeometry" Checked="True" Expanded="True" Filename=".\backwater_curve.g01.hdf">
+      <Layer Type="RASD2FlowArea" Checked="True" />
+      <Layer Type="RASBoundaryConditionLines" Checked="True" />
+      <Layer Name="Boundary Conditions" Type="GroupLayer" Checked="True" />
+    </Layer>
+  </Geometries>
+  <Results Checked="True" Expanded="True">
+    <Layer Name="Unknown Result (Bad file)" Type="RASResults" Checked="True" Expanded="True" Filename=".\backwater_curve.p01.hdf">
+      <Layer Type="RASGeometry" Filename=".\backwater_curve.p01.hdf" />
+      <Layer Name="depth" Type="RASResultsMap" Checked="True">
+        <Symbology>
+          <SurfaceFill Colors="-16711681,-16718862,-16726299,-16733480,-16740661,-16748097,-16755278,-16762459,-16769896,-16777077" Values="2.1,2.11,2.12,2.12,2.13,2.14,2.15,2.15,2.16,2.17" Stretched="True" RegenerateForScreen="False" />
+        </Symbology>
+        <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="FID" Position="5" Color="-16777216" />
+        <MapParameters MapType="depth" LayerName="Depth" Terrain="Terrain" ProfileIndex="0" ProfileName="None" ArrivalDepth="0" />
+      </Layer>
+      <Layer Name="velocity" Type="RASResultsMap">
+        <Symbology>
+          <SurfaceFill Colors="-16777077,-16777000,-13611046,-16776961,-2426576,-7936,-256,-39680,-2609664,-7667712" Values="0,0.01,0.02,0.03,0.04,0.06,0.07,0.08,0.09,0.1" Stretched="True" RegenerateForScreen="False" />
+        </Symbology>
+        <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="FID" Position="5" Color="-16777216" />
+        <MapParameters MapType="velocity" LayerName="Velocity" Terrain="Terrain" ProfileIndex="0" ProfileName="None" ArrivalDepth="0" />
+      </Layer>
+      <Layer Name="elevation" Type="RASResultsMap">
+        <Symbology>
+          <SurfaceFill Colors="-8388864,-13981184,-11163136,-16744448,-15616,-37376,-23296,-32633,-32548,-65281" Values="2,2.01,2.02,2.03,2.04,2.06,2.07,2.08,2.09,2.1" Stretched="True" RegenerateForScreen="False" />
+        </Symbology>
+        <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="FID" Position="5" Color="-16777216" />
+        <MapParameters MapType="elevation" LayerName="WSE" Terrain="Terrain" ProfileIndex="0" ProfileName="None" ArrivalDepth="0" />
+      </Layer>
+    </Layer>
+  </Results>
+  <MapLayers Checked="True" Expanded="True" />
+  <Terrains Checked="True" Expanded="True">
+    <Layer Name="Terrain" Type="TerrainLayer" Checked="True" Filename=".\Terrain\Terrain.hdf">
+      <Symbology>
+        <SurfaceFill Colors="-10039894,-256,-16744448,-23296,-7667712,-5952982,-8355712,-1286" Values="-0.109999999403954,-0.0928236602355489,-0.0758582585657031,-0.0589168230611072,-0.0410395406912595,-0.0240948660620884,-0.00716198990222464,0.00999999977648258" Stretched="True" RegenerateForScreen="False" />
+      </Symbology>
+      <Alpha>255</Alpha>
+      <ResampleMethod>near</ResampleMethod>
+      <Surface On="True" />
+    </Layer>
+  </Terrains>
+  <CurrentView>
+    <MaxX>271101</MaxX>
+    <MinX>259101</MinX>
+    <MaxY>4521837</MaxY>
+    <MinY>4518837</MinY>
+  </CurrentView>
+  <VelocitySettings>
+    <Density>1.5</Density>
+    <Lifetime>100</Lifetime>
+    <Radius>0.75</Radius>
+    <Method>2</Method>
+    <Timestep>1</Timestep>
+    <StaticColor>Black</StaticColor>
+  </VelocitySettings>
+  <AnimationSettings>
+    <DelayTimer>0</DelayTimer>
+  </AnimationSettings>
+  <Units>SI Units</Units>
+  <RenderMode>hybrid</RenderMode>
+  <MarksWarpMethod>False</MarksWarpMethod>
+  <CurrentSettings>
+    <ProjectSettings>
+      <RiverStationUnits>Feet</RiverStationUnits>
+      <RiverStationDecimalPlaces>0</RiverStationDecimalPlaces>
+      <HorizontalDecimalPlaces>1</HorizontalDecimalPlaces>
+      <VerticalDecimalPlaces>2</VerticalDecimalPlaces>
+      <XSMaxPoints>450</XSMaxPoints>
+      <LSMaxPoints>1000</LSMaxPoints>
+      <MeshTolerance_MinFaceLength>0.05</MeshTolerance_MinFaceLength>
+      <MeshTolerance_EnsureCellPoint>False</MeshTolerance_EnsureCellPoint>
+    </ProjectSettings>
+    <Folders>
+      <TerrainDestinationFolder>.\Terrain</TerrainDestinationFolder>
+      <TerrainSourceFolder>.\Terrain</TerrainSourceFolder>
+      <AddDataFolder>.\Terrain</AddDataFolder>
+    </Folders>
+  </CurrentSettings>
+</RASMapper>
