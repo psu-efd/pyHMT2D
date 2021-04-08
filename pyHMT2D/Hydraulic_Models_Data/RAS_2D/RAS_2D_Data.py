@@ -283,7 +283,8 @@ class RAS_2D_Data(HydraulicData):
         """ Get the computation, output, and map intervals
 
         """
-        print(os.getcwd())
+
+        #print(os.getcwd())
         #check whether the plan file exists
         if not os.path.isfile(self.plan_filename):
             print("The HEC-RAS plan file", self.plan_filename, "does not exists. Exiting ...")

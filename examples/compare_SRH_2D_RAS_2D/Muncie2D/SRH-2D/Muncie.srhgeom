@@ -1,5 +1,5 @@
 SRHGEOM 30
-Name "HEC-RAS 2D Mesh SRH-2D/Muncie/Muncie"
+Name "HEC-RAS 2D Mesh SRH-2D/Muncie"
 
 GridUnit "Feet" 
 Elem 1 1 2 3 4 21515
