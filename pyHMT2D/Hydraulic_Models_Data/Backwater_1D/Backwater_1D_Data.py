@@ -149,17 +149,17 @@ class Backwater_1D_Data(HydraulicData):
         with open(json_file_name, "w") as json_file:
             json.dump(self.configuration, json_file, indent=4, sort_keys=False)
 
-    def modify_ManningsN(self, materialID, newManningsNValue, materialName):
+    def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
         """Modify materialID's Manning's n value to new value
 
         Parameters
         ----------
-        materialID : int
-            material ID
-        newManningsNValue : float
-            new Manning's n value
-        materialName : str
-            name of the material
+        materialIDs : list
+            material ID list
+        newManningsNValues : list
+            new Manning's n value list
+        ManningN_MaterialNames : list
+            name of materials list
 
         Returns
         -------
@@ -168,32 +168,37 @@ class Backwater_1D_Data(HydraulicData):
 
         if gVerbose: print("Modify Manning's n value ...")
 
-        if not isinstance(materialID, int):
-            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialID),
-                  ". Exit.\n")
+        if not isinstance(materialIDs[0], int):
+            raise Exception("Material ID has to be an integer. The type of materialID passed in is ",
+                            type(materialIDs[0]))
 
-        if not isinstance(newManningsNValue, float):
-            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValue),
-                  ". Exit.\n")
+        if not isinstance(newManningsNValues[0], float):
+            raise Exception("Manning's n has to be a float. The type of newManningsNValue passed in is ",
+                            type(newManningsNValues[0]))
 
-        bFound = False
+        for i in range(len(materialIDs)):
+            materialID = materialIDs[i]
 
-        #loop through all ManningNZones to find the materialID
-        for zoneI in range(len(self.ManningNZones)):
-            if materialID == self.ManningNZones[zoneI]["materialID"]:
-                bFound = True
+            bFound = False
 
-                if gVerbose: print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
-                                  materialID, "zone name = ", self.ManningNZones[zoneI]["material_name"])
+            # loop through all ManningNZones to find the materialID
+            for zoneI in range(len(self.ManningNZones)):
+                if materialID == self.ManningNZones[zoneI]["materialID"]:
+                    bFound = True
 
-                self.ManningNZones[zoneI]["n"] = newManningsNValue
+                    if gVerbose: print("    Old Manning's n value =", self.ManningNZones[zoneI]["n"],
+                                       "for material ID = ",
+                                       materialID, "zone name = ", self.ManningNZones[zoneI]["material_name"])
 
-                if gVerbose: print("    New Manning's n value =", self.ManningNZones[zoneI]["n"], "for material ID = ",
-                                  materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
+                    self.ManningNZones[zoneI]["n"] = newManningsNValues[i]
 
-        #if didn't find the specified materialID, something is wrong
-        if not bFound:
-            raise Exception("The specified materialID", materialID, "is not in the Manning's n list. "
+                    if gVerbose: print("    New Manning's n value =", self.ManningNZones[zoneI]["n"],
+                                       "for material ID = ",
+                                       materialID, "zone name = ", self.ManningNZones[zoneI]["name"])
+
+            # if didn't find the specified materialID, something is wrong
+            if not bFound:
+                raise Exception("The specified materialID", materialID, "is not in the Manning's n list. "
                             "Please check both material ID and material name, and make sure they are consistent.")
 
         #update the Manning's n interpolator
