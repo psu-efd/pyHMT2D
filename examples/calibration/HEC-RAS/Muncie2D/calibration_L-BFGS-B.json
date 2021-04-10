@@ -1,0 +1,126 @@
+{
+  "Notes": "Put some notes here for the description of the case. It is not used by pyHMT2D.",
+  "model": "HEC-RAS",
+  "HEC-RAS": {
+	"version": "5.0.7",
+	"faceless": "False",
+	"case": "Muncie2D.prj",
+	"terrainFileName": "Terrain/TerrainMuncie_composite.tif"
+  },
+    "calibration": {
+		"calibration_parameters": [
+			{
+				"type": "ManningN",
+				"material_name": "left_1",
+				"materialID": 4,
+				"initial_guess": 0.04,
+				"min": 0.01,
+				"max": 0.06,
+				"active": "False"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "left_2",
+				"materialID": 5,
+				"initial_guess": 0.05,
+				"min": 0.01,
+				"max": 0.06,
+				"active": "False"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "right_1",
+				"materialID": 6,
+				"initial_guess": 0.06,
+				"min": 0.04,
+				"max": 0.08,
+				"active": "False"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "right_2",
+				"materialID": 7,
+				"initial_guess": 0.035,
+				"min": 0.01,
+				"max": 0.06,
+				"active": "False"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "right_3",
+				"materialID": 8,
+				"initial_guess": 0.045,
+				"min": 0.01,
+				"max": 0.06,
+				"active": "False"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "channel_up",
+				"materialID": 3,
+				"initial_guess": 0.02,
+				"min": 0.01,
+				"max": 0.05,
+				"active": "True"
+			},			
+			{
+				"type": "ManningN",
+				"material_name": "channel_middle",
+				"materialID": 2,
+				"initial_guess": 0.04,
+				"min": 0.01,
+				"max": 0.05,
+				"active": "True"
+			},
+			{
+				"type": "ManningN",
+				"material_name": "channel_down",
+				"materialID": 1,
+				"initial_guess": 0.02,
+				"min": 0.01,
+				"max": 0.05,
+				"active": "True"
+			}			
+		],
+        "objectives": [
+            {
+                "name": "wse",
+                "solVarName": "Water_Elev_ft",
+                "type": "PointMeasurement",
+                "weight": 1,
+                "file": "sampled_wse.csv",
+				"errorMethod": "relative"
+            },
+            {
+                "name": "velocity",
+                "solVarName": "Velocity_ft_p_s",
+                "type": "PointMeasurement",
+                "weight": 1,
+                "file": "sampled_velocity.csv",
+				"errorMethod": "relative"
+            }
+        ],
+        "optimizer": "scipy.optimize.local",
+        "scipy.optimize.local": {
+            "method": "L-BFGS-B",
+            "jac": "None",
+			"hess": "None",
+			"maxfun": 1000,
+			"maxiter": 2000,
+            "tol": 1e-3,
+            "disp": "True",
+			"options":  {
+				"disp": "True", 
+				"maxcor": 10, 
+				"ftol": 2.220446049250313e-09, 
+				"gtol": 1e-05, 
+				"eps": 1e-03, 
+				"maxfun": 15000, 
+				"maxiter": 15000, 
+				"iprint": -1,
+				"maxls": 20, 
+				"finite_diff_rel_step": "False"
+			}			
+        }
+    }
+}

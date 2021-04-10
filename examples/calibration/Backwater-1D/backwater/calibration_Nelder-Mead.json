@@ -1,0 +1,80 @@
+{
+    "model": "Backwater-1D",
+    "Backwater-1D": {
+        "case_name": "test",
+        "units": "SI",
+        "startx": 269601,
+        "startH": 2,
+        "startZ": 0,
+        "riverLength": 10000,
+        "slope": 0.00001,
+        "ManningNZones": [
+            {
+                "materialID": 1,
+                "name": "zone1",
+                "startx": 269601,
+                "endx": 274600,
+                "n": 0.04
+            },
+            {
+                "materialID": 2,
+                "name": "zone2",
+                "startx": 274601,
+                "endx": 279601,
+                "n": 0.055
+            }
+        ],
+        "nGrid": 1001,
+        "specificDischarge": 0.48
+    },
+    "calibration": {
+		"calibration_parameters": [
+			{
+				"type": "ManningN",
+				"materialID": 1,
+				"initial_guess": 0.02,
+				"min": 0.01,
+				"max": 0.06
+			},
+			{
+				"type": "ManningN",
+				"materialID": 2,
+				"initial_guess": 0.02,
+				"min": 0.01,
+				"max": 0.06
+			}
+		],
+        "objectives": [
+            {
+                "name": "points1_wse",
+                "solVarName": "Water_Elev_m",
+                "type": "PointMeasurement",
+                "weight": 1,
+                "file": "sampled_wse.csv"
+            },
+            {
+                "name": "points2_velocity",
+                "solVarName": "Velocity_m_p_s",
+                "type": "PointMeasurement",
+                "weight": 1,
+                "file": "sampled_velocity.csv"
+            }
+        ],
+        "optimizer": "scipy.optimize.local",
+        "scipy.optimize.local": {
+            "method": "Nelder-Mead",
+            "tol": 1e-3,
+			"callback": "None",
+			"options":  {
+				"maxiter": "None", 
+				"maxfev": "None", 
+				"disp": "False", 
+				"return_all": "False", 
+				"initial_simplex": "None", 
+				"xatol": 0.0001, 
+				"fatol": 0.0001, 
+				"adaptive": "False"
+			}			
+        }
+    }
+}

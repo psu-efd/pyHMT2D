@@ -1,0 +1,27 @@
+Flow Title=Muncie_Peak_Flow
+Program Version=5.07
+Use Restart= 0 
+Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,outlet                          
+Interval=1HOUR
+Stage Hydrograph= 7 
+     930     930     930     930     930     930     930
+Stage Hydrograph Use Initial Stage=-1
+Stage Hydrograph TW Check=0
+DSS Path=
+Use DSS=False
+Use Fixed Start Time=False
+Fixed Start Date/Time=,
+Is Critical Boundary=False
+Critical Boundary Flow=
+Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,inlet                           
+Interval=1HOUR
+Flow Hydrograph= 7 
+   20000   20000   20000   20000   20000   20000   20000
+Stage Hydrograph TW Check=0
+Flow Hydrograph Slope= 0.0001 
+DSS Path=
+Use DSS=False
+Use Fixed Start Time=False
+Fixed Start Date/Time=,
+Is Critical Boundary=False
+Critical Boundary Flow=
