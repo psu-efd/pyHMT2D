@@ -1,12 +1,6 @@
-.. _ref_examples:
+Examples
+========
 
-Examples Gallery
-================
+This directory shows the application examples of *pyHMT2D*. See "docs/pyHMT2D_Documentation.pdf" for details.
 
-Here is a gallery of all the quick examples demonstrating what pyHMT2D can do.
 
-All of these examples are live and available on MyBinder!
-
-.. image:: https://static.mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/pyHMT2D/pyHMT2D-examples/master
-   :alt: Launch on Binder
