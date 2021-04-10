@@ -203,10 +203,22 @@ class SRH_2D_Model(HydraulicModel):
             # depending on how long the simulation will be).
 
             #get the latest simulation information from the INF file
-            info_data = np.genfromtxt(case_INF_file_name,skip_header=1)
-            #print(info_data[-1,1])  #latest "Time(Hours)"
+            if os.path.isfile(case_INF_file_name):
+                info_data = np.genfromtxt(case_INF_file_name,skip_header=1)
+                #print(info_data[-1,1])  #latest "Time(Hours)"
+            else:
+                continue
 
-            time_passed_since_last_check = info_data[-1,1] - previous_checked_simulation_time
+            #need to consider the scenarios that there is zero line, one line, and multiple lines of INFO output
+            current_simulation_time = startTime
+            if len(info_data.shape) == 0:
+                current_simulation_time = startTime
+            elif len(info_data.shape) == 1:
+                current_simulation_time = info_data[1]
+            elif len(info_data.shape) == 2:
+                current_simulation_time = info_data[-1,1]
+
+            time_passed_since_last_check = current_simulation_time - previous_checked_simulation_time
             clicks_since_last_check = int(time_passed_since_last_check/(endTime-startTime)*totalClicks)
 
             counter += clicks_since_last_check
@@ -217,7 +229,7 @@ class SRH_2D_Model(HydraulicModel):
                 printProgressBar(counter, totalClicks, "Simulation in progress")
                 # print("test")   #Don't do this. It will create a new progress bar each time.
 
-            previous_checked_simulation_time = info_data[-1,1]
+            previous_checked_simulation_time = current_simulation_time
 
             if counter > totalClicks:
                 break

@@ -2,19 +2,7 @@
 This script compare results (in VTK format) from SRH-2D and HEC-RAS 2D
 """
 
-import numpy as np
-
-from matplotlib import pyplot as plt
-import vtk
-
 import pyHMT2D
-from pyHMT2D.Misc.tools import setNumpyArrayValueToNaN
-
-plt.rc('text', usetex=False)  #allow the use of Latex for math expressions and equations
-plt.rc('font', family='serif') #specify the default font family to be "serif"
-
-def plot_1D_profile():
-    pass
 
 def calculate_2D_difference():
     """Calculate the difference in 2D result; the difference for each variable is saved to a vtk file
@@ -33,8 +21,8 @@ def calculate_2D_difference():
 
     vtk_handler = pyHMT2D.Misc.vtkHandler()
 
-    vtkFileName1 = "SRH-2D/Muncie/SRH2D_Muncie_C_0005.vtk"
-    vtkFileName2 = "HEC-RAS/Muncie/RAS2D_Muncie_Geom_0024.vtk"
+    vtkFileName1 = "SRH-2D/SRH2D_Muncie_C_0006.vtk"
+    vtkFileName2 = "HEC-RAS/RAS2D_Muncie_Geom_0024.vtk"
 
     #water depth
     varName1 = "Water_Depth_ft"
@@ -80,7 +68,5 @@ def calculate_2D_difference():
 if __name__ == "__main__":
 
     calculate_2D_difference()
-
-    #plot_1D_profile()
 
     print("All done!")
