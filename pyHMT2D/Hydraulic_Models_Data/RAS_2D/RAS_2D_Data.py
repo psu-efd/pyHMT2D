@@ -191,15 +191,6 @@ class RAS_2D_Data(HydraulicData):
         #cell IDs in each Manning's n zones (for srhmat output)
         self.cellsInManningZones = []
 
-        #2D interpolator for Manning n ID from GeoTiff file
-        #Note: This interpolator uses linear interpolation and returns a float (need to convert to integer ID for use)
-
-        #get the full land cover file name (deal with relative path w.r.t. the script where RAS_2D_Data class is used)
-        #fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
-        #full_landcover_filename = fileBase+self.landcover_filename
-
-        #self.ManningNIDInterpolator = self.build2DInterpolatorFromGeoTiff(full_landcover_filename)
-
         #2D area Manning's n at cell center: a list for all 2D areas
         #e.g., TwoDAreaCellManningN[0][1] is the Manning's n value for cell 1 in 2D flow area 0
         self.TwoDAreaCellManningN = []
@@ -572,7 +563,10 @@ class RAS_2D_Data(HydraulicData):
             # read the Manning n zones (land cover zones)
             self.ManningNZones = {}  # clear the dictionary just in case
 
-            fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
+            if os.path.dirname(self.hdf_filename) == '':
+                fileBase = b''
+            else:
+                fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
             hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
 
@@ -651,7 +645,10 @@ class RAS_2D_Data(HydraulicData):
 
         else:
             # read the Manning n zones (land cover zones)
-            fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
+            if os.path.dirname(self.hdf_filename) == '':
+                fileBase = b''
+            else:
+                fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
             hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r+')
 
@@ -1392,7 +1389,11 @@ class RAS_2D_Data(HydraulicData):
         #    cell_ManningN[cellI] = self.ManningNZones[ManningN_ID][1]  #get the Manning n value
 
         #get the full land cover file name (deal with relative path w.r.t. the script where RAS_2D_Data class is used)
-        fileBase = str.encode(os.path.dirname(self.hdf_filename)+'/')
+        if os.path.dirname(self.hdf_filename) == '':
+            fileBase = b''
+        else:
+            fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
+
         full_landcover_filename = fileBase+self.landcover_filename
 
         if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.

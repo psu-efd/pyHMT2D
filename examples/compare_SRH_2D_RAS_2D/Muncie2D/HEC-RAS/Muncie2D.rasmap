@@ -7,7 +7,7 @@
   </Features>
   <Geometries Checked="True" Expanded="True">
     <Layer Name="Muncie_base2D" Type="RASGeometry" Checked="True" Expanded="True" Filename=".\Muncie2D.g01.hdf">
-      <Layer Type="RASD2FlowArea" Checked="True" />
+      <Layer Type="RASD2FlowArea" Checked="True" Expanded="True" />
       <Layer Type="RasLandCoverRegions" Checked="True">
         <Symbology>
           <Brush Type="SolidBrush" B="205" G="235" R="255" A="150" Name="PolygonFill" />
@@ -43,7 +43,7 @@
       </Layer>
     </Layer>
   </Results>
-  <MapLayers Checked="True" Expanded="True">
+  <MapLayers Expanded="True">
     <Layer Name="TerrainWithChannel" Type="InterpolatedLayer" Filename=".\Terrain\TerrainWithChannel.vrt">
       <Symbology>
         <SurfaceFill Colors="-10039894,-2231258,-9324544,-11170816,-879872,-6811136,-6546404,-6991792,-6513765,-1286" Values="898.91,911.6,924.3,936.99,949.69,962.38,975.08,987.77,1000.47,1013.16" Stretched="True" RegenerateForScreen="False" />
@@ -69,10 +69,10 @@
     </Layer>
   </Terrains>
   <CurrentView>
-    <MaxX>415462.333609501</MaxX>
-    <MinX>402210.501873051</MinX>
-    <MaxY>1808111.975429</MaxY>
-    <MinY>1798862.31711393</MinY>
+    <MaxX>414609.196132002</MaxX>
+    <MinX>402258.057853427</MinX>
+    <MaxY>1808288.95571423</MaxY>
+    <MinY>1799202.76997241</MinY>
   </CurrentView>
   <VelocitySettings>
     <Density>1.5</Density>

@@ -11,26 +11,6 @@ from ..__common__ import gVerbose
 
 import logging
 
-# Create a custom logger
-logger = logging.getLogger(__name__)
-
-# Create handlers
-c_handler = logging.StreamHandler()
-f_handler = logging.FileHandler('calibration.log', mode='w')
-
-# Create formatters and add it to handlers
-c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-c_handler.setFormatter(c_format)
-f_handler.setFormatter(f_format)
-
-# Add handlers to the logger
-logger.addHandler(c_handler)
-logger.addHandler(f_handler)
-
-logger.setLevel(logging.INFO)
-
-
 class Calibrator(object):
     """Calibrator class to handle calibration process
 
@@ -86,6 +66,10 @@ class Calibrator(object):
         # create the optimizer
         self.create_optimizer()
 
+        # initialize a logger
+        self.logger = None
+
+        self.init_logger()
 
 
     def load_config_json(self):
@@ -212,6 +196,33 @@ class Calibrator(object):
         else:
             raise Exception("Specified optimizer is not supported.")
 
+    def init_logger(self):
+        """ Initialize a logger
+
+        Returns
+        -------
+
+        """
+
+        # Create a custom logger
+        self.logger = logging.getLogger(__name__)
+
+        # Create handlers
+        c_handler = logging.StreamHandler()
+        f_handler = logging.FileHandler('calibration.log', mode='w')
+
+        # Create formatters and add it to handlers
+        c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+        f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        c_handler.setFormatter(c_format)
+        f_handler.setFormatter(f_format)
+
+        # Add handlers to the logger
+        self.logger.addHandler(c_handler)
+        self.logger.addHandler(f_handler)
+
+        self.logger.setLevel(logging.INFO)
+
     def calibrate(self):
         """ Calibrate the model
 
@@ -293,7 +304,7 @@ class Calibrator(object):
                 # send information to logger for the record or restart
                 msg = "\nThe optimized parameters:: " + ", ".join(map(str, result[0])) \
                       + "\nThe function value at optimized parameters:  " + ", ".join(map(str, result[1]))
-                logger.info(msg)
+                self.logger.info(msg)
 
             else:
                 raise Exception("The optimization method %s is not supported." % self.optimizer.method)
@@ -395,7 +406,11 @@ class Calibrator(object):
 
             #update the time stamp of the Manning's n GeoTiff file (to force HEC-RAS to re-compute 2D flow area's
             #properties table. (No need? The above Manning's modification already updatet the time stamp.)
-            fileBase = str.encode(os.path.dirname(self.hydraulic_data.hdf_filename) + '/')
+            if os.path.dirname(self.hydraulic_data.hdf_filename) == '':
+                fileBase = b''
+            else:
+                fileBase = str.encode(os.path.dirname(self.hydraulic_data.hdf_filename) + '/')
+
             full_landcover_filename = (fileBase + self.hydraulic_data.landcover_filename).decode("ASCII")
 
             Path(full_landcover_filename).touch()
@@ -432,7 +447,7 @@ class Calibrator(object):
         msg =   "ManningN_MaterialIDs: " + ", ".join(map(str, ManningN_MaterialIDs))\
               + " ManningNs: " + ", ".join(map(str, ManningNs)) \
               + " total_score: " + str(total_score)
-        logger.info(msg)
+        self.logger.info(msg)
 
 
         # updating the optimizer's lists for record. Pass to optimizer without arguments or parentheses.
