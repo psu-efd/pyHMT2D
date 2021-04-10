@@ -14,6 +14,8 @@ Currently, the following hydraulic models are supported:
 -  SRH-2D
 -  HEC-RAS
 
+In the future, suport for more 2D models will be added.
+
 Motivations
 -----------
 
@@ -34,12 +36,12 @@ motivations of this package are as follows:
 -  Most 2D models have good user interface and they have capability to
    produce good result visualizations and analysis. However, with this
    package and the power of the VTK library, 2D hydraulic modeling
-   results can be visualized and analyzed with more flexibilty and
+   results can be visualized and analyzed with more flexibility and
    efficiency.
 -  This package also serves as a bridge between 2D hydraulic models and
-   the Python universe where many powerful libaries exist, for example
+   the Python universe where many powerful libraries exist, for example
    statistics, machine learning, GIS, and parallel computing.
--  The read/write and tranformation of 2D hydraulic model results can be
+-  The read/write and transformation of 2D hydraulic model results can be
    used to feed other models which use the simulated flow field, for
    example external water quality models and fish models.
 -  Model inter-comparison and evaluation. Almost all 2D hydraulic models
@@ -81,9 +83,9 @@ For HEC-RAS 2D modeling:
 With the control and automation capability above, it is much easier to
 do the following:
 
--  automatic calibration of models with available optimzation and
+-  automatic calibration of models with available optimization and
    calibration Python packages. Currently, "scipy"'s "optimize" module is supported, which
-   includes many local and global optimizaton methods.
+   includes many local and global optimization methods.
 -  Monte-Carlo simulations with scripting and Python’s statistic
    libraries
 -  ...
@@ -91,7 +93,7 @@ do the following:
 Other features:
 
 -  calculate the difference between simulation results (regardless they are on the same mesh or not)
--  create and manupulate terrain data
+-  create and manipulate terrain data
 
 Requirements
 ------------

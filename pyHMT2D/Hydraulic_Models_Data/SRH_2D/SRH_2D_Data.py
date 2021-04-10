@@ -193,12 +193,10 @@ class SRH_2D_SRHHydro:
         if gVerbose: print("Modify Manning's n value ...")
 
         if not isinstance(materialIDs[0], int):
-            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]),
-                  ". Exit.\n")
+            raise Exception("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]))
 
         if not isinstance(newManningsNValues[0], float):
-            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
-                  ". Exit.\n")
+            raise Exception("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]))
 
 
         nDict = self.srhhydro_content["ManningsN"]
@@ -1674,7 +1672,6 @@ class SRH_2D_Data(HydraulicData):
 
         This has to be called after the XMDF data have been loaded by calling readSRHXMDFFile(...).
 
-        It calls outputVTK(...).
 
         Parameters
         ----------
@@ -1865,6 +1862,16 @@ class SRH_2D_Data(HydraulicData):
             else:
                 temp_cell_data_array = VN.numpy_to_vtk(currentTimePointV)
                 temp_cell_data_array.SetName(velocityVarName)
+                cell_data.AddArray(temp_cell_data_array)
+
+            #add Manning's n
+            if bNodal:
+                temp_point_data_array = VN.numpy_to_vtk(self.ManningN_node)
+                temp_point_data_array.SetName(ManningNVarName)
+                point_data.AddArray(temp_point_data_array)
+            else:
+                temp_cell_data_array = VN.numpy_to_vtk(self.ManningN_cell)
+                temp_cell_data_array.SetName(ManningNVarName)
                 cell_data.AddArray(temp_cell_data_array)
 
             #add nodal bed elevation

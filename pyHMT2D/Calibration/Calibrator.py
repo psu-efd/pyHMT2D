@@ -302,8 +302,12 @@ class Calibrator(object):
                                  )
 
                 # send information to logger for the record or restart
-                msg = "\nThe optimized parameters:: " + ", ".join(map(str, result[0])) \
-                      + "\nThe function value at optimized parameters:  " + ", ".join(map(str, result[1]))
+                if full_output: #return both parameter values and function value
+                    msg = "\nThe optimized parameters:: " + ", ".join(map(str, result[0])) \
+                          + "\nThe function value at optimized parameters:  " + str(result[1])
+                else:          #return only paramter values
+                    msg = "\nThe optimized parameters:: " + ", ".join(map(str, result))
+
                 self.logger.info(msg)
 
             else:
