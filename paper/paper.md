@@ -13,7 +13,7 @@ affiliations:
  - name: Department of Civil and Environmental Engineering, Institute of Computational and Data Sciences, The Pennsylvania State University
    index: 1
 date: 29 March 2021
-bibliography: paper.bib
+bibliography: paper/paper.bib
 ---
 
 # Summary
