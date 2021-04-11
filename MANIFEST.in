@@ -1,6 +1,6 @@
 include LICENSE
 
-# Don't recursively include everything that's in test
-include test/helpers.py
-recursive-include test/data *
+recursive-include tests *
+recursive-include licenses *
 
+incluce docs/pyHMT2D_Documentation.pdf
