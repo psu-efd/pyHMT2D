@@ -67,7 +67,7 @@ def convert_SRH_2D_to_VTK():
 
 if __name__ == "__main__":
 
-    #run_SRH_2D()
+    run_SRH_2D()
 
     convert_SRH_2D_to_VTK()
 

@@ -1,8 +1,6 @@
-.. raw:: html
-
-   <h1 align="center">
-       <a href="https://github.com/psu-efd/pyHMT2D"><img src="logo/pyhmt2d_logo_vel_color_vector.png" width="100%" onerror="this.width = '0%'"/></a>
-   </h1>
+.. image:: https://github.com/psu-efd/pyHMT2D/raw/main/docs/source/_static/images/pyhmt2d_logo_vel_color_vector.png
+   :target: https://github.com/psu-efd/pyHMT2D
+   :alt: pyHMT2D
 
 *pyHMT2D* - Python Hydraulic Modeling Tools - 2D
 ================================================
