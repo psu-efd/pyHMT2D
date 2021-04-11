@@ -9,10 +9,11 @@
 hydraulic modeling, and pre-/postprocessing simulation results.
 Currently, the following hydraulic models are supported:
 
--  SRH-2D
--  HEC-RAS
+-  `SRH-2D <https://www.usbr.gov/tsc/techreferences/computer%20software/models/srh2d/index.html>`__
+-  `HEC-RAS <https://www.hec.usace.army.mil/software/hec-ras/>`__
+-  Backwater-1D (a simple toy model for demonstration purpose)
 
-In the future, suport for more 2D models will be added.
+In the future, support for more 2D models may be added.
 
 Motivations
 -----------
@@ -53,16 +54,16 @@ Features
 
 For SRH-2D modeling:
 
--  read SRH-2D results
--  convert SRH-2D results to VTK format, one of the most popular format for
+-  read SRH-2D results (mainly into Python's Numpy arrays)
+-  convert SRH-2D results to VTK format, one of the most popular formats for
    scientific data
 -  sample and probe simulation results (with the functionalities of VTK
    library)
--  control SRH-2D simulations
+-  control and modify SRH-2D simulations
 
 For HEC-RAS 2D modeling:
 
--  read RAS2D results (HDF files)
+-  read RAS2D results (HDF files, mainly into Python's Numpy arrays)
 -  convert RAS2D results to VTK
 
    -  point and cell center data (depht, water surface elevation,
@@ -76,13 +77,13 @@ For HEC-RAS 2D modeling:
    2D can be used as a mesh generator for SRH-2D.
 -  sample and probe simulation results (with the functionalities of VTK
    library)
--  control HEC-RAS 2D simulations
+-  control and modify HEC-RAS 2D simulations
 
 With the control and automation capability above, it is much easier to
 do the following:
 
 -  automatic calibration of models with available optimization and
-   calibration Python packages. Currently, "scipy"'s "optimize" module is supported, which
+   calibration Python packages. Currently, *scipy*'s *optimize* module is supported, which
    includes many local and global optimization methods.
 -  Monte-Carlo simulations with scripting and Python’s statistic
    libraries
@@ -91,7 +92,11 @@ do the following:
 Other features:
 
 -  calculate the difference between simulation results (regardless they are on the same mesh or not)
--  create and manipulate terrain data
+-  create and manipulate georeferenced terrain data for 2D modeling
+-  conversion of 2D model mesh and result to 3D through extrusion (one layer or multiple layers) and
+   VTK interpolation. This feature is useful to use 2D simulation result in 3D applications, e.g., fish
+   passage design or use 2D result as initial condition for 3D CFD simulations. Currently, conversion
+   to `OpenFOAM <https://www.openfoam.com/>`__ is supported through `Gmsh <https://gmsh.info/>`__'s MSH file format.
 
 Requirements
 ------------
@@ -100,10 +105,11 @@ This package uses the following libraries:
 
 -  `h5py <https://www.h5py.org/>`__
 -  `vtk <https://github.com/Kitware/VTK>`__
--  `pywin32 <https://pypi.org/project/pywin32/>`__
 -  `gdal <https://pypi.org/project/GDAL/>`__
--  `affine <https://pypi.org/project/affine/>`__
+-  `pywin32 <https://pypi.org/project/pywin32/>`__ (optional; only if you want to use *pyHMT2D* to control HEC-RAS)
+-  `affine <https://pypi.org/project/affine/>`__ (optional; only if you want to use *pyHMT2D* to read HEC-RAS 2D results)
 
+See *pyHMT2D*'s User Manual for how to install these libraries.
 
 Installation
 ------------
@@ -149,7 +155,44 @@ To use *pyHMT2D* in your Python code, simply add
     import pyHMT2D
 ..
 
-One example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
+One example to use *pyHMT2D* to control the run of SRH-2D is as follows:
+
+.. code-block:: python
+
+    #the follow should be modified based on your installation of SRH-2D
+    version = "3.3"
+    srh_pre_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe\SRH_Pre_Console.exe"
+    srh_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe\SRH-2D_V330_Console.exe"
+    extra_dll_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe"
+
+    #create a SRH-2D model instance
+    my_srh_2d_model = pyHMT2D.SRH_2D.SRH_2D_Model(version, srh_pre_path,
+                       srh_path, extra_dll_path, faceless=False)
+
+    #initialize the SRH-2D model
+    my_srh_2d_model.init_model()
+
+    print("Hydraulic model name: ", my_srh_2d_model.getName())
+    print("Hydraulic model version: ", my_srh_2d_model.getVersion())
+
+    #open a SRH-2D project
+    my_srh_2d_model.open_project("Muncie.srhhydro")
+
+    #run SRH-2D Pre to preprocess the case
+    my_srh_2d_model.run_pre_model()
+
+    #run the SRH-2D model's current project
+    my_srh_2d_model.run_model()
+
+    #close the SRH-2D project
+    my_srh_2d_model.close_project()
+
+    #quit SRH-2D
+    my_srh_2d_model.exit_model()
+..
+
+
+Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
 
 .. code-block:: python
 
@@ -174,6 +217,15 @@ One example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
     my_hec_ras_model.exit_model()
 ..
 
+The last example is to use *pyHMT2D* to perform SRH-2D auto-calibration in two lines:
+
+.. code-block:: python
+
+    my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
+
+    my_calibrator.calibrate()
+..
+
 More examples can be found in the "examples" directory.
 
 
@@ -184,6 +236,7 @@ For SRH-2D:
 
 -  This package is developed and tested with SRH-2D v3.3; other versions
    may work but has not been tested.
+-  Currently, only flow data is processed; others such as sediment and water quality are ignored.
 -  Currently *pyHMT2D* cannot manipulate other things such as hydraulic structures in the case configuration files.
    More functionalities will be added in the future.
 
@@ -192,20 +245,19 @@ For HEC-RAS 2D:
 -  Only one 2D flow area is supported.
 -  Only 2D flow area information is processed; others such as 1D
    channels and structures are ignored.
--  Only flow data is processes; others such as sediment and water
+-  Currently, only flow data is processes; others such as sediment and water
    quality are ignored.
--  This package is developed and tested with HEC-RAS v5.0.7 and v6.0
-   beta; other versions may work but has not been tested.
+-  This package is developed and tested with HEC-RAS v5.0.7; other versions may work but has not been tested.
 
 Acknowledgements and references
 -------------------------------
 
 *pyHMT2D* utilizes and/or benefits from several open source codes. The usage
 of these codes strictly follows proper copyright laws and their licenses (see
-the copies of their original licenses in the “licenses” directory). We
+the copies of their original licenses in the *licenses* directory). We
 acknowledge their contributions.
 
-In particular, the following packages were used:
+In particular, the following packages were used and/or referenced:
 
 -  `PyRAS - Python for River
    AnalysiS <https://github.com/solomonvimal/pyras>`__
@@ -214,7 +266,7 @@ In particular, the following packages were used:
 Some of the examples and tests use dataset from public domain or authorized sources:
 
 - Munice case data from HEC-RAS example data set (public domain)
-- Duck Pond case data from Penn State University (with authorization for research and teaching purposes only)
+- `Duck Pond <https://www.google.com/maps/@40.8041236,-77.8438126,522m/data=!3m1!1e3>`__ case data from Penn State University (with authorization for research and teaching purposes only)
 - `Lidar data set from USGS <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ (public domain)
 
 The inclusion of these data sets in *pyHMT2D* is strictly for demonstration purpose only. Reuse or
