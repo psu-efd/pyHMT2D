@@ -104,12 +104,6 @@ This package uses the following libraries:
 -  `gdal <https://pypi.org/project/GDAL/>`__
 -  `affine <https://pypi.org/project/affine/>`__
 
-You can install these requirements all at once by first getting the the "`requirements.txt <https://github.com/psu-efd/pyHMT2D/blob/main/requirements.txt>`__"
-file from *pyHMT2D*'s GitHub Repository. Then, in a terminal (preferably with a dedicated Python virtual environment activated), do
-
-.. code-block:: bash
-
-   $ pip install -r requirements.txt
 
 Installation
 ------------
