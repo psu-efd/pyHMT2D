@@ -217,7 +217,7 @@ Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
     my_hec_ras_model.exit_model()
 ..
 
-The last example is to use *pyHMT2D* to perform SRH-2D auto-calibration in two lines:
+The last example is to use *pyHMT2D* to perform auto-calibration in two lines:
 
 .. code-block:: python
 
