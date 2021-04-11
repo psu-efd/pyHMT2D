@@ -35,7 +35,7 @@ import copy
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
-from pyHMT2D.Misc import printProgressBar, vtkHandler, horizontalDistance
+from pyHMT2D.Misc import printProgressBar, vtkHandler
 from pyHMT2D.__common__ import *
 
 class RAS_2D_Data(HydraulicData):
