@@ -8,3 +8,5 @@ dependencies:
   - ipykernel
   - pip:
     - nbsphinx
+    - sphinx_copybutton
+    - m2r2
