@@ -249,6 +249,13 @@ For HEC-RAS 2D:
    quality are ignored.
 -  This package is developed and tested with HEC-RAS v5.0.7; other versions may work but has not been tested.
 
+User manual and API documentation
+---------------------------------
+
+The *pyHMT2D* User Manual can be found in *docs*: `pyHMT2D_User_Manual.pdf <https://github.com/psu-efd/pyHMT2D/raw/main/docs/pyHMT2D_User_Manual.pdf>`__
+
+The API documentation is hosted at `https://psu-efd.github.io/pyHMT2D_API_Web/ <https://psu-efd.github.io/pyHMT2D_API_Web/>`__
+
 Acknowledgements and references
 -------------------------------
 
