@@ -11,6 +11,8 @@ To perform the comparison, the order of steps is as follows:
 - Run "process_SRH_2D_Data.py": it will process SRH-2D result and save to VTK.
 - Run "compare_SRH_2D_HEC_RAS_2D.py": it will read the two VTK result files from both SRH-2D and HEC-RAS 2D, calculates the difference in results between SRH-2D and HEC-RAS 2D, and save to VTk files, which can be loaded in ParaView for inspection.
 
+Comparison of water depth simulated by HEC-RAS and SRH-2D:
+
     .. figure:: Muncie_Paraview_compare_water_depth.png
         :width: 400px
         :align: center
@@ -18,6 +20,8 @@ To perform the comparison, the order of steps is as follows:
         :alt: Muncie comparison between SRH-2D and HEC-RAS
         :figclass: align-center
 
+
+Difference between HEC-RAS and SRH-2D in bed elevation, water depth, velocity, and WSE:
 
     .. figure:: Muncie_differences_paraview.png
         :width: 400px
