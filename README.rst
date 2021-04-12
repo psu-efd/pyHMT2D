@@ -6,7 +6,7 @@
 ================================================
 
 *pyHMT2D* is a Python package developed to control and (semi)automate 2D
-hydraulic modeling, and pre-/postprocessing simulation results.
+hydraulic modeling, and pre-/post-process simulation results.
 Currently, the following hydraulic models are supported:
 
 -  `SRH-2D <https://www.usbr.gov/tsc/techreferences/computer%20software/models/srh2d/index.html>`__
