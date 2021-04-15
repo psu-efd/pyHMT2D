@@ -110,9 +110,9 @@ setup(
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
-    # entry_points={
-    #     'console_scripts': ['mycli=mymodule:cli'],
-    # },
+    entry_points={
+        'console_scripts': ['ras_to_srh=pyHMT2D.cli:ras_to_srh'],
+    },
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
