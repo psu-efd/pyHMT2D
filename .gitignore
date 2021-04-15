@@ -3,9 +3,7 @@
 *.dat
 
 examples/misc
-examples/RAS_2D_Data
 examples/sandbox
-examples/SRH_2D_Data
 
 examples/SRH_2D_to_OpenFOAM
 

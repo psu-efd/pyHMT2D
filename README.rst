@@ -2,8 +2,8 @@
    :target: https://github.com/psu-efd/pyHMT2D
    :alt: pyHMT2D
 
-*pyHMT2D* - Python Hydraulic Modeling Tools - 2D
-================================================
+*pyHMT2D* - Python-based Hydraulic Modeling Tools - 2D
+=======================================================
 
 *pyHMT2D* is a Python package developed to control and (semi)automate 2D
 hydraulic modeling, and pre-/post-process simulation results.
@@ -73,7 +73,7 @@ For HEC-RAS 2D modeling:
 
 -  convert RAS2D mesh, boundary conditions, and Manning’s n data into
    SRH-2D format such that SRH-2D and HEC-RAS 2D can run a case with
-   exactly the same mesh for comparison purpose. Additionally, HEC-RAS
+   exactly the same mesh for comparison purpose. As a side bonus, HEC-RAS
    2D can be used as a mesh generator for SRH-2D.
 -  sample and probe simulation results (with the functionalities of VTK
    library)
@@ -137,7 +137,7 @@ There are several ways to install *pyHMT2D*.
 
 ..
 
-     If you use this approach to install *pyHMT2D*, in order to make the Python Interpreter aware of *pyHMT2D*, you need to add the path to *pyHMT2D* to the *PYTHONPATH*. There are several ways to do it. See the user manual for details. One example is to add the path in your Python code.
+     If you use this approach to install *pyHMT2D*, in order to make the Python Interpreter aware of *pyHMT2D*, you need to add the path to *pyHMT2D* to the *PYTHONPATH* environment variable. There are several ways to do it. See the user manual for details. One example is to add the path in your Python code.
 
 .. code-block:: python
 
@@ -247,7 +247,7 @@ For HEC-RAS 2D:
    channels and structures are ignored.
 -  Currently, only flow data is processes; others such as sediment and water
    quality are ignored.
--  This package is developed and tested with HEC-RAS v5.0.7; other versions may work but has not been tested.
+-  This package is developed and tested with HEC-RAS v5.0.7; other versions may work but have not been tested.
 
 User manual and API documentation
 ---------------------------------
