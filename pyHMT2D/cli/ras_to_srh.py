@@ -21,7 +21,7 @@ def ras_to_srh(argv=None):
 
 def get_ras_to_srh_parser():
     parser = argparse.ArgumentParser(
-        description=("Convert HEC-RAS 2D mesh and Manning's n to SRH-2D.")
+        description=("Convert HEC-RAS 2D mesh and Manning's n to SRH-2D. It will create two files: .srhgeom and .srhmat.")
     )
 
     parser.add_argument("ras_infile", type=str, help="HEC-RAS 2D result hdf file, e.g., case.p01.hdf")

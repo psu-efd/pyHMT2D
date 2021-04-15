@@ -16,10 +16,10 @@ except Exception:
 
 
 def get_pyHMT2D_version_info():
-    return "\n".join(
+    return ", ".join(
         [
-            f"pyHMT2D v{__version__} "
-            f"[Python {version_info.major}.{version_info.minor}.{version_info.micro}]",
-            "Copyright (c) 2021 Xiaofeng Liu, xiaofengliu19@gmail.com",
+            f"pyHMT2D v{__version__}",
+            f"Python {version_info.major}.{version_info.minor}.{version_info.micro}",
+            "Copyright (c) 2021 Xiaofeng Liu"
         ]
     )
