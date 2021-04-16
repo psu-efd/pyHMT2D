@@ -1,16 +1,17 @@
 Readme
 -----------
 
-This directory contains examples for "ras_to_srh" command of *pyHMT2D*.
+This directory contains examples for the "hmt-ras-to-srh" command of *pyHMT2D*.
 
 Make sure you are in a Windows terminal with the right Python virtual environment activated. Then, in this example's
 directory, do:
 
 .. code-block:: bash
 
-   $ ras_to_srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+   $ cd Munice
+   $ hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
 
-Here, the command "ras_to_srh" take three arguments:
+Here, the command "htm-ras-to-srh" take three arguments:
 
 - HEC-RAS 2D result file in HDF format, e.g., "Muncie2D.p01.hdf"
 - Terrain file in GeoTiff format, e.g., "Terrain/TerrainMuncie_composite.tif"
@@ -20,5 +21,5 @@ You can also type the following for more information:
 
 .. code-block:: bash
 
-   $ ras_to_srh -v
-   $ ras_to_srh -h
+   $ htm-ras-to-srh -v
+   $ htm-ras-to-srh -h

@@ -111,7 +111,9 @@ setup(
     # py_modules=['mypackage'],
 
     entry_points={
-        'console_scripts': ['ras_to_srh=pyHMT2D.cli:ras_to_srh'],
+        'console_scripts': ['hmt-ras-to-srh=pyHMT2D.cli:ras_to_srh',
+                            'hmt-calibrate=pyHMT2D.cli:hmt_calibrate'
+                            ],
     },
     install_requires=REQUIRED,
     extras_require=EXTRAS,
