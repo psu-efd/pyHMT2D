@@ -1724,9 +1724,9 @@ class SRH_2D_Data(HydraulicData):
         ManningNVarName = "ManningN"
 
         if bNodal:
-            print("All nodal solution variable names: ", resultVarNames[:-1], "and cell center ManningN")
+            if gVerbose: print("All nodal solution variable names: ", resultVarNames[:-1], "and cell center ManningN")
         else:
-            print("All cell center solution variable names: ", resultVarNames)
+            if gVerbose: print("All cell center solution variable names: ", resultVarNames)
 
         #add bed elevation at nodes regardless whether bNodal is True or False. Nodal elevation is more accurate representation
         #of the terrain because cell center elevation is averaged from nodal elevations.

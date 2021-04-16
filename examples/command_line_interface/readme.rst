@@ -9,6 +9,6 @@ directory, for example:
 
 .. code-block:: bash
 
-   $ cd ras_to_srh/Munice
+   $ cd ras_to_srh
 
 See further instructions in each of the examples.
