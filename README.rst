@@ -148,16 +148,35 @@ There are several ways to install *pyHMT2D*.
 Example Usage
 -------------
 
-To use *pyHMT2D* in your Python code, simply add
+There are at least two ways to use *pyHMT2D*:
 
-.. code-block:: python
+- Command line interface (CLI): Only limited functions of *pyHMT2D* can be used in this way. You only need to
+  type commands in a Windows terminal, e.g.,
 
-    import pyHMT2D
-..
+  .. code-block:: bash
 
-One example to use *pyHMT2D* to control the run of SRH-2D is as follows:
+    $ hmt-calibrate calibration.json
 
-.. code-block:: python
+  which runs a calibration job. Or
+
+  .. code-block:: bash
+
+    $ hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+
+  which converts a RAS 2D case to SRH-2D. See "examples/command_line_interface" for more details.
+
+- Use in your own Python code (more flexibility)
+
+  To use *pyHMT2D* in your Python code, simply add
+
+  .. code-block:: python
+
+   import pyHMT2D
+  ..
+
+  One example to use *pyHMT2D* to control the run of SRH-2D is as follows:
+
+  .. code-block:: python
 
     #the follow should be modified based on your installation of SRH-2D
     version = "3.3"
@@ -189,12 +208,11 @@ One example to use *pyHMT2D* to control the run of SRH-2D is as follows:
 
     #quit SRH-2D
     my_srh_2d_model.exit_model()
-..
+  ..
 
+  Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
 
-Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
-
-.. code-block:: python
+  .. code-block:: python
 
     #create a HEC-RAS model instance
     my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7",
@@ -215,18 +233,18 @@ Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
 
     #quit HEC-RAS
     my_hec_ras_model.exit_model()
-..
+  ..
 
-The last example is to use *pyHMT2D* to perform auto-calibration in two lines:
+  The last example is to use *pyHMT2D* to perform auto-calibration in two lines:
 
-.. code-block:: python
+  .. code-block:: python
 
     my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
 
     my_calibrator.calibrate()
-..
+  ..
 
-More examples can be found in the "examples" directory.
+  More examples can be found in the "examples" directory.
 
 
 Limitations
