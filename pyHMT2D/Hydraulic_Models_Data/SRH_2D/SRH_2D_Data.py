@@ -1036,14 +1036,14 @@ class SRH_2D_SRHGeom:
         fid.close()
 
 
-    def output_2d_mesh_to_vtk(self,flatMeshVTKFileName, bFlat=False, dir=''):
+    def output_2d_mesh_to_vtk(self,meshVTKFileName, bFlat=False, dir=''):
         """output the 2D mesh to vtk
 
 
         Parameters
         --------
-        flatMeshVTKFileName : str
-            VTK file name for the flat mesh
+        meshVTKFileName : str
+            VTK file name for the mesh
         bFlat : bool, optional
             whether to make a flat mesh (z=0)
         dir : str, optional
@@ -1056,9 +1056,9 @@ class SRH_2D_SRHGeom:
 
         vtkFileName = ''
         if len(dir) == 0:
-            vtkFileName = flatMeshVTKFileName
+            vtkFileName = meshVTKFileName
         else:
-            vtkFileName = dir + "/" + flatMeshVTKFileName
+            vtkFileName = dir + "/" + meshVTKFileName
 
         # build VTK object:
         # points
@@ -1967,7 +1967,7 @@ class SRH_2D_Data(HydraulicData):
 
         fid.write('\n')
 
-        # How many solution data entries to output depending on whehter it is nodal or not
+        # How many solution data entries to output depending on whether it is nodal or not
         entryCount = -1
         if bNodal:
             entryCount = self.srhgeom_obj.nodeCoordinates.shape[0]
@@ -1977,10 +1977,10 @@ class SRH_2D_Data(HydraulicData):
         # output solution variables: only if there is solution variable
         if len(resultVarNames) != 0:
             if not bNodal:
-                print('Solution variables are at cell centers. \n')
+                if gVerbose: print('Output variables are at cell centers. \n')
                 fid.write('CELL_DATA %d\n' % self.srhgeom_obj.elementNodesList.shape[0])
             else:
-                print('Solution variables are at vertices. \n')
+                if gVerbose: print('Output variables are at vertices. \n')
                 fid.write('POINT_DATA %d\n' % self.srhgeom_obj.nodeCoordinates.shape[0])
 
             # column numbers for Vel_X and Vel_Y for vector assemble
@@ -2027,13 +2027,13 @@ class SRH_2D_Data(HydraulicData):
 
         fid.close()
 
-    def output_2d_mesh_to_vtk(self, flatMeshVTKFileName, bFlat=False, dir=''):
+    def output_2d_mesh_to_vtk(self, meshVTKFileName, bFlat=False, dir=''):
         """ output the flat mesh to vtk
 
         Parameters
         ----------
-        flatMeshVTKFileName : str
-            file name for the flat mesh
+        meshVTKFileName : str
+            file name for the mesh
         bFlat : bool
             whether to make the 2d mesh flat (node's z coordinate -> 0)
         dir : str, optional
@@ -2044,7 +2044,7 @@ class SRH_2D_Data(HydraulicData):
 
         """
         #just call srhgeom_obj's function
-        self.srhgeom_obj.output_2d_mesh_to_vtk(flatMeshVTKFileName, bFlat, dir)
+        self.srhgeom_obj.output_2d_mesh_to_vtk(meshVTKFileName, bFlat, dir)
 
     def readSRHFile(self, srhFileName):
         """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.

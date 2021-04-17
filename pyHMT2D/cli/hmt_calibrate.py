@@ -1,17 +1,17 @@
 """
-pyHMT2D's CLI: hmt_calibrate
+pyHMT2D's CLI: hmt-calibrate
 
 This command line interface calibrates a 2D model. The example command syntax:
 
 $ hmt-calibrate calibration.json
 
-Here, the command "hmt_calibrate" takes one argument:
+Here, the command "hmt-calibrate" takes one argument:
     - calibration specification JSON file, e.g., "calibration.json"
 
 You can also type the following for more information:
 
-$ hmt_calibrate -v
-$ hmt_calibrate -h
+$ hmt-calibrate -v
+$ hmt-calibrate -h
 
 """
 
