@@ -1,19 +1,19 @@
 """
-pyHMT2D's CLI: ras_to_srh
+pyHMT2D's CLI: hmt-ras-to-srh
 
 This command line interface converts RAS 2D mesh and Manning's n to SRH-2D. The example command syntax:
 
-$ ras_to_srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+$ hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
 
-Here, the command "ras_to_srh" take three arguments:
+Here, the command "hmt-ras-to-srh" take three arguments:
     - HEC-RAS 2D result file in HDF format, e.g., "Muncie2D.p01.hdf"
     - Terrain file in GeoTiff format, e.g., "Terrain/TerrainMuncie_composite.tif"
     - SRH-2D case name, e.g., "srh_Muncie", which will direct the command to generate "srh_Muncie.srhgeom" and "srh_Muncie.srhmat" files. The ".srhhydro" file needs to be created separately.
 
 You can also type the following for more information:
 
-$ ras_to_srh -v
-$ ras_to_srh -h
+$ hmt-ras-to-srh -v
+$ hmt-ras-to-srh -h
 
 """
 

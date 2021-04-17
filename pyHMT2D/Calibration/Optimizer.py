@@ -262,3 +262,110 @@ class Optimizer_ScipyOptimizeGlobal(Optimizier):
             fid.write("%10.5e\n" % self.list_callback_res[iterationI])
 
         fid.close()
+
+class Optimizer_Enumerator(Optimizier):
+    """ Optimizer using user-provided enumeration of parameter combinations  class
+
+    User needs to provide a list of parameter combinations. Then, the algorithm sweeps
+    through the enumeration and picks the best one.
+
+    Attributes
+    ----------
+
+    """
+
+    def __init__(self, optimizerDict):
+        """Optimizer_Enumerator class constructor
+
+        Parameters
+        ----------
+
+        """
+
+        Optimizier.__init__(self, optimizerDict)
+
+        # type
+        self.type = "enumerator"
+
+        # method: default (not relevant).
+        self.method = "None"
+
+        #options:
+
+        # dictionary for the options of the particular method
+        self.options = {}
+
+        #parameter_combinations (a list of lists)
+        self.parameter_combinations = []
+
+        # load optimizer configuration from dictionary
+        self.load_from_optimizer_dict()
+
+        # for callback: record the data during the optimization such as number of function calls,
+        # ref: https://stackoverflow.com/questions/16739065/how-to-display-progress-of-scipy-optimize-function
+        self.num_calls = 0  # how many times the cost function has been called
+        self.callback_count = 0  # number of times callback has been called (= iteration count)
+        self.list_calls_inp = []  # input of all calls
+        self.list_calls_res = []  # result of all calls
+        self.decreasing_list_calls_inp = []  # input of calls that resulted in decrease
+        self.decreasing_list_calls_res = []  # result of calls that resulted in decrease
+        self.list_callback_inp = []  # only appends inputs on callback, as such they correspond to the iterations
+        self.list_callback_res = []  # only appends results on callback, as such they correspond to the iterations
+
+    def load_from_optimizer_dict(self):
+        """ Load configuration of the optimizer from the dictionary
+
+        Returns
+        -------
+
+        """
+
+        for combinationI in self.optimizerDict['enumerator']['parameter_combinations']:
+            self.parameter_combinations.append(combinationI)
+
+    def minimize(self, func_to_minimize, args=None, callback=None):
+        """ Loop through the parameter combination list
+
+        Parameters
+        ----------
+        func_to_minimize
+        parameter_combination_list
+        callback
+
+        Returns
+        -------
+
+        """
+
+
+
+
+
+    def write_optimization_results_to_csv(self, parameterNames=[]):
+        """ Write optimization results to files in csv format
+
+        Returns
+        -------
+
+        """
+
+        #write out the calibration parameters' values and calibration errors for all iterations
+        fid = open(self.type+"_"+"calibration_results"+".csv", "w")
+
+        #loop through all parameters
+        for parameterI in range(len(self.list_callback_inp[0])):
+            if len(parameterNames) == 0:
+                fid.write("Parameter-%d," % parameterI)
+            else:
+                fid.write("%s," % parameterNames[parameterI])
+
+        fid.write("Calibration-Error\n")
+
+        #loop through all iterations
+        for iterationI in range(len(self.list_callback_inp)):
+            for parameterI in range(len(self.list_callback_inp[0])):
+                fid.write("%10.5e," % self.list_callback_inp[iterationI][parameterI])
+
+            fid.write("%10.5e\n" % self.list_callback_res[iterationI])
+
+        fid.close()

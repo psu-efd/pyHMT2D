@@ -237,7 +237,12 @@ class Calibrator(object):
         materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list = \
             self.calibration_parameters.get_ManningN_Info_list()
 
-        if self.optimizer_name == "scipy.optimize.local":
+        if self.optimizer_name == "enumerator":
+
+            self.optimizer.minimize(self.func_to_minimize, args=(materialID_list, materialName_list,))
+
+
+        elif self.optimizer_name == "scipy.optimize.local":
             import scipy.optimize as OP
 
             # build bounds

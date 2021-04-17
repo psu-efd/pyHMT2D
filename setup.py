@@ -20,17 +20,18 @@ URL = 'https://github.com/psu-efd/pyHMT2D'
 EMAIL = 'xiaofengliu19@gmail.com'
 AUTHOR = 'Xiaofeng Liu'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '1.0.1'
+VERSION = '1.0.3'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'vtk', 'h5py', 'scipy',
+    'numpy', 'vtk', 'h5py', 'scipy', 'affine',
 ]
 
 # What packages are optional?
 EXTRAS = {
      'HEC-RAS Control': ['pywin32'],
-     'Georeferencing': ['osgeo', 'affine'],
+     'Georeferencing': ['osgeo'],
+     'Gmsh mesh to SRH-2D': ['meshio'],
 }
 
 # The rest you shouldn't have to touch too much :)
@@ -112,7 +113,9 @@ setup(
 
     entry_points={
         'console_scripts': ['hmt-ras-to-srh=pyHMT2D.cli:ras_to_srh',
-                            'hmt-calibrate=pyHMT2D.cli:hmt_calibrate'
+                            'hmt-calibrate=pyHMT2D.cli:hmt_calibrate',
+                            'hmt-srh-mesh-to-vtk=pyHMT2D.cli:hmt_srh_mesh_to_vtk',
+                            'hmt-srh-to-vtk=pyHMT2D.cli:hmt_srh_to_vtk',
                             ],
     },
     install_requires=REQUIRED,
