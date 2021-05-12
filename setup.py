@@ -19,12 +19,12 @@ DESCRIPTION = 'Two-dimensional hydraulic modeling tools in Python'
 URL = 'https://github.com/psu-efd/pyHMT2D'
 EMAIL = 'xiaofengliu19@gmail.com'
 AUTHOR = 'Xiaofeng Liu'
-REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '1.0.4'
+REQUIRES_PYTHON = '>=3.7.0, <3.8'
+VERSION = '1.0.5'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'vtk', 'h5py', 'scipy', 'affine',
+    'numpy', 'vtk<=8.2.0', 'h5py', 'scipy', 'affine',
 ]
 
 # What packages are optional?
