@@ -193,6 +193,8 @@ class Calibrator(object):
             self.optimizer = pyHMT2D.Calibration.Optimizer_ScipyOptimizeLocal(self.configuration["calibration"]["scipy.optimize.local"])
         elif self.optimizer_name == "scipy.optimize.global":
             self.optimizer = pyHMT2D.Calibration.Optimizer_ScipyOptimizeGlobal(self.configuration["calibration"]["scipy.optimize.global"])
+        elif self.optimizer_name == "enumerator":
+            self.optimizer = pyHMT2D.Calibration.Optimizer_Enumerator(self.configuration["calibration"]["enumerator"])
         else:
             raise Exception("Specified optimizer is not supported.")
 
@@ -239,7 +241,7 @@ class Calibrator(object):
 
         if self.optimizer_name == "enumerator":
 
-            self.optimizer.minimize(self.func_to_minimize, args=(materialID_list, materialName_list,))
+            self.optimizer.minimize(self.func_to_minimize, args=(materialID_list, materialName_list,), callback=self.callback)
 
 
         elif self.optimizer_name == "scipy.optimize.local":
@@ -480,7 +482,8 @@ class Calibrator(object):
     def callback(self, xk, *_):
         """Callback function that can be used by optimizers of scipy.optimize.
 
-        "callback" is called by the optimizer every iteration, not every function evaluation call.
+        "callback" is called by the optimizer every iteration, not every function evaluation call. For "enumerator"
+        optimizer, it is called for each parameter combination.
 
         The third argument "*_" makes sure that it still works when the
         optimizer calls the callback function with more than one argument. Pass

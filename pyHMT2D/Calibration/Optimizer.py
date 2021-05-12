@@ -1,6 +1,8 @@
 
 from ..Misc import json_dict_type_correction
 
+import numpy as np
+
 class Optimizier(object):
     """ Optimizer base class
 
@@ -264,7 +266,7 @@ class Optimizer_ScipyOptimizeGlobal(Optimizier):
         fid.close()
 
 class Optimizer_Enumerator(Optimizier):
-    """ Optimizer using user-provided enumeration of parameter combinations  class
+    """ Optimizer using user-provided enumeration of parameter combinations class
 
     User needs to provide a list of parameter combinations. Then, the algorithm sweeps
     through the enumeration and picks the best one.
@@ -296,10 +298,17 @@ class Optimizer_Enumerator(Optimizier):
         self.options = {}
 
         #parameter_combinations (a list of lists)
+        #For each list, it contains: "materialID": Manning's n dictionary
         self.parameter_combinations = []
 
         # load optimizer configuration from dictionary
         self.load_from_optimizer_dict()
+
+        #best combination index
+        self.best_combination_index = -1
+
+        #best calibration score
+        self.best_calibration_score = np.inf
 
         # for callback: record the data during the optimization such as number of function calls,
         # ref: https://stackoverflow.com/questions/16739065/how-to-display-progress-of-scipy-optimize-function
@@ -320,11 +329,13 @@ class Optimizer_Enumerator(Optimizier):
 
         """
 
-        for combinationI in self.optimizerDict['enumerator']['parameter_combinations']:
+        for combinationI in self.optimizerDict['parameter_combinations']:
             self.parameter_combinations.append(combinationI)
 
     def minimize(self, func_to_minimize, args=None, callback=None):
         """ Loop through the parameter combination list
+
+        Each item in the parameter combination list is a dictionary for the Manning's n of each materialID.
 
         Parameters
         ----------
@@ -337,8 +348,57 @@ class Optimizer_Enumerator(Optimizier):
 
         """
 
+        #get the material ID list and material name list
+        materialID_list, materialName_list = args[0], args[1]
+
+        #total number of combinations
+        nCombinations = len(self.parameter_combinations)
+
+        #loop over all combinations in the list
+        for idx, combinationI in enumerate(self.parameter_combinations):
+            #assemble the ManningNs
+            ManningNs = [None] * len(materialID_list)
+
+            #loop over all material IDs in the current combination
+            for matID, ManningN in combinationI.items():
+                if int(matID) in materialID_list:
+                    ManningNs[materialID_list.index(int(matID))] = ManningN
+                else:  #the current material ID is not in the list; something is wrong
+                    raise Exception("The material ID in the enumerator does not match with the list of calibration parameters.")
+
+            #also need to check whether all materials have been dealt with
+            for ManningN in ManningNs:
+                if ManningN is None:
+                    raise Exception("Not all materials are specified in the enumertor.")
 
 
+            #print information to screen
+            print("Parameter combination #", idx+1, "/ ", nCombinations)
+            print("     Material names: ", materialName_list)
+            print("     Material IDs:   ", materialID_list)
+            print("     Manning Ns:     ", ManningNs)
+
+            #call the function to be minimized
+            score = func_to_minimize(ManningNs, materialID_list, materialName_list)
+
+            #record the best combination and the corresponding calibration score
+            if idx == 0: #first combination
+                self.best_combination_index = idx
+                self.best_calibration_score = score
+            elif self.best_calibration_score > score:
+                self.best_combination_index = idx
+                self.best_calibration_score = score
+
+            #call the callback
+            callback(ManningNs)
+
+        #report the best calibration result
+        print("The best calibration parameter combination is # ", self.best_combination_index+1,  #report in 1-based
+              "with a minimum calibration score of ", self.best_calibration_score)
+        print("The best parameter values are: ")
+        print("     Material names: ", materialName_list)
+        print("     Material IDs:   ", materialID_list)
+        print("     Manning Ns:     ", self.parameter_combinations[self.best_combination_index])  #python is 0-based
 
 
     def write_optimization_results_to_csv(self, parameterNames=[]):
