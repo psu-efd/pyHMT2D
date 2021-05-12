@@ -105,7 +105,8 @@ def demo_calibrator():
 
     """
 
-    my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
+    #my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
+    my_calibrator = pyHMT2D.Calibration.Calibrator("calibration_enumerator.json")
 
     my_calibrator.calibrate()
 
