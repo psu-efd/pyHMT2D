@@ -5,7 +5,7 @@ def main():
 
     #build the RAS_to_SRH_Converter object
     my_ras_to_srh_converter = pyHMT2D.Misc.RAS_to_SRH_Converter("HEC-RAS-2D/backwater_curve.p01.hdf",
-                                                                "HEC-RAS-2D/Terrain/Terrain.constant_slope_channel.tif",
+                                                                "constant_slope_channel.tif",
                                                                 "SRH-2D/backwater")
 
     #convert to SRH-2D (mesh and material) and save
