@@ -24,14 +24,13 @@ VERSION = '1.0.5'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'vtk<=8.2.0', 'h5py', 'scipy', 'affine',
+    'numpy', 'vtk<=8.2.0', 'h5py', 'scipy', 'affine', 'meshio',
 ]
 
 # What packages are optional?
 EXTRAS = {
      'HEC-RAS Control': ['pywin32'],
      'Georeferencing': ['osgeo'],
-     'Gmsh mesh to SRH-2D': ['meshio'],
 }
 
 # The rest you shouldn't have to touch too much :)
