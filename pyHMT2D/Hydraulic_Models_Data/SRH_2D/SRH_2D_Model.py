@@ -199,7 +199,7 @@ class SRH_2D_Model(HydraulicModel):
 
             previous_checked_simulation_time = startTime  #this may not work if it is a restart simulation (?)
 
-            time.sleep(5)  #check the simulation progress every 5 s (this value needs to be updated for each case
+            time.sleep(10)  #check the simulation progress every 5 s (this value needs to be updated for each case
             # depending on how long the simulation will be).
 
             #get the latest simulation information from the INF file

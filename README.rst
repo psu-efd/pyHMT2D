@@ -15,6 +15,11 @@ Currently, the following hydraulic models are supported:
 
 In the future, support for more 2D models may be added.
 
+Supported Platform
+------------------
+
+Currently, only Windows is supported. This is because SRH-2D and HEC-RAS 2D are for Windows only. Most practitioners and engineers who run these 2D models use Windows almost exclusively.
+
 Motivations
 -----------
 
