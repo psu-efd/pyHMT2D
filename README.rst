@@ -13,7 +13,7 @@ Currently, the following hydraulic models are supported:
 -  `HEC-RAS <https://www.hec.usace.army.mil/software/hec-ras/>`__
 -  Backwater-1D (a simple toy model for demonstration purpose)
 
-In the future, support for more 2D models may be added.
+In the future, support for more 2D models may be added. To use this Python package, an obvious prerequisite is that the hydraulic model you want to use has been properly installed. Please see their respective website and documentation for installation and usage. 
 
 Supported Platform
 ------------------
