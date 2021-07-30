@@ -97,10 +97,14 @@ class RAS_2D_Data(HydraulicData):
         
         #get intervals
         self.get_intervals()
-        
-        self.units = ''
-        self.short_ID = ''
-        
+
+        self.version =''   #version of HEC-RAS that produced this HDF result file
+        self.units = ''    #units used
+        self.short_ID = '' #short_ID of the plan
+
+        #get version
+        self.get_version()
+
         #get units
         self.units = self.get_units()
         
@@ -232,7 +236,31 @@ class RAS_2D_Data(HydraulicData):
         self.TwoDAreaPointVz = []
         
         self.load2DAreaSolutions()
-        
+
+    def get_version(self):
+        """Get the version of HEC-RAS that produced this file
+
+        Version of HEC-RAS, such as "5.0.7", "6.0.0"
+
+        Parameters
+        -----------
+
+        """
+
+        hf = h5py.File(self.hdf_filename, 'r')
+
+        file_version = hf.attrs['File Version']
+
+        if b'5.0.7' in file_version:
+            self.version = '5.0.7'
+        elif b'6.0.0' in file_version:
+            self.version = '6.0.0'
+        else:
+            raise Exception("The file version of the HEC-RAS result file is not supported.")
+
+        #print("HEC-RAS file version = ", self.version)
+
+        hf.close()
 
     def get_units(self):
         """Get the units used in the HEC-RAS project
@@ -1060,7 +1088,8 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        hf = h5py.File(self.hdf_filename,'r') 
+        hf = h5py.File(self.hdf_filename,'r')
+
         hdf2DAreaResultVar = np.array(hf['Results']['Unsteady']['Output']['Output Blocks']
                   ['Base Output']['Unsteady Time Series']['2D Flow Areas'][area][varName])
         
@@ -1127,8 +1156,27 @@ class RAS_2D_Data(HydraulicData):
             #print("2D Flow Area = ", area)
             
             #fetch the depth and WSE data
-            cellDepth = self.hdf2DAreaResultVar(area, 'Depth')
-            cellWSE = self.hdf2DAreaResultVar(area, 'Water Surface')
+            depth_name = ''  #name of depth variable in HDF file
+            WSE_name = ''    #name of WSE variable in HDF file
+            nodeVx_name = ''   #name of nodal x velocity in HDF file
+            nodeVy_name = ''  # name of nodal y velocity in HDF file
+
+            if self.version == '5.0.7':
+                depth_name = 'Depth'
+                WSE_name = 'Water Surface'
+                nodeVx_name = 'Node X Vel'
+                nodeVy_name = 'Node Y Vel'
+            elif self.version == '6.0.0':
+                depth_name = 'Cell Invert Depth'
+                WSE_name = 'Water Surface'
+                nodeVx_name = 'Node Velocity - Velocity X'
+                nodeVy_name = 'Node Velocity - Velocity Y'
+            else:
+                raise Exception("The version of HEC-RAS that produced this HDF result file is not supported.")
+
+
+            cellDepth = self.hdf2DAreaResultVar(area, depth_name)
+            cellWSE = self.hdf2DAreaResultVar(area, WSE_name)
             
             #slice the cell data array to get values only for cells in current 2D area. 
             #The HEC-RAS results also contain values at the center of boundary faces.
@@ -1140,8 +1188,8 @@ class RAS_2D_Data(HydraulicData):
             
             #fetch point data
             #Node X Vel and Node Y Vel
-            pointVx=self.hdf2DAreaResultVar(area, 'Node X Vel')
-            pointVy=self.hdf2DAreaResultVar(area, 'Node Y Vel')
+            pointVx=self.hdf2DAreaResultVar(area, nodeVx_name)
+            pointVy=self.hdf2DAreaResultVar(area, nodeVy_name)
             
             self.TwoDAreaPointVx.append(pointVx)
             self.TwoDAreaPointVy.append(pointVy)

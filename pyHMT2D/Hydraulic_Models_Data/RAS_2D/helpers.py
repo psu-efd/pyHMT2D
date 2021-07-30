@@ -15,7 +15,7 @@ from pyHMT2D.Misc import yes_or_no
 def get_supported_hec_ras_versions():
     """Return a list of supported HEC-RAS versions
     """
-    return ['5.0.7', '6.0.1']
+    return ['5.0.7', '6.0.0']
 
 
 def kill_all_hec_ras():
@@ -60,7 +60,7 @@ def get_installed_hec_ras_versions():
     """ Get a list of installed HEC-RAS versions
     """
     #this list has to include as many possible HEC-RAS versions as possible
-    ver = {'HEC-RAS\\6.0 Beta Update 2\\Ras.exe': '6.0.1',
+    ver = {'HEC-RAS\\6.0\\Ras.exe': '6.0.0',
            'HEC-RAS\\5.0.7\\Ras.exe': '5.0.7'}
 
     ldic = _get_registered_typelibs()

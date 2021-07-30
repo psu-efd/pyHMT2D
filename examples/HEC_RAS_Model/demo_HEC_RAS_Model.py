@@ -9,7 +9,8 @@ import pyHMT2D
 def run_HEC_RAS():
 
     #create a HEC-RAS model instance
-    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7",faceless=False)
+    #my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7",faceless=False)
+    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.0.0", faceless=False)
 
     #initialize the HEC-RAS model
     my_hec_ras_model.init_model()

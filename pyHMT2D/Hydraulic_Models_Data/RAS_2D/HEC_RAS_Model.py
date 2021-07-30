@@ -304,10 +304,14 @@ class HEC_RAS_Model(HydraulicModel):
             #self._RASController = win32.Dispatch("RAS507.HECRASController")
             self._RASController = win32.DispatchEx("RAS507.HECRASController")
 
-        elif (self.getVersion() == '6.0.1'):
+        elif (self.getVersion() == '6.0.0'):
             # As of 03/21, "RAS5x.HECRASController" is the prog_id for HEC-RAS version 6 beta 1 and 2
             # This may change (check in future).
-            self._RASController = win32.gencache.EnsureDispatch('RAS5x.HECRASController')
+            # Updated 07/21: The latest official release of HEC-RAS v6.0.0's prog_id is "RAS60.HECRASController"
+            self._RASController = win32.gencache.EnsureDispatch('RAS60.HECRASController')
+
+        else:
+            raise Exception("The specified version of HEC-RAS is not currently supported.")
 
         # show HEC-RAS main window
         if not self._faceless:
