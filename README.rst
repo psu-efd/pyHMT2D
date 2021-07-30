@@ -270,7 +270,7 @@ For HEC-RAS 2D:
    channels and structures are ignored.
 -  Currently, only flow data is processes; others such as sediment and water
    quality are ignored.
--  This package is developed and tested with HEC-RAS v5.0.7; other versions may work but have not been tested.
+-  This package is developed and tested with HEC-RAS v5.0.7 and v6.0.0; other versions may work but have not been tested.
 
 User manual and API documentation
 ---------------------------------
