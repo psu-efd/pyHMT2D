@@ -185,8 +185,8 @@ class RAS_2D_Data(HydraulicData):
 
         #land cover (Manning n)
         #This can be retrived from HDF's entries: [Geometry][Land Cover Filename] and [Geometry][Land Cover Layername]
-        self.landcover_filename = ''
-        self.landcover_layername = ''
+        self.landcover_filename = b''
+        self.landcover_layername = b''
 
         #Manning n zone dictionary: {ID: [name, Manning's n]}
         self.ManningNZones = {}
@@ -568,6 +568,18 @@ class RAS_2D_Data(HydraulicData):
         """
 
         hf = h5py.File(self.hdf_filename, 'r')
+
+        #check whether 'Land Cover Filename' and 'Land Cover Layername' are in the attributes
+        if 'Land Cover Filename' not in hf['Geometry'].attrs.keys() or \
+                'Land Cover Layername' not in hf['Geometry'].attrs.keys():
+            self.ManningNZones = {}  # clear the dictionary just in case
+
+            # take the default Manning's n value in row 0 and column 1.
+            self.ManningNZones[0] = [b'default', hf['Geometry']['2D Flow Areas']['Attributes'][0][1]]
+
+            hf.close()
+
+            return
 
         self.landcover_filename = hf['Geometry'].attrs['Land Cover Filename']
         self.landcover_layername = hf['Geometry'].attrs['Land Cover Layername']
@@ -1680,9 +1692,9 @@ class RAS_2D_Data(HydraulicData):
                 #write to vtk file
                 fileName_temp = []
                 if dir!= '':
-                    fileName_temp = [dir, '/', 'RAS2D_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
+                    fileName_temp = [dir, '/', 'RAS2D_', self.plan, '_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
                 else:
-                    fileName_temp = ['RAS2D_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
+                    fileName_temp = ['RAS2D_', self.plan, '_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
                 vtkFileName = "".join(fileName_temp)
 
                 # write out the ugrid

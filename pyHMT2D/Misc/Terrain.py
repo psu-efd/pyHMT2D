@@ -2,6 +2,8 @@
 A Python class for terrain data I/O, creation, and manipulation
 """
 
+import math
+
 import numpy as np
 import sys
 
@@ -9,6 +11,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
+import random
 
 class Terrain(HydraulicData):
     """A Python class for terrain data I/O, creation, and manipulation
@@ -186,6 +189,144 @@ class Terrain(HydraulicData):
         for iy in range(0, ny + extra_len_ny * 2):
             for ix in range(0, nx + extra_len_nx * 2):
                 self.elevation[iy, ix] = elevation_origin -slope * (ix-extra_len_nx) * pixel_width
+
+    def add_bedform(self, channel_lenx, channel_leny, Lb, Hb, alpha_lee, a_stoss, rotation=0,perturbation=0):
+        """Add bedform feature to the terrain
+
+        Typical use scenario is firstly to create a constant slope channel and then add the bedform features.
+
+        Parameters
+        ----------
+        channel_lenx : float
+            channel length in x
+        channel_leny : float
+            channel length in y
+        Lb : float
+            bed form length
+        Hb : float
+            bed form height
+        alpha_lee : float
+            bed-form's lee side slope angle (in degrees)
+        a_stoss : float
+            bed-form's stoss size sine function amplitude
+        rotation : float
+            optional rotation angle of the domain in degrees (default is zero)
+        perturbation : float
+            optional perturbation added to the terrain (default is zero)
+
+        Returns
+        -------
+
+        """
+
+        #lee side length
+        Llee = Hb/np.tan(math.radians(alpha_lee))
+
+        #stoss side length
+        Lstoss = Lb - Llee
+
+        if Lstoss <=0:
+            raise Exception("The calculated stoss lengh is negative. Check the bedform parameters.")
+
+        print("Bedform lengths of stoss and lee sides are: ", Lstoss, Llee)
+
+        #stoss side angle
+        alpha_stoss = np.arctan(Hb/Lstoss)
+
+        #raster size (without extra length)
+        nx = int(channel_lenx/self.pixel_width)
+        ny = int(channel_leny/self.pixel_height)
+
+        # set the elevation
+        for iy in range(self.elevation.shape[0]):
+            for ix in range(self.elevation.shape[1]):
+
+                # get current grid point's coordinate
+                x = ix * self.pixel_width
+                y = iy * self.pixel_height
+                L = np.sqrt(x**2+y**2)
+
+                x_new = x
+                y_new = y
+
+                # take care of optional rotation
+                if np.abs(rotation) > 1e-3:
+                    alpha = np.arctan(y/(x+1e-6))
+                    alpha_prime = alpha + np.deg2rad(rotation)
+                    x_new = L*np.cos(alpha_prime)
+                    y_new = L*np.sin(alpha_prime)
+
+                # get the location of current grid point within one bedform
+                xprime = x_new % Lb
+
+                # elevation due to the existence of bedform
+                deltaZ = 0.0
+
+                if xprime <= Lstoss:  #if current location is in the stoss side
+                    deltaZ = xprime*np.tan(alpha_stoss) - a_stoss*np.sin(2*math.pi*xprime/Lstoss)
+                else:                 #if the current location is in the lee side
+                    deltaZ = Hb - Hb*(xprime-Lstoss)/(Lb-Lstoss)
+
+                # take care of optional perturbation
+                if np.abs(perturbation) > 1e-3:
+                    deltaZ += (random.random() - 0.5)*2*perturbation
+
+                self.elevation[iy, ix] += deltaZ
+
+    def add_composite_channel(self, channel_lenx, channel_leny, L1, B, D, alpha):
+        """Add composite channel to the terrain
+
+        Typical use scenario is firstly to create a constant slope channel and then add the composite channel.
+
+        Parameters
+        ----------
+        channel_lenx : float
+            channel length in x
+        channel_leny : float
+            channel length in y
+        L1 : float
+            flood plain's width on one side (the other side can be calculated)
+        B : float
+            main channel bottom width
+        D : float
+            main channel depth
+        alpha : float
+            main channel's side slope angle (in degrees)
+
+        Returns
+        -------
+
+        """
+
+        #main channel slope's horizontal distance
+        Lside = D*np.tan(math.radians(alpha))
+
+        #raster size (without extra length)
+        nx = int(channel_lenx/self.pixel_width)
+        ny = int(channel_leny/self.pixel_height)
+
+        # set the elevation
+        for iy in range(self.elevation.shape[0]):
+            for ix in range(self.elevation.shape[1]):
+
+                # get current grid point's coordinate
+                x = ix * self.pixel_width
+                y = iy * self.pixel_height
+
+                # elevation modification due to the existence of main channel
+                deltaZ = 0.0
+
+                if (y>L1 and y <= (L1+Lside)):
+                    deltaZ = -(y-L1)/np.tan(math.radians(alpha))
+                elif (y>(L1+Lside) and y<= (L1+Lside+B)):
+                    deltaZ = -D
+                elif (y>(L1+Lside+B) and y < (L1+Lside+B+Lside)):
+                    deltaZ = -(L1+Lside+B+Lside - y)/np.tan(math.radians(alpha))
+                else:
+                    deltaZ = 0.0
+
+                self.elevation[iy, ix] += deltaZ
+
 
     def set_georeference(self, geoTopLeft_x, geoTopLeft_y, EPSGCode):
         """Set the georeferencing information

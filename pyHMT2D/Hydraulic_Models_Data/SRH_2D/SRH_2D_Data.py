@@ -1884,7 +1884,8 @@ class SRH_2D_Data(HydraulicData):
             point_data.AddArray(temp_point_data_array)
 
             # write to vtk file
-            unstr_writer = vtk.vtkUnstructuredGridWriter()
+            unstr_writer = vtk.vtkUnstructuredGridWriter()     #ASCII
+            #unstr_writer = vtk.vtkXMLUnstructuredGridWriter()   #Binary
             unstr_writer.SetFileName(vtkFileName)
             unstr_writer.SetInputData(uGrid)
             unstr_writer.Write()

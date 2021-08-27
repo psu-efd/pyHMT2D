@@ -330,7 +330,7 @@ class vtkHandler:
         s_elev.SetScalarRange(bounds[4], bounds[5])
         s_elev.Update()
 
-        # print("s_elev = ", s_elev.GetUnstructuredGridOutput())
+        #print("s_elev = ", s_elev.GetUnstructuredGridOutput())
 
         ### flatten the source data; the Z elevations are already in the scalars data ###
         s_flat = vtk.vtkTransformFilter()
