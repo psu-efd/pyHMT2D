@@ -9,6 +9,8 @@ from pyHMT2D.__common__ import *
 class Backwater_1D_Model(HydraulicModel):
     """Simple 1D backwater curve model .
 
+    This model only works for subcritical flows!!! It does not work critical flows or transcritical flows.
+
 
     Attributes:
 
