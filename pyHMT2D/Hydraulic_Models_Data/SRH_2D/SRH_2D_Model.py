@@ -211,25 +211,29 @@ class SRH_2D_Model(HydraulicModel):
 
             #need to consider the scenarios that there is zero line, one line, and multiple lines of INFO output
             current_simulation_time = startTime
-            if len(info_data.shape) == 0:
-                current_simulation_time = startTime
-            elif len(info_data.shape) == 1:
-                current_simulation_time = info_data[1]
-            elif len(info_data.shape) == 2:
-                current_simulation_time = info_data[-1,1]
+            try:
+                if len(info_data.shape) == 0:
+                    current_simulation_time = startTime
+                elif len(info_data.shape) == 1:
+                    current_simulation_time = info_data[1]
+                elif len(info_data.shape) == 2:
+                    current_simulation_time = info_data[-1,1]
 
-            time_passed_since_last_check = current_simulation_time - previous_checked_simulation_time
-            clicks_since_last_check = int(time_passed_since_last_check/(endTime-startTime)*totalClicks)
+                time_passed_since_last_check = current_simulation_time - previous_checked_simulation_time
+                clicks_since_last_check = int(time_passed_since_last_check/(endTime-startTime)*totalClicks)
 
-            counter += clicks_since_last_check
+                counter += clicks_since_last_check
 
-            #print("clicks_since_last_check, counter", clicks_since_last_check, counter)
+                #print("clicks_since_last_check, counter", clicks_since_last_check, counter)
 
-            if clicks_since_last_check > 0:
-                printProgressBar(counter, totalClicks, "Simulation in progress")
-                # print("test")   #Don't do this. It will create a new progress bar each time.
+                if clicks_since_last_check > 0:
+                    printProgressBar(counter, totalClicks, "Simulation in progress")
+                    # print("test")   #Don't do this. It will create a new progress bar each time.
 
-            previous_checked_simulation_time = current_simulation_time
+                previous_checked_simulation_time = current_simulation_time
+
+            except IndexError:   #try to catch the occational index error if the INF write is not compplete.
+                continue
 
             if counter > totalClicks:
                 break

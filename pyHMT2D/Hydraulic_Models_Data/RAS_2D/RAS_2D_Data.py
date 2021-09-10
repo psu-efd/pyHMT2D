@@ -608,22 +608,48 @@ class RAS_2D_Data(HydraulicData):
             else:
                 fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
-            hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
 
-            dset = hfManningN['IDs']
+            #The way the land cover and Manning's n information stored in v5 and v6 is different.
+            if self.version == '5.0.7':
+                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
 
-            with dset.astype(np.uint8):
-                IDs = dset[:]
+                dset = hfManningN['IDs']
 
-            ManningN = np.array(hfManningN['ManningsN'])
-            Names = hfManningN['Names']
+                with dset.astype(np.uint8):
+                    IDs = dset[:]
 
-            # print("IDs =", IDs)
-            # print("ManningN =", ManningN)
-            # print("Names =", Names)
+                ManningN = np.array(hfManningN['ManningsN'])
+                Names = hfManningN['Names']
 
-            for i in range(len(IDs)):
-                self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+                # print("IDs =", IDs)
+                # print("ManningN =", ManningN)
+                # print("Names =", Names)
+
+                for i in range(len(IDs)):
+                    self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+
+            elif self.version == '6.0.0':
+                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
+
+                dset_raster_map = hfManningN['Raster Map']
+                dset_variables = hfManningN['Variables']
+
+                #with dset_raster_map['ID'].astype(np.uint8):
+                IDs = dset_raster_map['ID']
+
+                ManningN = np.array(dset_variables['ManningsN'])
+                Names = dset_variables['Name']
+
+                # print("IDs =", IDs)
+                # print("ManningN =", ManningN)
+                # print("Names =", Names)
+
+                for i in range(len(IDs)):
+                    self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+
+            else:
+                raise Exception("The version of HEC-RAS that produced this HDF result file is not supported.")
+
 
             if gVerbose: print("self.ManningNZones = ", self.ManningNZones)
 
@@ -631,37 +657,19 @@ class RAS_2D_Data(HydraulicData):
 
         hf.close()
 
-    def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
-        """Modify materialID's Manning's n values to new values
-
-        Assume that there is "Land Cover Filename" and "Land Cover Layername" in the result HDF file.
-        If they don't exist (mostly for the case that the whole domain uses the default, constant
-        Manning's n value in ["Geometry"]["2D Flow Areas"][0][1]), just use newManningsNValues[0].
+    def change_ManningsN_v5(self, materialIDs, newManningsNValues, materialNames):
+        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v5)
 
         Parameters
         ----------
-        materialIDs : list
-            material ID list
-        newManningsNValues : list
-            new Manning's n values in a list
-        materialNames : list
-            names of the material in a list
-
+        materialIDs
+        newManningsNValues
+        materialNames
 
         Returns
         -------
 
         """
-
-        if gVerbose: print("Modify Manning's n value ...")
-
-        if not isinstance(materialIDs[0], int):
-            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]),
-                  ". Exit.\n")
-
-        if not isinstance(newManningsNValues[0], float):
-            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
-                  ". Exit.\n")
 
         #get land cover (Manning's n) file name and layer name
         hf = h5py.File(self.hdf_filename, 'r')
@@ -736,6 +744,134 @@ class RAS_2D_Data(HydraulicData):
 
             # need to re-build 2D Manning's n zones information after update
             self.build2DManningNZones()
+
+    def change_ManningsN_v6(self, materialIDs, newManningsNValues, materialNames):
+        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v6)
+
+        Parameters
+        ----------
+        materialIDs
+        newManningsNValues
+        materialNames
+
+        Returns
+        -------
+
+        """
+
+        # get land cover (Manning's n) file name and layer name
+        hf = h5py.File(self.hdf_filename, 'r')
+
+        self.landcover_filename = hf['Geometry'].attrs['Land Cover Filename']
+        self.landcover_layername = hf['Geometry'].attrs['Land Cover Layername']
+
+        hf.close()
+
+        if gVerbose: print("Land Cover Filename = ", self.landcover_filename)
+        if gVerbose: print("Land Cover Layername = ", self.landcover_layername)
+
+        # Some time HEC-RAS does not save land cover filename and layername to HDF because the
+        # geometry association of terrain or land cover (Manning's n) is removed after the 2D area geometry
+        # computation has been done.
+        if len(self.landcover_filename) == 0 or len(self.landcover_layername) == 0:
+            print("Land Cover Filename or Land Cover Layername in result HDF is empty. "
+                  "Will use the default Manning's n value.")
+
+            raise Exception("Modification of default constant Manning's n has not been implemented.")
+
+        else:
+            # read the Manning n zones (land cover zones)
+            if os.path.dirname(self.hdf_filename) == '':
+                fileBase = b''
+            else:
+                fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
+
+            hfManningN = h5py.File(fileBase + self.landcover_layername, 'r+')
+
+            dset_raster_map = hfManningN['Raster Map']
+            dset_variables = hfManningN['Variables']     #This dataset needs to be modified because ManningsN is in it.
+
+            # with dset_raster_map['ID'].astype(np.uint8):
+            IDs = dset_raster_map['ID']
+
+            IDs = IDs.tolist()
+
+            ManningN = np.array(dset_variables['ManningsN'])
+
+            Names = dset_variables['Name']
+
+            # make a copy of the original Manning's n values
+            #ManningN_new = copy.deepcopy(ManningN)
+            dset_variables_new = copy.deepcopy(dset_variables)
+
+            # print("IDs =", IDs)
+            # print("ManningN =", ManningN)
+            # print("Names =", Names)
+
+            for i in range(len(materialIDs)):
+                materialID = materialIDs[i]
+                if materialID in IDs:
+                    # also check whether the name is consistent
+                    if materialNames[i] == Names[IDs.index(materialID)].decode("ASCII"):
+                        if gVerbose: print("    Old Manning's n value =", dset_variables['ManningsN'][IDs.index(materialID)],
+                                           "for material ID = ", materialID)
+                        dset_raster_map['ManningsN'][IDs.index(materialID)] = newManningsNValues[i]
+                        if gVerbose: print("    New Manning's n value =", dset_variables_new['ManningsN'][IDs.index(materialID)],
+                                           "for material ID = ", materialID)
+                    else:
+                        raise Exception(
+                            "The materialI and material name are not consistent. Please make sure they are consistent with HEC-RAS case."
+                            "You can check the content of the Manning's n HDF file with HDFViewer.")
+                else:
+                    raise Exception(
+                        "The specified materialID %d is not in the Manning's n list. Please check." % materialID)
+
+            dset_variables[...] = dset_variables_new  # assign new values to data
+
+            # save and close the HDF file
+            hfManningN.close()
+
+            # need to re-build 2D Manning's n zones information after update
+            self.build2DManningNZones()
+
+    def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
+        """Modify materialID's Manning's n values to new values
+
+        Assume that there is "Land Cover Filename" and "Land Cover Layername" in the result HDF file.
+        If they don't exist (mostly for the case that the whole domain uses the default, constant
+        Manning's n value in ["Geometry"]["2D Flow Areas"][0][1]), just use newManningsNValues[0].
+
+        Parameters
+        ----------
+        materialIDs : list
+            material ID list
+        newManningsNValues : list
+            new Manning's n values in a list
+        materialNames : list
+            names of the material in a list
+
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify Manning's n value ...")
+
+        if not isinstance(materialIDs[0], int):
+            print("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]),
+                  ". Exit.\n")
+
+        if not isinstance(newManningsNValues[0], float):
+            print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
+                  ". Exit.\n")
+
+        if self.version == '5.0.7':
+            self.change_ManningsN_v5(materialIDs, newManningsNValues, materialNames)
+        elif self.version == '6.0.0':
+            self.change_ManningsN_v6(materialIDs, newManningsNValues, materialNames)
+
+        if gVerbose: print("Finished modifying Manning's n value ...")
 
 
     def build2DInterpolatorFromGeoTiff(self, geoTiffFileName):
@@ -1454,7 +1590,13 @@ class RAS_2D_Data(HydraulicData):
         else:
             fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
-        full_landcover_filename = fileBase+self.landcover_filename
+        #HEC-RAS v5's land cover file name stores the tiff file name, while in
+        #v6 it stores the hdf file name. For v6, I assume the tiff file name is
+        #land cover layer name.tif. Need to check this assumption.
+        if self.version == '5.0.7':
+            full_landcover_filename = fileBase+self.landcover_filename
+        elif self.version == '6.0.0':
+            full_landcover_filename = (fileBase+self.landcover_filename[:-4])+b'.tif'
 
         if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
             ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]

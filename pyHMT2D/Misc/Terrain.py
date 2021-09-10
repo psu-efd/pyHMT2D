@@ -267,6 +267,9 @@ class Terrain(HydraulicData):
                 else:                 #if the current location is in the lee side
                     deltaZ = Hb - Hb*(xprime-Lstoss)/(Lb-Lstoss)
 
+                # shift the bedform so vertically the center is at the origin
+                deltaZ -= Hb/2.0
+
                 # take care of optional perturbation
                 if np.abs(perturbation) > 1e-3:
                     deltaZ += (random.random() - 0.5)*2*perturbation
