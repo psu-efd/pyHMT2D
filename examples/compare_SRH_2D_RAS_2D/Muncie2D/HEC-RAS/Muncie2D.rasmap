@@ -5,9 +5,9 @@
       <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="Name" Position="3" Color="-16777216" />
     </Layer>
   </Features>
-  <Geometries Checked="True" Expanded="True">
+  <Geometries Expanded="True">
     <Layer Name="Muncie_base2D" Type="RASGeometry" Checked="True" Expanded="True" Filename=".\Muncie2D.g01.hdf">
-      <Layer Type="RASD2FlowArea" Checked="True" Expanded="True" />
+      <Layer Type="RASD2FlowArea" Checked="True" />
       <Layer Type="RasLandCoverRegions" Checked="True">
         <Symbology>
           <Brush Type="SolidBrush" B="205" G="235" R="255" A="150" Name="PolygonFill" />
@@ -22,7 +22,7 @@
       <Layer Type="RASBoundaryConditionLines" Checked="True" />
     </Layer>
   </Geometries>
-  <Results Checked="True" Expanded="True">
+  <Results Expanded="True">
     <Layer Name="Peak flow" Type="RASResults" Checked="True" Expanded="True" Filename=".\Muncie2D.p01.hdf">
       <Layer Type="RASGeometry" Filename=".\Muncie2D.p01.hdf" />
       <Layer Name="depth" Type="RASResultsMap" Checked="True">
@@ -43,7 +43,7 @@
       </Layer>
     </Layer>
   </Results>
-  <MapLayers Expanded="True">
+  <MapLayers Checked="True" Expanded="True">
     <Layer Name="TerrainWithChannel" Type="InterpolatedLayer" Filename=".\Terrain\TerrainWithChannel.vrt">
       <Symbology>
         <SurfaceFill Colors="-10039894,-2231258,-9324544,-11170816,-879872,-6811136,-6546404,-6991792,-6513765,-1286" Values="898.91,911.6,924.3,936.99,949.69,962.38,975.08,987.77,1000.47,1013.16" Stretched="True" RegenerateForScreen="False" />
@@ -52,7 +52,7 @@
       <ResampleMethod>near</ResampleMethod>
       <Surface On="True" />
     </Layer>
-    <Layer Name="ManningNFromZonePolygons" Type="LandCover" Filename=".\ManningNFromZonePolygons.tif">
+    <Layer Name="ManningNFromZonePolygons" Type="LandCover" Checked="True" Filename=".\ManningNFromZonePolygons.tif">
       <Alpha>250</Alpha>
       <ResampleMethod>near</ResampleMethod>
       <ColorByteMap Alpha="250" Values="0,6,5,1,3,4,2" Colors="-100663296,-89447392,-91935933,-88505556,-87933887,-92188319,-96304119" />
@@ -69,10 +69,10 @@
     </Layer>
   </Terrains>
   <CurrentView>
-    <MaxX>414609.196132002</MaxX>
-    <MinX>402258.057853427</MinX>
-    <MaxY>1808288.95571423</MaxY>
-    <MinY>1799202.76997241</MinY>
+    <MaxX>415719.54246556</MaxX>
+    <MinX>401358.625766429</MinX>
+    <MaxY>1808885.60868283</MaxY>
+    <MinY>1798789.84674748</MinY>
   </CurrentView>
   <VelocitySettings>
     <Density>1.5</Density>

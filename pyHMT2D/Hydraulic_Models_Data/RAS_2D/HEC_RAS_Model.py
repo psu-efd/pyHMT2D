@@ -462,6 +462,24 @@ class HEC_RAS_Model(HydraulicModel):
 
         return currentPlanName, currentPlanFile
 
+    def set_current_plan(self, planName):
+        """
+
+        Parameters
+        ----------
+        planName : str
+            name of the plan to be set as current
+
+        Returns
+        -------
+
+        """
+
+        #TODO: should check whether planName is in the list plans of current project
+
+        self._RASController.Plan_SetCurrent(planName)
+
+
     def get_simulation_case(self):
         """Get the simulation case to RAS_2D_data
 
