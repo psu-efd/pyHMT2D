@@ -10,7 +10,7 @@ from scipy import interpolate
 
 import xml.etree.cElementTree as ET
 
-from osgeo import gdal
+#from osgeo import gdal
 
 
 def horizontalDistance(point1, point2):
@@ -111,6 +111,8 @@ def build_gdal_vrt(vrtFileName, sourceGeoTiffFileNameList):
     -------
 
     """
+
+    from osgeo import gdal
 
     vrt_options = gdal.BuildVRTOptions(resampleAlg='cubic', addAlpha=True)
 

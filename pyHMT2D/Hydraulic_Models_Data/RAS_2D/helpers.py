@@ -6,8 +6,8 @@ Some of the following code is adapted from pyras under the MIT license: https://
 
 import os
 
-import win32api
-import win32con
+#import win32api
+#import win32con
 
 from pyHMT2D.Misc import yes_or_no
 
@@ -83,6 +83,10 @@ def _get_typelib_info(keyid, version):
 
     # Copyright (c) 1996-2008, Greg Stein and Mark Hammond.
     """
+
+    import win32api
+    import win32con
+
     collected = []
     help_path = ""
     key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT,
@@ -141,6 +145,10 @@ def _get_registered_typelibs(match='HEC River Analysis System'):
 
     # Copyright (c) 1996-2008, Greg Stein and Mark Hammond.
     """
+
+    import win32api
+    import win32con
+
     # Explicit lookup in the registry.
     result = []
     key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT, "TypeLib")

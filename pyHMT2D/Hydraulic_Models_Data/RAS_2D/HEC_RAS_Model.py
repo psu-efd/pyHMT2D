@@ -2,7 +2,7 @@
 RAS_2D_Model:
 """
 
-import win32com.client as win32
+#import win32com.client as win32
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
 
 from pyHMT2D.__common__ import gVerbose
@@ -281,6 +281,8 @@ class HEC_RAS_Model(HydraulicModel):
         """
 
         print("Initializing HEC-RAS ...")
+
+        import win32com.client as win32
 
         # Should we kill all currently running HEC-RAS instances? Probably not a good idea.
         #kill_all_hec_ras()

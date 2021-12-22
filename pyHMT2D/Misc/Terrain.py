@@ -7,8 +7,8 @@ import math
 import numpy as np
 import sys
 
-from osgeo import gdal
-from osgeo import osr
+#from osgeo import gdal
+#from osgeo import osr
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 import random
@@ -57,6 +57,9 @@ class Terrain(HydraulicData):
             name of the terrain
 
         """
+
+        from osgeo import gdal
+        from osgeo import osr
 
         HydraulicData.__init__(self, "Terrain")
 
@@ -190,7 +193,7 @@ class Terrain(HydraulicData):
             for ix in range(0, nx + extra_len_nx * 2):
                 self.elevation[iy, ix] = elevation_origin -slope * (ix-extra_len_nx) * pixel_width
 
-    def add_bedform(self, channel_lenx, channel_leny, Lb, Hb, alpha_lee, a_stoss, rotation=0,perturbation=0):
+    def add_bedform(self, channel_lenx, channel_leny, Lb, Hb, alpha_lee, a_stoss, rotation=0,perturbation=0,perturb_distribution=0):
         """Add bedform feature to the terrain
 
         Typical use scenario is firstly to create a constant slope channel and then add the bedform features.
@@ -213,6 +216,8 @@ class Terrain(HydraulicData):
             optional rotation angle of the domain in degrees (default is zero)
         perturbation : float
             optional perturbation added to the terrain (default is zero)
+        perturb_distribution: integer
+            optional perturbation distribution type: 0-uniform, 1-normal (mean=0, sd=perturbation/1.96)
 
         Returns
         -------
@@ -272,7 +277,12 @@ class Terrain(HydraulicData):
 
                 # take care of optional perturbation
                 if np.abs(perturbation) > 1e-3:
-                    deltaZ += (random.random() - 0.5)*2*perturbation
+                    if perturb_distribution==0: #uniform distribution
+                        deltaZ += (random.random() - 0.5)*2*perturbation
+                    elif perturb_distribution==1: #normal distribution
+                        deltaZ += (random.normalvariate(0.0, perturbation/1.96))
+                    else:
+                        raise ("Wrong choice of perturbation distribution = ", perturb_distribution)
 
                 self.elevation[iy, ix] += deltaZ
 
