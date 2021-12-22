@@ -1814,7 +1814,7 @@ class SRH_2D_Data(HydraulicData):
 
             uGrid = vtk.vtkUnstructuredGrid()
             uGrid.SetPoints(pointsVTK)
-            uGrid.SetCells(cell_types, cellsVTK)
+            uGrid.SetCells(cell_types.tolist(), cellsVTK)
 
             cell_data = uGrid.GetCellData()  # This holds cell data
             point_data = uGrid.GetPointData()  # This holds point data

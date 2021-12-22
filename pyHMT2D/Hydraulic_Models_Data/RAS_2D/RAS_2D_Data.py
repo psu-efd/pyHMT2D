@@ -28,7 +28,7 @@ import h5py
 import vtk
 from vtk.util import numpy_support as VN
 from scipy import interpolate
-from osgeo import gdal
+#from osgeo import gdal
 import affine
 import os.path
 import copy
@@ -892,6 +892,8 @@ class RAS_2D_Data(HydraulicData):
         """
         if gVerbose: print('Building 2D interpolator from GeoTiff file ...')
 
+        from osgeo import gdal
+
         # Read raster
         source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
         #print(source)
@@ -932,6 +934,8 @@ class RAS_2D_Data(HydraulicData):
         -------
 
         """
+
+        from osgeo import gdal
 
         #check whether the geoTiff file exists
         if not os.path.isfile(geoTiffFileName):
@@ -1769,6 +1773,10 @@ class RAS_2D_Data(HydraulicData):
                 #convert cell's number of face points to VTK cell type
                 vtkHandler_obj = vtkHandler()
                 cell_types = vtkHandler_obj.number_of_nodes_to_vtk_celltypes(cellFPCounts)
+
+                #for vtk version > 9, it seems the vtkUnstructuredGrid's SetCells() function has changed.
+                #The following is to convert cell_types from numpy's array to list
+                cell_types = cell_types.tolist()
 
                 cellsVTK = vtk.vtkCellArray()
                 cellsVTK.SetCells(self.TwoDAreaCellCounts[i], VN.numpy_to_vtkIdTypeArray(connectivity))
