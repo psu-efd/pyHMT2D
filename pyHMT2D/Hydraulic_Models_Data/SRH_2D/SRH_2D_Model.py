@@ -255,6 +255,8 @@ class SRH_2D_Model(HydraulicModel):
         else:
             print("SRH-2D simulation was not successful! Check the output files.")
 
+        return bRunSucessful
+
 
     def run_pre_model(self):
         """Run SRH-2D Pre to preprocess the simulation case
