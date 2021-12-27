@@ -211,6 +211,56 @@ class SRH_2D_SRHHydro:
             else:
                 print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
 
+    def modify_Case_Name(self, newCaseName):
+        """Modify grid file name
+
+        Parameters
+        ----------
+        newCaseName : str
+            new case name
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify case name ...")
+
+        self.srhhydro_content['Case'] = newCaseName
+
+    def modify_Grid_FileName(self, newGridFileName):
+        """Modify grid file name
+
+        Parameters
+        ----------
+        newGridFileName : str
+            new grid file name
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify grid file name ...")
+
+        self.srhhydro_content['Grid'] = newGridFileName
+
+    def modify_HydroMat_FileName(self, newHydroMatFileName):
+        """Modify grid file name
+
+        Parameters
+        ----------
+        newHydroMatFileName : str
+            new HydroMat file name
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify HydroMat file name ...")
+
+        self.srhhydro_content['HydroMat'] = newHydroMatFileName
 
     def write_to_file(self, new_srhhydro_file_name):
         """Write to a SRHHydro file (useful for modification of the SRHHydro file)
