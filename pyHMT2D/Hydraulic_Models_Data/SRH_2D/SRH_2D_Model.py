@@ -156,11 +156,16 @@ class SRH_2D_Model(HydraulicModel):
 
         self._srh_2d_data = None
 
-    def run_model(self):
+    def run_model(self, sleepTime = 10.0, bShowProgress=True):
         """Run the SRH-2D model
 
         It will run the current SRH-2D project (case) and show a progress bar. The case
         has to be created before with open_project(...) or set_simulation_case().
+
+        :param sleepTime: float
+            sleep time between each check on the progress
+        :param bShowProgress: bool
+            whether show the progress bar
 
         Returns
         -------
@@ -188,58 +193,59 @@ class SRH_2D_Model(HydraulicModel):
             print("Error while deleting case's existing _INF.DAT file. Exiting ...")
             sys.exit()
 
-        p = subprocess.Popen([cmd, case_srhhydro_file_name], shell=True, stdout=subprocess.PIPE,
+        p = subprocess.Popen([cmd, case_srhhydro_file_name], shell=False, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
 
-        #print the simulation progress bar
-        totalClicks = 100  # this is the granularity of the progress bar (how many times it needs to be updated)
+        if bShowProgress:
+            # print the simulation progress bar
+            totalClicks = 100  # this is the granularity of the progress bar (how many times it needs to be updated)
 
-        while True:
-            counter = 0 #counter to track how many times (out of 100) the bar() function has been called
+            while True:
+                counter = 0  # counter to track how many times (out of 100) the bar() function has been called
 
-            previous_checked_simulation_time = startTime  #this may not work if it is a restart simulation (?)
+                previous_checked_simulation_time = startTime  # this may not work if it is a restart simulation (?)
 
-            time.sleep(10)  #check the simulation progress every 5 s (this value needs to be updated for each case
-            # depending on how long the simulation will be).
+                time.sleep(10)  # check the simulation progress every 5 s (this value needs to be updated for each case
+                # depending on how long the simulation will be).
 
-            #get the latest simulation information from the INF file
-            if os.path.isfile(case_INF_file_name):
-                info_data = np.genfromtxt(case_INF_file_name,skip_header=1)
-                #print(info_data[-1,1])  #latest "Time(Hours)"
-            else:
-                continue
+                # get the latest simulation information from the INF file
+                if os.path.isfile(case_INF_file_name):
+                    info_data = np.genfromtxt(case_INF_file_name, skip_header=1)
+                    # print(info_data[-1,1])  #latest "Time(Hours)"
+                else:
+                    continue
 
-            #need to consider the scenarios that there is zero line, one line, and multiple lines of INFO output
-            current_simulation_time = startTime
-            try:
-                if len(info_data.shape) == 0:
-                    current_simulation_time = startTime
-                elif len(info_data.shape) == 1:
-                    current_simulation_time = info_data[1]
-                elif len(info_data.shape) == 2:
-                    current_simulation_time = info_data[-1,1]
+                # need to consider the scenarios that there is zero line, one line, and multiple lines of INFO output
+                current_simulation_time = startTime
+                try:
+                    if len(info_data.shape) == 0:
+                        current_simulation_time = startTime
+                    elif len(info_data.shape) == 1:
+                        current_simulation_time = info_data[1]
+                    elif len(info_data.shape) == 2:
+                        current_simulation_time = info_data[-1, 1]
 
-                time_passed_since_last_check = current_simulation_time - previous_checked_simulation_time
-                clicks_since_last_check = int(time_passed_since_last_check/(endTime-startTime)*totalClicks)
+                    time_passed_since_last_check = current_simulation_time - previous_checked_simulation_time
+                    clicks_since_last_check = int(time_passed_since_last_check / (endTime - startTime) * totalClicks)
 
-                counter += clicks_since_last_check
+                    counter += clicks_since_last_check
 
-                #print("clicks_since_last_check, counter", clicks_since_last_check, counter)
+                    # print("clicks_since_last_check, counter", clicks_since_last_check, counter)
 
-                if clicks_since_last_check > 0:
-                    printProgressBar(counter, totalClicks, "Simulation in progress")
-                    # print("test")   #Don't do this. It will create a new progress bar each time.
+                    if clicks_since_last_check > 0:
+                        printProgressBar(counter, totalClicks, "Simulation in progress")
+                        # print("test")   #Don't do this. It will create a new progress bar each time.
 
-                previous_checked_simulation_time = current_simulation_time
+                    previous_checked_simulation_time = current_simulation_time
 
-            except IndexError:   #try to catch the occational index error if the INF write is not compplete.
-                continue
+                except IndexError:  # try to catch the occational index error if the INF write is not compplete.
+                    continue
 
-            if counter > totalClicks:
-                break
+                if counter > totalClicks:
+                    break
 
-            if p.poll() is not None:
-                break
+                if p.poll() is not None:
+                    break
 
         print("\n")
 
