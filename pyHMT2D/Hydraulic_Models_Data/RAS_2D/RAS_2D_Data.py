@@ -240,7 +240,7 @@ class RAS_2D_Data(HydraulicData):
     def get_version(self):
         """Get the version of HEC-RAS that produced this file
 
-        Version of HEC-RAS, such as "5.0.7", "6.0.0"
+        Version of HEC-RAS, such as "5.0.7", "6.0.0", "6.1.0"
 
         Parameters
         -----------
@@ -255,8 +255,15 @@ class RAS_2D_Data(HydraulicData):
             self.version = '5.0.7'
         elif b'6.0.0' in file_version:
             self.version = '6.0.0'
+        elif b'6.1.0' in file_version:
+            self.version = '6.1.0'
         else:
-            raise Exception("The file version of the HEC-RAS result file is not supported.")
+            #raise Exception("The file version of the HEC-RAS result file is not supported.")
+
+            print("The file version of the HEC-RAS result file is not supported.")
+            print("    Version of the HEC-RAS result file: ", file_version)
+            print("    Supported versions: 5.0.7, 6.0.0, and 6.1.0")
+            sys.exit(-1)
 
         #print("HEC-RAS file version = ", self.version)
 
@@ -647,6 +654,9 @@ class RAS_2D_Data(HydraulicData):
                 for i in range(len(IDs)):
                     self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
 
+            elif self.version == '6.1.0':
+                raise Exception("Not implemented yet.")
+
             else:
                 raise Exception("The version of HEC-RAS that produced this HDF result file is not supported.")
 
@@ -870,6 +880,8 @@ class RAS_2D_Data(HydraulicData):
             self.change_ManningsN_v5(materialIDs, newManningsNValues, materialNames)
         elif self.version == '6.0.0':
             self.change_ManningsN_v6(materialIDs, newManningsNValues, materialNames)
+        elif self.version == '6.1.0':
+            raise Exception("Not implemented yet.")
 
         if gVerbose: print("Finished modifying Manning's n value ...")
 
@@ -1318,7 +1330,7 @@ class RAS_2D_Data(HydraulicData):
                 WSE_name = 'Water Surface'
                 nodeVx_name = 'Node X Vel'
                 nodeVy_name = 'Node Y Vel'
-            elif self.version == '6.0.0':
+            elif self.version == '6.0.0' or self.version == '6.1.0':
                 depth_name = 'Cell Invert Depth'
                 WSE_name = 'Water Surface'
                 nodeVx_name = 'Node Velocity - Velocity X'
@@ -1599,8 +1611,10 @@ class RAS_2D_Data(HydraulicData):
         #land cover layer name.tif. Need to check this assumption.
         if self.version == '5.0.7':
             full_landcover_filename = fileBase+self.landcover_filename
-        elif self.version == '6.0.0':
+        elif self.version == '6.0.0' or self.version == '6.1.0':
             full_landcover_filename = (fileBase+self.landcover_filename[:-4])+b'.tif'
+        else:
+            raise Exception("HEC-RAS version not supported. ")
 
         if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
             ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]
