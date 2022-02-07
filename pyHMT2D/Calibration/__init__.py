@@ -1,6 +1,6 @@
 from .Measurements import *
 from .Objectives import *
-from .Parameters import *
+from pyHMT2D.Calibration.Parameters import *
 from .Calibrator import *
 from .Optimizer import *
 

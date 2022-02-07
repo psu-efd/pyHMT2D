@@ -1,0 +1,41 @@
+{
+  "model": "SRH-2D",
+  "SRH-2D": {
+	"version": "3.3",
+    "srh_pre_path": "C:\\Program Files\\SMS 13.1 64-bit\\Python36\\Lib\\site-packages\\srh2d_exe\\SRH_Pre_Console.exe",
+    "srh_path": "C:\\Program Files\\SMS 13.1 64-bit\\Python36\\Lib\\site-packages\\srh2d_exe\\SRH-2D_V330_Console.exe",
+    "extra_dll_path": "C:\\Program Files\\SMS 13.1 64-bit\\Python36\\Lib\\site-packages\\srh2d_exe",
+	"case": "Muncie.srhhydro"
+  },
+  "parametric_study": {
+		"parameters": [
+			{
+				"type": "ManningN",
+				"material_name": "Main Channel",
+				"materialID": 1,
+				"value": 0.04,
+				"initial_guess": 0.04,
+				"min": 0.01,
+				"max": 0.06,
+				"active": "True"
+			},
+			{
+				"type": "InletQ",
+				"bc_name": "Upstream Inlet",
+				"bcID": 2,
+				"value": 3.0
+				"initial_guess": 3.0,
+				"min": 1,
+				"max": 4,
+				"active": "True"
+			}
+		],
+    "sampler": "enumerator",
+    "enumerator": [
+            [0.2, 1],
+			[0.2, 2],
+			[0.2, 3.5],
+			[0.38, 3.5]
+        ]
+    }
+}
