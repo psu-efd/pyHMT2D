@@ -288,8 +288,10 @@ class SRH_2D_Model(HydraulicModel):
 
         if str.encode("successfully executed") in p.stdout:
             print("SRH-2D Pre was successfully done!")
+            return True
         else:
             print("SRH-2D Pre was not successfully! Check the output files.")
+            return False
 
     def exit_model(self):
         """Exit the model (SRH-2D specific)

@@ -16,7 +16,8 @@ class Parameter(object):
         Parameters
         ----------
         active : bool, optional
-            whether this calibration parameter is active or not (default: True)
+            whether this parameter is active or not (default: False). Active refers to whether the parameter
+            participate in calibration or scenarios building.
 
 
         """
@@ -24,11 +25,17 @@ class Parameter(object):
         #type
         self.type = "Parameter_Base"
 
+        #name
+        self.name = "Parameter Base"
+
         #active or not (default: True)
-        self.active = active
+        self.active = True
+
+        self.min = 0.0
+        self.max = 0.0
 
 class Parameter_ManningN(Parameter):
-    """ ManningN calibration parameter class
+    """ ManningN parameter class
 
     Attributes
     ----------
@@ -59,22 +66,181 @@ class Parameter_ManningN(Parameter):
         # materialID of the Manning's n
         self.materialID = parameterDict["materialID"]
 
+        self.name = self.type + "_" + str(self.materialID)
+
         # material name
         self.material_name = parameterDict["material_name"]
 
         # initial guess for the optimizer
-        self.initial_guess = parameterDict["initial_guess"]
+        if "initial_guess" in parameterDict:
+            self.initial_guess = parameterDict["initial_guess"]
+        else:
+            self.initial_guess = None
+
+        # value for the Manning's n
+        if "value" in parameterDict:
+            self.value = parameterDict["value"]
+        else:
+            self.value = None
 
         # bound: min and max
         self.min = parameterDict["min"]
         self.max = parameterDict["max"]
 
         # some sanity check:
-        if self.min > self.max or \
-           self.initial_guess < self.min or \
-           self.initial_guess > self.max:
-            raise Exception("In ManningN calibration parameter specification, either the min is larger than"
-                            " the max, or the initial guess is not in the [min, max] range. Check. Exiting ...")
+        if self.min > self.max:
+            raise Exception("In ManningN parameter specification, the min and larger than the max.")
+
+        if self.initial_guess is not None:
+            if self.initial_guess < self.min or \
+                    self.initial_guess > self.max:
+                raise Exception("In ManningN parameter specification, the initial guess is not in the [min, max] range. Check. Exiting ...")
+
+        if "active" in parameterDict:
+            if parameterDict["active"] == "True":
+                self.active = True
+            elif parameterDict["active"] == "False":
+                self.active = False
+            else:
+                raise  Exception("In Parameter dictionary, \"active\" should be either \"True\" or \"False\". "
+                                 "Please check. Exiting ...")
+
+class Parameter_InletQ(Parameter):
+    """ InletQ parameter class
+
+    Attributes
+    ----------
+    bcID : int
+        bcID for the InletQ
+    value: float
+        value for the InletQ
+    initial_guess: float
+        initial guess of the InletQ
+    min, max: float
+        min and max of the calibration parameter bound
+
+    """
+
+    def __init__(self, parameterDict):
+        """Parameter_InletQ class constructor
+
+        Parameters
+        ----------
+        parameterDict : dict
+            dictionary that contains InletQ parameter information.
+
+        """
+
+        Parameter.__init__(self)
+
+        # type
+        self.type = "InletQ"
+
+        # bcID of the InletQ
+        self.bcID = parameterDict["bcID"]
+
+        self.name = self.type + "_" + str(self.bcID)
+
+        # bc name
+        self.bc_name = parameterDict["bc_name"]
+
+        # initial guess for the optimizer
+        if "initial_guess" in parameterDict:
+            self.initial_guess = parameterDict["initial_guess"]
+        else:
+            self.initial_guess = None
+
+        # value for the Manning's n
+        if "value" in parameterDict:
+            self.value = parameterDict["value"]
+        else:
+            self.value = None
+
+        # bound: min and max
+        self.min = parameterDict["min"]
+        self.max = parameterDict["max"]
+
+        # some sanity check:
+        if self.min > self.max:
+            raise Exception("In InletQ parameter specification, the min and larger than the max.")
+
+        if self.initial_guess is not None:
+            if self.initial_guess < self.min or \
+                    self.initial_guess > self.max:
+                raise Exception("In InletQ parameter specification, the initial guess is not in the [min, max] range. Check. Exiting ...")
+
+        if "active" in parameterDict:
+            if parameterDict["active"] == "True":
+                self.active = True
+            elif parameterDict["active"] == "False":
+                self.active = False
+            else:
+                raise  Exception("In Parameter dictionary, \"active\" should be either \"True\" or \"False\". "
+                                 "Please check. Exiting ...")
+
+class Parameter_ExitH(Parameter):
+    """ ExitH parameter class
+
+    Attributes
+    ----------
+    bcID : int
+        bcID for the ExitH
+    value: float
+        value for the ExitH
+    initial_guess: float
+        initial guess of the ExitH
+    min, max: float
+        min and max of the calibration parameter bound
+
+    """
+
+    def __init__(self, parameterDict):
+        """Parameter_ExitH class constructor
+
+        Parameters
+        ----------
+        parameterDict : dict
+            dictionary that contains ExitH parameter information.
+
+        """
+
+        Parameter.__init__(self)
+
+        # type
+        self.type = "ExitH"
+
+        # bcID of the ExitH
+        self.bcID = parameterDict["bcID"]
+
+        self.name = self.type + "_" + str(self.bcID)
+
+        # bc name
+        self.bc_name = parameterDict["bc_name"]
+
+        # initial guess for the optimizer
+        if "initial_guess" in parameterDict:
+            self.initial_guess = parameterDict["initial_guess"]
+        else:
+            self.initial_guess = None
+
+        # value for the Manning's n
+        if "value" in parameterDict:
+            self.value = parameterDict["value"]
+        else:
+            self.value = None
+
+        # bound: min and max
+        self.min = parameterDict["min"]
+        self.max = parameterDict["max"]
+
+        # some sanity check:
+        if self.min > self.max:
+            raise Exception("In ExitH parameter specification, the min and larger than the max.")
+
+        if self.initial_guess is not None:
+            if self.initial_guess < self.min or \
+                    self.initial_guess > self.max:
+                raise Exception("In ExitH parameter specification, the initial guess is not in the [min, max] range. Check. Exiting ...")
 
         if "active" in parameterDict:
             if parameterDict["active"] == "True":
@@ -115,6 +281,9 @@ class Parameters(object):
         # build parameter_list
         self.build_parameter_list()
 
+        # sample in the parameter space
+        self.sample()
+
 
     def build_parameter_list(self):
         """ Build parameter_list
@@ -128,16 +297,73 @@ class Parameters(object):
         for parameterDict in self.parametersDict:
             if parameterDict["type"] == "ManningN":
                 #construct the Parameter object
-                currParameter = pyHMT2D.Calibration.Parameter_ManningN(parameterDict)
+                currParameter = Parameter_ManningN(parameterDict)
 
                 #append the Parameter_ManningN object to the list
+                self.parameter_list.append(currParameter)
+            elif parameterDict["type"] == "InletQ":
+                #construct the Parameter object
+                currParameter = Parameter_InletQ(parameterDict)
+
+                #append the Parameter_InletQ object to the list
+                self.parameter_list.append(currParameter)
+            elif parameterDict["type"] == "ExitH":
+                #construct the Parameter object
+                currParameter = Parameter_ExitH(parameterDict)
+
+                #append the Parameter_ExitH object to the list
                 self.parameter_list.append(currParameter)
             else:
                 raise Exception("The specified calibration parameter type", parameterDict["type"],
                                 "is currently not supported. Support type is ManningN. Exiting ...")
 
+    def get_parameter_list(self):
+        if len(self.parameter_list)==0:
+            self.build_parameter_list()
+            return self.parameter_list
+
+        return self.parameter_list
+
+    def get_parameter_space(self):
+        """
+        Build and return the parameter space.
+        [
+          (min, max),   #min and max for each parameter in the oder of the configuration list
+          (min, max),
+          ...
+        ]
+
+        Returns
+        -------
+
+        """
+
+        parameter_space_list = []
+
+        for parameter in self.parameter_list:
+            parameter_space_list.append((parameter.min, parameter.max))
+
+        return parameter_space_list
+
+    def get_parameter_name_list(self):
+        """
+        Build and return the list of parameter names
+
+        Returns
+        -------
+
+        """
+
+        parameter_name_list = []
+
+        for parameter in self.parameter_list:
+            parameter_name_list.append(parameter.name)
+
+        return parameter_name_list
+
+
     def get_ManningN_Info_list(self):
-        """ Get the calibration ManningN's information
+        """ Get the ManningN's information
 
         This function returns the following:
         1. a list of calibration materialIDs
@@ -183,3 +409,14 @@ class Parameters(object):
             raise Exception("Manning's n calibration materailIDs are not unique. Please check. Exiting ...")
 
         return materialID_list, materialName_list, initial_guess_list, ManningN_min_list, ManningN_max_list
+
+    def sample(self):
+        """
+        Sample in the parameter space.
+
+
+
+        Returns
+        -------
+
+        """

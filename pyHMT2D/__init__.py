@@ -1,6 +1,7 @@
 
 from .Hydraulic_Models_Data import *
 from .Calibration import *
+from .Parametric_Study import *
 from .Misc import *
 from .cli import *
 
@@ -14,6 +15,7 @@ __all__ = [
     "SRH_2D",
     "RAS_2D",
     "Calibration",
+    "Parametric_Study",
     "Misc",
     "gVerbose",
     "gMax_Nodes_per_Element",

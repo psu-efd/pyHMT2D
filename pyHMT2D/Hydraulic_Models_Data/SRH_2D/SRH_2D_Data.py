@@ -173,7 +173,18 @@ class SRH_2D_SRHHydro:
 
         self.srhhydro_content = res_all
 
-    def modify_ManningsN(self, materialIDs, newManningsNValues,ManningN_MaterialNames):
+    def get_ManningN_dict(self):
+        """
+        Get the dictionary for Manning's n
+
+        Returns
+        -------
+
+        """
+
+        return self.srhhydro_content["ManningsN"]
+
+    def modify_ManningsN(self, materialIDs, newManningsNValues, ManningN_MaterialNames):
         """Modify materialID's Manning's n value to new value
 
         Parameters
@@ -211,6 +222,157 @@ class SRH_2D_SRHHydro:
             else:
                 print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
 
+    def get_BC(self):
+        """
+        Get boundary condition dictionary.
+
+        Returns
+        -------
+
+        """
+
+        BC_Dict = self.srhhydro_content["BC"]
+
+        return BC_Dict
+
+    def get_InletQ(self):
+        """
+        Get InletQ dictionary:
+
+        Returns
+        -------
+
+        """
+
+        if 'IQParams' not in self.srhhydro_content:
+            IQParams_Dict = {}   #empty
+        else:
+            IQParams_Dict = self.srhhydro_content['IQParams']
+
+        return IQParams_Dict
+
+    def modify_InletQ(self, bcIDs, newInletQValues):
+        """Modify bcID's InletQ value to new value.
+
+        Currently only constant inlet flow is supported.
+
+        Parameters
+        ----------
+        bcIDs : list
+            bc ID list
+        newInletQValues : list
+            new InletQ value list
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify InletQ value ...")
+
+        if not isinstance(bcIDs[0], int):
+            raise Exception("Boundary condition ID has to be an integer. The type of bcID passed in is ",
+                            type(bcIDs[0]))
+
+        if not isinstance(newInletQValues[0], float):
+            raise Exception("IneltQ value has to be a float. The type of newInletQValues passed in is ",
+                            type(newInletQValues[0]))
+
+        BC_Dict = self.srhhydro_content["BC"]
+
+        if 'IQParams' not in self.srhhydro_content:
+            raise Exception("There is INLET-Q boundary in the SRHHydro file.")
+
+        IQParams_Dict = self.srhhydro_content['IQParams']
+
+
+        for i in range(len(bcIDs)):
+            bcID = bcIDs[i]
+
+            if bcID in BC_Dict:
+                # Make sure this bcID's corresponding BC type is InletQ
+                if BC_Dict[bcID] != "INLET-Q":
+                    raise Exception("The boundary condition for the specified bcID ", bcID, "is not INLET-Q.")
+
+                # Also make sure bcID is in the "IQParams" dictionary
+                if bcID not in IQParams_Dict:
+                    raise Exception("The specified bcID ", bcID, "is not in the IQParams dictionary.")
+
+                if gVerbose: print("    Old InletQ value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                IQParams_Dict[bcID][0] = newInletQValues[i]
+                if gVerbose: print("    New InletQ value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+            else:
+                print("The specified bcID", bcID, "is not in the boundary list. Please check.")
+
+    def get_ExitH(self):
+        """
+        Get ExitH dictionary:
+
+        Returns
+        -------
+
+        """
+
+        if 'EWSParamsC' not in self.srhhydro_content:
+            EWSParamsC_Dict = {}   #empty
+        else:
+            EWSParamsC_Dict = self.srhhydro_content['EWSParamsC']
+
+        return EWSParamsC_Dict
+
+    def modify_ExitH(self, bcIDs, newExitHValues):
+        """Modify bcID's ExitH value to new value.
+
+        Currently only constant WSE is supported.
+
+        Parameters
+        ----------
+        bcIDs : list
+            bc ID list
+        newExitHValues : list
+            new ExitH value list
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify Exit-H value ...")
+
+        if not isinstance(bcIDs[0], int):
+            raise Exception("Boundary condition ID has to be an integer. The type of bcID passed in is ",
+                            type(bcIDs[0]))
+
+        if not isinstance(newExitHValues[0], float):
+            raise Exception("IneltQ value has to be a float. The type of newInletQValues passed in is ",
+                            type(newExitHValues[0]))
+
+        BC_Dict = self.srhhydro_content["BC"]
+
+        if 'EWSParamsC' not in self.srhhydro_content:
+            raise Exception("There is no constant stage exit boundary in the SRHHydro file.")
+
+        EWSParamsC_Dict = self.srhhydro_content['EWSParamsC']
+
+
+        for i in range(len(bcIDs)):
+            bcID = bcIDs[i]
+
+            if bcID in BC_Dict:
+                # Make sure this bcID's corresponding BC type is InletQ
+                if BC_Dict[bcID] != "EXIT-H":
+                    raise Exception("The boundary condition for the specified bcID ", bcID, "is not EXIT-H.")
+
+                # Also make sure bcID is in the "EWSParamsC" dictionary
+                if bcID not in EWSParamsC_Dict:
+                    raise Exception("The specified bcID ", bcID, "is not in the EWSParamsC dictionary.")
+
+                if gVerbose: print("    Old EXIT-H value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                EWSParamsC_Dict[bcID][0] = newExitHValues[i]
+                if gVerbose: print("    New EXIT-H value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+            else:
+                print("The specified bcID", bcID, "is not in the boundary list. Please check.")
+
     def modify_Case_Name(self, newCaseName):
         """Modify grid file name
 
@@ -227,6 +389,9 @@ class SRH_2D_SRHHydro:
         if gVerbose: print("Modify case name ...")
 
         self.srhhydro_content['Case'] = newCaseName
+
+    def get_Case_Name(self):
+        return self.srhhydro_content['Case']
 
     def modify_Grid_FileName(self, newGridFileName):
         """Modify grid file name
@@ -245,6 +410,9 @@ class SRH_2D_SRHHydro:
 
         self.srhhydro_content['Grid'] = newGridFileName
 
+    def get_Grid_FileName(self):
+        return self.srhhydro_content['Grid']
+
     def modify_HydroMat_FileName(self, newHydroMatFileName):
         """Modify grid file name
 
@@ -261,6 +429,9 @@ class SRH_2D_SRHHydro:
         if gVerbose: print("Modify HydroMat file name ...")
 
         self.srhhydro_content['HydroMat'] = newHydroMatFileName
+
+    def get_HydroMat_FileName(self):
+        return self.srhhydro_content['HydroMat']
 
     def write_to_file(self, new_srhhydro_file_name):
         """Write to a SRHHydro file (useful for modification of the SRHHydro file)
@@ -1147,7 +1318,7 @@ class SRH_2D_SRHGeom:
 
         uGrid = vtk.vtkUnstructuredGrid()
         uGrid.SetPoints(pointsVTK)
-        uGrid.SetCells(cell_types, cellsVTK)
+        uGrid.SetCells(cell_types.tolist(), cellsVTK)
 
         # write to vtk file
         unstr_writer = vtk.vtkUnstructuredGridWriter()
