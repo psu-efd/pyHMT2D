@@ -10,7 +10,8 @@ def run_HEC_RAS():
 
     #create a HEC-RAS model instance
     #my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7",faceless=False)
-    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.0.0", faceless=False)
+    #my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.0.0", faceless=False)
+    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.1.0", faceless=False)
 
     #initialize the HEC-RAS model
     my_hec_ras_model.init_model()
@@ -46,9 +47,9 @@ def convert_HEC_RAS_to_VTK():
 
 if __name__ == "__main__":
 
-    #run_HEC_RAS()
+    run_HEC_RAS()
 
-    convert_HEC_RAS_to_VTK()
+    #convert_HEC_RAS_to_VTK()
 
     print("All done!")
 
