@@ -635,6 +635,8 @@ class RAS_2D_Data(HydraulicData):
                 for i in range(len(IDs)):
                     self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
 
+                hfManningN.close()
+
             elif self.version == '6.0.0':
                 hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
@@ -654,21 +656,42 @@ class RAS_2D_Data(HydraulicData):
                 for i in range(len(IDs)):
                     self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
 
+                hfManningN.close()
+
             elif self.version == '6.1.0':
-                raise Exception("Not implemented yet.")
+                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+
+                dset = hfManningN['IDs']
+
+                #with dset.astype(np.uint8):
+                #    IDs = dset[:]
+                IDs = dset.astype(np.uint8)[:]
+
+
+                ManningN = np.array(hfManningN['ManningsN'])
+                Names = hfManningN['Names']
+
+                # print("IDs =", IDs)
+                # print("ManningN =", ManningN)
+                # print("Names =", Names)
+
+                for i in range(len(IDs)):
+                    self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+
+                hfManningN.close(0)
+
 
             else:
+                hf.close()
                 raise Exception("The version of HEC-RAS that produced this HDF result file is not supported.")
 
 
             if gVerbose: print("self.ManningNZones = ", self.ManningNZones)
 
-            hfManningN.close()
-
         hf.close()
 
-    def change_ManningsN_v5(self, materialIDs, newManningsNValues, materialNames):
-        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v5)
+    def change_ManningsN(self, materialIDs, newManningsNValues, materialNames):
+        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v5 and v6.1.0)
 
         Parameters
         ----------
@@ -712,8 +735,9 @@ class RAS_2D_Data(HydraulicData):
 
             dset = hfManningN['IDs']
 
-            with dset.astype(np.uint8):
-                IDs = dset[:]
+            #with dset.astype(np.uint8):
+            #    IDs = dset[:]
+            IDs = dset.astype(np.uint8)
 
             IDs = IDs.tolist()
 
@@ -755,7 +779,7 @@ class RAS_2D_Data(HydraulicData):
             # need to re-build 2D Manning's n zones information after update
             self.build2DManningNZones()
 
-    def change_ManningsN_v6(self, materialIDs, newManningsNValues, materialNames):
+    def change_ManningsN_v60(self, materialIDs, newManningsNValues, materialNames):
         """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v6)
 
         Parameters
@@ -876,12 +900,10 @@ class RAS_2D_Data(HydraulicData):
             print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
                   ". Exit.\n")
 
-        if self.version == '5.0.7':
-            self.change_ManningsN_v5(materialIDs, newManningsNValues, materialNames)
-        elif self.version == '6.0.0':
-            self.change_ManningsN_v6(materialIDs, newManningsNValues, materialNames)
-        elif self.version == '6.1.0':
-            raise Exception("Not implemented yet.")
+        if self.version == '5.0.7' or self.version == '6.1.0':
+            self.change_ManningsN(materialIDs, newManningsNValues, materialNames)
+        elif self.version == '6.0.0':  #v6.0.0 is special
+            self.change_ManningsN_v60(materialIDs, newManningsNValues, materialNames)
 
         if gVerbose: print("Finished modifying Manning's n value ...")
 
@@ -927,6 +949,9 @@ class RAS_2D_Data(HydraulicData):
         ay = np.array([gt[3] + iy*gt[5] + gt[5]/2.0 for iy in range(ny)])
 
         bilinterp = interpolate.interp2d(ax, ay, band_array, kind='linear')
+
+        #close the GDAL file
+        source = None
     
         return bilinterp
 
@@ -984,6 +1009,8 @@ class RAS_2D_Data(HydraulicData):
             #Sample with the pixel coordinates. Note that py should be first because
             # the index is [rows, columns] in a 2@ grid in python
             interpolatedValues.append(data_array[py][px])
+
+        source = None
 
         return interpolatedValues
 
@@ -1612,7 +1639,7 @@ class RAS_2D_Data(HydraulicData):
         if self.version == '5.0.7':
             full_landcover_filename = fileBase+self.landcover_filename
         elif self.version == '6.0.0' or self.version == '6.1.0':
-            full_landcover_filename = (fileBase+self.landcover_filename[:-4])+b'.tif'
+            full_landcover_filename = (fileBase+self.landcover_filename[:-4])+b'.tif'   #note: it may already has the ".tif" extension
         else:
             raise Exception("HEC-RAS version not supported. ")
 

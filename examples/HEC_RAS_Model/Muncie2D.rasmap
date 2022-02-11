@@ -7,7 +7,6 @@
     <Layer Name="Muncie_base2D" Type="RASGeometry" Checked="True" Expanded="True" Filename=".\Muncie2D.g01.hdf">
       <Layer Type="RASXS" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
       <Layer Type="RASD2FlowArea" Checked="True" />
-      <Layer Type="StructureLayer" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
       <Layer Name="Culvert Groups" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="" />
       <Layer Name="Culvert Barrels" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="Bridges/Culverts" />
       <Layer Name="Gate Groups" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="" />
@@ -28,6 +27,7 @@
       <Layer Name="Culvert Barrels" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
       <Layer Name="Rating Curve Outlets" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
       <Layer Name="Outlet Time Series" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
+      <Layer Type="StructureLayer" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
       <Layer Type="RASBoundaryConditionLines" Checked="True" />
       <Layer Type="RasLandCoverRegions" Checked="True">
         <Symbology>
@@ -65,9 +65,18 @@
           <Metadata BandIndex="0" SubDataset="" />
         </Layer>
       </Layer>
-      <Layer Type="RASGeometry" Expanded="True" Filename=".\Muncie2D.p01.hdf">
+      <Layer Type="RASGeometry" Filename=".\Muncie2D.p01.hdf">
         <Layer Type="RASXS" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
-        <Layer Type="StructureLayer" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
+        <Layer Type="RASD2FlowArea">
+          <DataColumnGroupVisibilities>
+            <DataColumnGroupVisibility DisplayName="Feature Parameters" IsVisible="False" />
+          </DataColumnGroupVisibilities>
+        </Layer>
+        <Layer Type="MeshPerimeterLayer">
+          <DataColumnGroupVisibilities>
+            <DataColumnGroupVisibility DisplayName="Feature Parameters" IsVisible="True" />
+          </DataColumnGroupVisibilities>
+        </Layer>
         <Layer Name="Culvert Groups" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="" />
         <Layer Name="Culvert Barrels" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="Bridges/Culverts" />
         <Layer Name="Gate Groups" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="" />
@@ -88,6 +97,7 @@
         <Layer Name="Culvert Barrels" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
         <Layer Name="Rating Curve Outlets" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
         <Layer Name="Outlet Time Series" Type="VirtualGeometryFeatureLayer" ParentIdentifiers="SA/2D Connections" />
+        <Layer Type="StructureLayer" UnitsRiverStation="Feet" RiverStationDecimalPlaces="0" />
         <Layer Type="FinalNValueLayer">
           <ResampleMethod>near</ResampleMethod>
           <Surface On="True" />
@@ -128,11 +138,11 @@
       <ResampleMethod>near</ResampleMethod>
       <Surface On="True" />
     </Layer>
-    <Layer Name="ManningNFromZonePolygons" Type="LandCoverLayer" Filename=".\ManningNFromZonePolygons.hdf" SelectedParameterForSurfaceFillLabel="ID">
+    <Layer Name="ManningNFromZonePolygons" Type="LandCoverLayer" Checked="True" Expanded="True" Filename=".\ManningNFromZonePolygons.hdf" SelectedParameterForSurfaceFillLabel="ID">
       <Symbology>
-        <ColorByteMap Type="System.Int32" Alpha="128" Values="" Colors="" ValuesExcludeLegend="" />
+        <ColorByteMap Type="System.Int32" Alpha="128" Values="1,2,3,4,5,6" Colors="-6048093,-3416057,-4041844,-16505489,-16279128,-3933693" ValuesExcludeLegend="" />
       </Symbology>
-      <ColorByteMap Type="System.Int32" Alpha="128" Values="" Colors="" ValuesExcludeLegend="" />
+      <ColorByteMap Type="System.Int32" Alpha="128" Values="1,2,3,4,5,6" Colors="-6048093,-3416057,-4041844,-16505489,-16279128,-3933693" ValuesExcludeLegend="" />
       <Layer Name="Classification Polygons" Type="LandCoverClassificationLayer" />
     </Layer>
   </MapLayers>
@@ -146,10 +156,10 @@
     </Layer>
   </Terrains>
   <CurrentView>
-    <MaxX>406853.010308772</MaxX>
-    <MinX>403484.572483404</MinX>
-    <MaxY>1805685.71547581</MaxY>
-    <MinY>1801397.52689671</MinY>
+    <MaxX>414704.952361758</MaxX>
+    <MinX>402579.514690517</MinX>
+    <MaxY>1807711.40180388</MaxY>
+    <MinY>1798603.04713247</MinY>
   </CurrentView>
   <VelocitySettings>
     <Density>1.5</Density>
