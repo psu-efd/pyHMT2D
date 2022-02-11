@@ -678,7 +678,7 @@ class RAS_2D_Data(HydraulicData):
                 for i in range(len(IDs)):
                     self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
 
-                hfManningN.close(0)
+                hfManningN.close()
 
 
             else:
