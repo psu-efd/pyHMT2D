@@ -24,7 +24,7 @@ VERSION = '1.0.5'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'vtk>=9.0.2', 'h5py', 'scipy', 'affine', 'meshio',
+    'numpy', 'vtk>=9.0.2', 'h5py', 'scipy', 'affine', 'meshio', 'scikit-optimize',
 ]
 
 # What packages are optional?
