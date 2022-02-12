@@ -505,6 +505,19 @@ class HEC_RAS_Model(HydraulicModel):
         else:
             print("Call to set_current_plan(...) failed. Current plan not changed. Check the validity of the plan name: ", planName)
 
+    def get_current_planFile(self):
+        """
+        Return the current plan file (it seems there is no function to get plan name)
+
+        Returns
+        -------
+
+        """
+
+        plan_file = self._RASController.CurrentPlanFile()
+
+        return plan_file
+
     def load_current_plan_results(self):
         """
         Load the current plan results to ras_2d_data
@@ -623,6 +636,9 @@ class HEC_RAS_Model(HydraulicModel):
                   "False.")
 
         print("The returned messages are:")
+        print("res = ", res)
+        print("nmsg = ", nmsg)
+        print("msg = ", msg)
         for i in range(res[1]):
             print("    ", res[2][i])
 
