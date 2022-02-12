@@ -3,6 +3,8 @@ RAS_2D_Model:
 """
 
 #import win32com.client as win32
+import os.path
+
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
 
 from pyHMT2D.__common__ import gVerbose
@@ -29,7 +31,7 @@ class HEC_RAS_Project(object):
     """
 
     def __init__(self, title='', currentPlanName='', currentPlanFile='', geom_file_list=[],
-                 flow_file_list=[], plan_file_list=[], plans=[]):
+                 flow_file_list=[], plan_file_list=[], plans=[], terrainFileName=''):
         """HEC_RAS_Project class constructor
 
         Parameters
@@ -48,6 +50,8 @@ class HEC_RAS_Project(object):
             list of plan file names
         plans : str
             list of HEC_RAS_Plan objects
+        terrainFileName : str
+            name of terrain file (not necessary the terrain used by HEC-RAS; it is used for interpolation)
         """
 
         self.title = title
@@ -59,6 +63,8 @@ class HEC_RAS_Project(object):
 
         #Plans in the opened HEC-RAS project: a list of HEC_RAS_Plan objects
         self.plans = plans
+
+        self.terrainFileName = terrainFileName
 
     def set_current_plan_file_name(self, currentPlanName, currentPlanFile):
         """
@@ -77,6 +83,12 @@ class HEC_RAS_Project(object):
 
         self.currentPlanName = currentPlanName
         self.currentPlanFile = currentPlanFile
+
+    def get_current_plan_file_name(self):
+        return self.currentPlanName, self.currentPlanFile
+
+    def get_terrainFileName(self):
+        return self.terrainFileName
 
     def __del__(self):
         """ Destructor
@@ -458,13 +470,13 @@ class HEC_RAS_Model(HydraulicModel):
             self._project = None
 
         self._project = HEC_RAS_Project(title, currentPlanName, currentPlanFile, geom_file_list,
-                                        flow_file_list, plan_file_list, plans)
+                                        flow_file_list, plan_file_list, plans, terrainFileName)
 
         #dump _project content to screen
         #print(self._project)
 
-        #create RAS_2D_Data object
-        self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
+        #create RAS_2D_Data object (can't be here because the plan.hdf file exists only after the plan has been run)
+        #self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
 
         print("Finished building all the plans in the project.")
 
@@ -476,7 +488,7 @@ class HEC_RAS_Model(HydraulicModel):
         Parameters
         ----------
         planName : str
-            name of the plan to be set as current
+            name of the plan to be set as current. The name should be like "Peak_flow_plan", not "p01" or "p02"
 
         Returns
         -------
@@ -485,10 +497,35 @@ class HEC_RAS_Model(HydraulicModel):
 
         #TODO: should check whether planName is in the list plans of current project
 
-        self._RASController.Plan_SetCurrent(planName)
+        #Plan_SetCurrent(...) returns a tuple (True/False, planName)
+        ret = self._RASController.Plan_SetCurrent(planName)
+
+        if ret[0]:
+            print("Call to set_current_plan(...) is successful. Current plan is ", planName)
+        else:
+            print("Call to set_current_plan(...) failed. Current plan not changed. Check the validity of the plan name: ", planName)
+
+    def load_current_plan_results(self):
+        """
+        Load the current plan results to ras_2d_data
+        Returns
+        -------
+
+        """
+
+        currentPlanName, currentPlanFile = self._project.get_current_plan_file_name()
+        terrainFileName = self._project.get_terrainFileName()
+
+        #check whether the hdf file exists
+        if not os.path.isfile(currentPlanFile):
+            raise Exception("The result HDF file for current plan does not exist. Make sure to run HEC-RAS before calling this function.")
+        elif not os.path.isfile(terrainFileName):
+            raise Exception("The specified terrain file does not exist.")
+        else:
+            self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
 
 
-    def get_simulation_case(self):
+    def get_simulation_case(self, bReload=False):
         """Get the simulation case to RAS_2D_data
 
         Parameters
@@ -498,11 +535,13 @@ class HEC_RAS_Model(HydraulicModel):
         -------
         ras_2d_data : RAS_2D_Data
             an object from class RAS_2D_Data, which should be created before calling
+        bRelaod: bool
+            whether to reload the results from the HDF file
 
         """
 
-        if self._ras_2d_data is None:
-            raise  Exception("The requested SRH_2D_Data object is None. It should be created before requesting. Please check.")
+        if self._ras_2d_data is None or bReload:
+            self.load_current_plan_results()
 
         return self._ras_2d_data
 

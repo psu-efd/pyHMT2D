@@ -4,6 +4,11 @@ Test the HEC_RAS_Model class
 It demonstrates how to use pyHMT2D to control the run of HEC-RAS model.
 """
 
+#if run in the cloud, need to specify the location of pyHMT2D. If pyHMT2D is installed
+#with regular pip install, then the following is not necessary.
+#import sys
+#sys.path.append(r"C:\Users\Administrator\python_packages\pyHMT2D")
+
 import pyHMT2D
 
 def run_HEC_RAS():
