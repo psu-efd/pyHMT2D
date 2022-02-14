@@ -5,9 +5,8 @@ Some of the following code is adapted from pyras under the MIT license: https://
 """
 
 import os
-
-#import win32api
-#import win32con
+import sys
+import fileinput
 
 from pyHMT2D.Misc import yes_or_no
 
@@ -202,6 +201,86 @@ def _get_registered_typelibs(match='HEC River Analysis System'):
 
     return result
 
+#helper functions for modify HEC-RAS files
+
+def modify_HEC_RAS_file_with_key(ras_file_name, key_name, value):
+    """
+    Modify HEC-RAS file based on the provided key name and value. Common files are
+        - project file (*.prj),
+        - plan file (*.p01, *.p02, ...)
+        - geometry file (*.g01, *.g02, ...)
+        - unsteady flow file (*.u01, *.u02, ...)
+
+
+    E.g.,
+
+    key_name = "Run HTab", value = 0    (turn off the run of hydraulics modeling)
+
+
+    Parameters
+    ----------
+    plan_file_name
+    key_name
+    value
+
+    Returns
+    -------
+
+    """
+
+    #check whether the plan_file_name file exists
+    if os.path.isfile(ras_file_name):
+        for line in fileinput.input([ras_file_name], inplace=True):
+            if line.strip().startswith(key_name+"="):
+                line = key_name+"=" + str(value) + '\n'
+            sys.stdout.write(line)
+
+def modify_HEC_RAS_file_with_key_two_lines(ras_file_name, key_name, value, value_second_line):
+    """
+    Modify HEC-RAS file based on the provided key name, value, and a second line. For example
+
+    Common files are
+        - unsteady flow file (*.u01, *.u02, ...)
+
+    E.g.,
+
+    key_name = "Stage Hydrograph", value = 7    (7 stage hydrograph values for next line)
+    value_second_line = "940     930     930     930     930     930     930"
+
+
+    Parameters
+    ----------
+    plan_file_name
+    key_name
+    value
+    value_second_line
+
+    Returns
+    -------
+
+    """
+
+    bNext_line = False
+
+    #check whether the plan_file_name file exists
+    if os.path.isfile(ras_file_name):
+        for line in fileinput.input([ras_file_name], inplace=True):
+            if line.strip().startswith(key_name+"=") and not bNext_line:
+                line = key_name+"=" + str(value) + '\n'
+                bNext_line = True
+            elif bNext_line:
+                line = value_second_line + '\n'
+                bNext_line = False
+
+            sys.stdout.write(line)
 
 if __name__ == "__main__":
-    print(get_installed_hec_ras_versions())
+    #print(get_installed_hec_ras_versions())
+
+    #modify_HEC_RAS_file_with_key(ras_file_name="Muncie2D.p01", key_name="Run HTab", value=0)
+
+    modify_HEC_RAS_file_with_key_two_lines(ras_file_name="Muncie2D.u01",
+                                           key_name="Stage Hydrograph", value=7,
+                                           value_second_line="950     930     930     930     930     930     930")
+
+    print("Done!")
