@@ -9,6 +9,11 @@ It demonstrates how to use pyHMT2D to control the run of HEC-RAS model.
 #import sys
 #sys.path.append(r"C:\Users\Administrator\python_packages\pyHMT2D")
 
+import sys
+#sys.path.append((r"C:\Users\xzl123\Dropbox\PycharmProjects\pyHMT2D"))
+
+#print('\n'.join(sys.path))
+
 import pyHMT2D
 
 def run_HEC_RAS():

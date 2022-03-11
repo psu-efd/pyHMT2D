@@ -511,7 +511,7 @@ class RAS_2D_Data(HydraulicData):
 
         if gVerbose: print("Building HEC-RAS 2D area boundaries ...")
         maxNumBC = 10          #maximum number of boundaries (adjust according to the mesh)
-        maxPointsPerBC = 100   #maximum number of points per boundary
+        maxPointsPerBC = 1000   #maximum number of points per boundary
 
         boundaryIDList = np.zeros(maxNumBC,dtype=int)   #list of boundary IDs
         boundaryPointList = np.zeros((maxNumBC,maxPointsPerBC),dtype=int)  #list of point IDs on each boundary

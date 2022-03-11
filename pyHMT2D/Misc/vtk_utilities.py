@@ -272,7 +272,8 @@ class vtkHandler:
         line.Update()
         return line
 
-    def probeUnstructuredGridVTKOverLine(self, lineVTK, readerUnstructuredGridVTK, varName):
+    def probeUnstructuredGridVTKOverLine(self, lineVTK, readerUnstructuredGridVTK, varName,
+                                         kernel="gaussian", radius=None, nullValue=None):
         """ Interpolate the data from the Unstructured Grid VTK onto a line (profile).
 
         The unstructured grid VTK is supposed to be a 2D surface in 3D space, such as the mesh used in 2D hydraulics
@@ -289,6 +290,13 @@ class vtkHandler:
             Unstructured Grid VTK reader
         varName : str
             name of the variable to be probed
+        kernel : str
+            name of the kernel for interpolation (linear, gaussin, voronoi, Shepard"
+        radius : float
+            radius for interpolation kernels
+        nullValue: float
+            value to be assigned to invalid probing points
+
 
         Returns
         -------
@@ -300,9 +308,24 @@ class vtkHandler:
 
         # Get data from the Unstructured Grid VTK reader
         data = readerUnstructuredGridVTK.GetOutput()
+
+        # make sure the data is stored at points (for smoother interpolation)
+        cell2point = vtk.vtkCellDataToPointData()
+        cell2point.SetInputData(data)
+        cell2point.Update()
+        data = cell2point.GetOutput()   #after this, all data are stored at points, not cell centers.
+
         bounds = data.GetBounds()
 
         #print("Unstructured Grid VTK bounds = ", bounds)
+        #print("Unstructured Grid number of cells: ", data.GetNumberOfCells())
+        #print("Unstructured Grid number of points: ", data.GetNumberOfPoints())
+
+        if radius is None:
+            boundingArea = (bounds[1] - bounds[0]) * (bounds[3] - bounds[2])   #assume 2D Grid
+            averageCellArea =  boundingArea/data.GetNumberOfCells()            #average cell area
+            radius = np.sqrt(averageCellArea)                                  #average size of cell
+            radius = 2.0*radius                                                #double the search radius
 
         ### make a transform to set all Z values to zero ###
         flattener = vtk.vtkTransform()
@@ -337,14 +360,44 @@ class vtkHandler:
         s_flat.SetInputConnection(s_elev.GetOutputPort())
         s_flat.SetTransform(flattener)
 
-        # vtkProbeFilter, the probe line is the input, and the underlying dataset is the source.
-        probe = vtk.vtkProbeFilter()
+        # build the probe using vtkPointInterpolator
+        # construct the interpolation kernel
+        if kernel == 'gaussian':
+            kern = vtk.vtkGaussianKernel()
+            kern.SetRadius(radius)
+        elif kernel == 'voronoi':
+            kern = vtk.vtkVoronoiKernel()
+        elif kernel == 'linear':
+            kern = vtk.vtkLinearKernel()
+            kern.SetRadius(radius)
+        elif kernel == 'Shepard':
+            kern = vtk.vtkShepardKernel()
+            kern.SetPowerParameter(2)
+            kern.SetRadius(radius)
+        else:
+            raise Exception("The specified kernel is not supported.")
+
+        probe = vtk.vtkPointInterpolator()
         probe.SetInputConnection(i_flat.GetOutputPort())
         probe.SetSourceConnection(s_flat.GetOutputPort())
+        probe.SetKernel(kern)
+        if nullValue is not None:
+            probe.SetNullValue(nullValue)
+        else:
+            probe.SetNullPointsStrategyToClosestPoint()
+
         probe.Update()
+
+        # (This approach of using vtkProbeFilter is replaced by vtkPointInterpolator for smoother result)
+        # vtkProbeFilter, the probe line is the input, and the underlying dataset is the source.
+        #probe = vtk.vtkProbeFilter()
+        #probe.SetInputConnection(i_flat.GetOutputPort())
+        #probe.SetSourceConnection(s_flat.GetOutputPort())
+        #probe.Update()
 
         # get the data from the VTK-object (probe) to an numpy array
         #print("varName =", varName)
+        #print(probe.GetOutput().GetPointData().GetArray(varName))
 
         varProbedValues = VN.vtk_to_numpy(probe.GetOutput().GetPointData().GetArray(varName))
 
