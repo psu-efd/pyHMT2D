@@ -11,6 +11,8 @@ examples/SRH_2D_to_OpenFOAM
 
 examples/parametric_study/SRH-2D/Muncie2D/cases
 
+examples/RAS_2D_Monte_Carlo
+
 GUI
 CHIC
 

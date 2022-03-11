@@ -20,7 +20,7 @@ URL = 'https://github.com/psu-efd/pyHMT2D'
 EMAIL = 'xiaofengliu19@gmail.com'
 AUTHOR = 'Xiaofeng Liu'
 REQUIRES_PYTHON = '>=3.7.0, <3.9.9'
-VERSION = '1.0.5'
+VERSION = '1.0.6'
 
 # What packages are required for this module to be executed?
 REQUIRED = [

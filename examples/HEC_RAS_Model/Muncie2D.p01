@@ -1,7 +1,7 @@
 Plan Title=Peak_flow_plan
 Program Version=6.00
 Short Identifier=Peak flow                                                       
-Simulation Date=01JAN1900,0000,01JAN1900,0600
+Simulation Date=01JAN1900,0000,01JAN1900,0200
 Geom File=g01
 Flow File=u01
 Subcritical Flow
