@@ -739,7 +739,7 @@ class RAS_2D_Data(HydraulicData):
             #    IDs = dset[:]
             IDs = dset.astype(np.uint8)
 
-            IDs = IDs.tolist()
+            IDs = IDs[:].tolist()
 
             ManningN_dataset = hfManningN['ManningsN']
             ManningN = np.array(ManningN_dataset)

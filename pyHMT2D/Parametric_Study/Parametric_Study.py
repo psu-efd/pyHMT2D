@@ -303,6 +303,14 @@ class Parametric_Study(object):
                 shutil.move(newHydroMatFileName, "cases/case_" + str(i))
                 shutil.move(newGridFileName, "cases/case_" + str(i))
 
+        elif self.model_name == "HEC-RAS":
+
+            #loop over all samples
+            for i, sample in zip(range(len(samples)), samples):
+                print("current sample: ", i, sample)
+
+                sample_np = np.array(sample)
+
         else:
             raise NotImplementedError
 

@@ -11,7 +11,10 @@ examples/SRH_2D_to_OpenFOAM
 
 examples/parametric_study/SRH-2D/Muncie2D/cases
 
-examples/RAS_2D_Monte_Carlo
+#examples/RAS_2D_Monte_Carlo
+examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/cases
+examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/full_case
+examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/try_isolines.py
 
 GUI
 CHIC
