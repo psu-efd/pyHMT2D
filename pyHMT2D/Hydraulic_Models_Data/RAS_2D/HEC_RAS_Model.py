@@ -629,11 +629,13 @@ class HEC_RAS_Model(HydraulicModel):
         res = self._RASController.Compute_CurrentPlan(nmsg, msg)
 
         #print computing message
+        bRunSucessful = True
         if res[0]:
             print("HEC-RAS computed successfully.")
         else:
             print("HEC-RAS computed unsuccessfully. The HEC-RAS Controller's Compute_CurrentPlan() function returned "
                   "False.")
+            bRunSucessful = False
 
         print("The returned messages are:")
         print("res = ", res)
@@ -642,6 +644,7 @@ class HEC_RAS_Model(HydraulicModel):
         for i in range(res[1]):
             print("    ", res[2][i])
 
+        return bRunSucessful
 
     def exit_model(self):
         """ Exit the model (HEC-RAS specific)

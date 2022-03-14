@@ -272,6 +272,23 @@ class vtkHandler:
         line.Update()
         return line
 
+    def probeUnstructuredGridVTKOnPoints(self, pointVTK, readerUnstructuredGridVTK, varName,
+                                         kernel="gaussian", radius=None, nullValue=None):
+        """ Interpolate the data from the Unstructured Grid VTK onto given points.
+
+            Currently, it simply call probeUnstructuredGridVTKOverLine(...) because it can handle points.
+
+        Parameters
+        ----------
+        pointVTK : vtkPoints
+            coordinates of points in vtkPoints format; the points don't need to ordered,
+            thus they can be just a bunch of points
+
+        """
+
+        return self.probeUnstructuredGridVTKOverLine(pointVTK, readerUnstructuredGridVTK, varName,
+                                              kernel, radius, nullValue)
+
     def probeUnstructuredGridVTKOverLine(self, lineVTK, readerUnstructuredGridVTK, varName,
                                          kernel="gaussian", radius=None, nullValue=None):
         """ Interpolate the data from the Unstructured Grid VTK onto a line (profile).
@@ -364,6 +381,7 @@ class vtkHandler:
         # construct the interpolation kernel
         if kernel == 'gaussian':
             kern = vtk.vtkGaussianKernel()
+            kern.SetSharpness(2)
             kern.SetRadius(radius)
         elif kernel == 'voronoi':
             kern = vtk.vtkVoronoiKernel()
@@ -418,6 +436,7 @@ class vtkHandler:
             points[i, 0] = x[i]
             points[i, 1] = y[i]
             points[i, 2] = z[i]
+
         return points, varProbedValues, elev
 
     def vtk_diff_consistent(self, vtkFileName1, vtkFileName2, vtkFileNameDiff,
@@ -584,6 +603,56 @@ class vtkHandler:
             cellDataNames.append(celldata.GetArrayName(i))
 
         return pointDataNames, cellDataNames
+
+    def get_uGRid_cell_field_with_name(self, readerUnstructuredGridVTK, varName):
+        """
+        Get the cell field varName on an vtkUnstructuredGrid
+
+        Parameters
+        ----------
+        readerUnstructuredGridVTK
+        varName
+
+        Returns
+        -------
+
+        """
+
+        # Get data from the Unstructured Grid VTK reader
+        data = readerUnstructuredGridVTK.GetOutput()
+
+        #get the list of point and cell data names
+        pointDataNames, cellDataNames = self.get_uGRid_all_field_names(data)
+
+        if varName not in cellDataNames:
+            print("The specified varName:", varName, "is not in the cell data names: ", cellDataNames)
+
+        return VN.vtk_to_numpy(data.GetCellData().GetArray(varName))
+
+    def get_uGRid_point_field_with_name(self, readerUnstructuredGridVTK, varName):
+        """
+        Get the point field varName on an vtkUnstructuredGrid
+
+        Parameters
+        ----------
+        readerUnstructuredGridVTK
+        varName
+
+        Returns
+        -------
+
+        """
+
+        # Get data from the Unstructured Grid VTK reader
+        data = readerUnstructuredGridVTK.GetOutput()
+
+        # get the list of point and cell data names
+        pointDataNames, cellDataNames = self.get_uGRid_all_field_names(data)
+
+        if varName not in pointDataNames:
+            print("The specified varName:", varName, "is not in the cell data names: ", pointDataNames)
+
+        return VN.vtk_to_numpy(data.GetPointData().GetArray(varName))
 
     def vtk_cell_to_point_interpolation(self, uGrid, varName=''):
         """Interpolate all cell data to point in an unstructured grid
