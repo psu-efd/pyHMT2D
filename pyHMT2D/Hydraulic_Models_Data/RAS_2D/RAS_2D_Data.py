@@ -610,15 +610,16 @@ class RAS_2D_Data(HydraulicData):
             # read the Manning n zones (land cover zones)
             self.ManningNZones = {}  # clear the dictionary just in case
 
-            if os.path.dirname(self.hdf_filename) == '':
+            # get the path of the HDF file.
+            if len(os.path.dirname(self.hdf_filename))==0:
                 fileBase = b''
             else:
                 fileBase = str.encode(os.path.dirname(self.hdf_filename) + '/')
 
-
             #The way the land cover and Manning's n information stored in v5 and v6 is different.
             if self.version == '5.0.7':
-                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                #hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
                 dset = hfManningN['IDs']
 
@@ -659,27 +660,54 @@ class RAS_2D_Data(HydraulicData):
                 hfManningN.close()
 
             elif self.version == '6.1.0':
-                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
-
-                dset = hfManningN['IDs']
-
-                #with dset.astype(np.uint8):
-                #    IDs = dset[:]
-                IDs = dset.astype(np.uint8)[:]
+                #Note: In v6 and above, it seems HEC-RAS can handle different formats of Land Cover (Manning's n) HDF
+                #      file for backward compatability. For example, if a HEC-RAS case was originally created by v5.0.7, the
+                #      Land Cover HDF file has "IDs, ManningsN, and Names". But for cases created by v6 and later, the
+                #      Land Cover HDF fiel has "Raster Map, Variables".
 
 
-                ManningN = np.array(hfManningN['ManningsN'])
-                Names = hfManningN['Names']
+                #hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
-                # print("IDs =", IDs)
-                # print("ManningN =", ManningN)
-                # print("Names =", Names)
+                if (("Raster Map" in hfManningN.keys()) and ("Variables" in hfManningN.keys())): #for new version >= 6
+                    dset_raster_map = hfManningN['Raster Map']
+                    dset_variables = hfManningN['Variables']
 
-                for i in range(len(IDs)):
-                    self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+                    # with dset_raster_map['ID'].astype(np.uint8):
+                    IDs = dset_raster_map['ID']
 
-                hfManningN.close()
+                    ManningN = np.array(dset_variables['ManningsN'])
+                    Names = dset_variables['Name']
 
+                    # print("IDs =", IDs)
+                    # print("ManningN =", ManningN)
+                    # print("Names =", Names)
+
+                    for i in range(len(IDs)):
+                        self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+                elif (("IDs" in hfManningN.keys()) and ("ManningsN" in hfManningN.keys()) and ("Names" in hfManningN.keys())):
+                    dset = hfManningN['IDs']
+
+                    # with dset.astype(np.uint8):
+                    #    IDs = dset[:]
+                    IDs = dset.astype(np.uint8)[:]
+
+                    ManningN = np.array(hfManningN['ManningsN'])
+                    Names = hfManningN['Names']
+
+                    # print("IDs =", IDs)
+                    # print("ManningN =", ManningN)
+                    # print("Names =", Names)
+
+                    for i in range(len(IDs)):
+                        self.ManningNZones[IDs[i]] = [Names[i], ManningN[i]]
+                else:
+                    hfManningN.close()
+                    hf.close()
+                    raise Exception("The format of the land cover (Manning's n) layer in the HDF file is not supported. "
+                                    "Please contact the developer of pyHMT2D or raise an issue on GitHub.")
+
+                hf.close()
 
             else:
                 hf.close()
