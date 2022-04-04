@@ -79,6 +79,10 @@ class SRH_2D_SRHHydro:
         res_EQParams = {}  # dict for exit discharge boundary condition
         res_NDParams = {}  # dict for normal depth outlet boundary condition
 
+        res_PressureParams = {}  #dict for PressureParams
+        res_PressOvertop = {}    #dict for PressOvertop
+
+
         #check whether the srhhydro file exists
         if not path.isfile(self.srhhydro_filename):
             raise Exception("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exiting ...")
@@ -918,8 +922,8 @@ class SRH_2D_SRHGeom:
             if nodeString not in self.bcDict.keys():
                 continue
 
-            #also exclude internal BC nodeStrings such as weir
-            if 'WEIR' in self.bcDict[nodeString]:
+            #also exclude internal BC nodeStrings such as weir and pressure
+            if 'WEIR' in self.bcDict[nodeString] or 'PRESSURE' in self.bcDict[nodeString]:
                 continue
 
             #list of nodes in current nodeString
