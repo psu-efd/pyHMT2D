@@ -213,7 +213,7 @@ def write_srhgeom(srhmatFileName, mesh, nodeStrings, units="Meters"):
             for quadI in range(mesh.cells[cells_blockI].data.shape[0]):
                 cellI += 1
                 fid.write("Elem ")
-                fid.write("%d %d %d %d %d\n" % (cellI + 1,  # +1 because SRH-2D is 1-based
+                fid.write("%d %d %d %d %d\n" % (cellI,
                                               mesh.cells[cells_blockI].data[quadI][0]+1,
                                               mesh.cells[cells_blockI].data[quadI][1]+1,
                                               mesh.cells[cells_blockI].data[quadI][2]+1,

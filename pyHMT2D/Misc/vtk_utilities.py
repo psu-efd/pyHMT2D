@@ -488,7 +488,7 @@ class vtkHandler:
         #If varName exists in the point data, interpolate it to cell center. Otherwise, report error.
         pointDataNames1, cellDataNames1 = self.get_uGRid_all_field_names(data1)
 
-        print("pointDataNames, cellDataNames in first VTK file =", pointDataNames1, cellDataNames1)
+        #print("pointDataNames, cellDataNames in first VTK file =", pointDataNames1, cellDataNames1)
 
         if diffNodal: # if the intended diff is nodal
             if (not varName1 in pointDataNames1):  # varName1 does not exist in VTK file1's point data:
@@ -575,6 +575,8 @@ class vtkHandler:
 
         # write out the diff result to vtk
         self.writeVTK_UnstructuredGrid(uGrid, vtkFileNameDiff)
+
+        return varDiff_data
 
     def get_uGRid_all_field_names(self, uGrid):
         """ Get the field names of point data and cell data
