@@ -8,7 +8,7 @@ import sys
 import meshio
 
 
-def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, units="Meters"):
+def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units="Meters"):
     """Convert Gmsh 2D mesh into SRH-2D format
 
     It generates two files: srhgeom for mesh and srhmat for Manning's n
@@ -21,6 +21,10 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, units="Meters"):
         file name of the Gmsh MSH file
     srh_caseName : str
         case name for SRH-2D.
+    shift_x: float
+        shift of coordinates in x direction
+    shift_y: float
+        shift of coordinates in y direction
     units : str, default Meters
         length units of Gmsh file
 
@@ -41,7 +45,7 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, units="Meters"):
     nodeStrings = build_nodeStrings(mesh)
 
     #write srhgeom file
-    write_srhgeom(srh_caseName, mesh, nodeStrings, units)
+    write_srhgeom(srh_caseName, mesh, nodeStrings, shift_x, shift_y, units)
 
     #build Manning's n zone information
     nManningNZones, ManningNZoneNames, cellsInManningZones = build_ManningNZones(mesh)
@@ -155,8 +159,27 @@ def build_ManningNZones(mesh):
 
     return nManningNZones, ManningNZoneNames, cellsInManningZones
 
+def orientation_2D(xA, yA, xB, yB, xC, yC):
+    """
+    Calculate the orientation of the order of three points A, B, and C in 2D.
 
-def write_srhgeom(srhmatFileName, mesh, nodeStrings, units="Meters"):
+    Ref: https://en.wikipedia.org/wiki/Curve_orientation
+
+    :param xA:
+    :param yA:
+    :param xB:
+    :param yB:
+    :param xC:
+    :param yC:
+    :return: < 0: clockwise, >0: counter clockwise
+    """
+
+    #construct the square matrix
+    matrix = np.array([ [1, xA, yA],[1, xB, yB],[1, xC, yC] ])
+
+    return np.linalg.det(matrix)
+
+def write_srhgeom(srhmatFileName, mesh, nodeStrings, shift_x=0.0, shift_y=0.0, units="Meters"):
     """
 
     Parameters
@@ -200,25 +223,69 @@ def write_srhgeom(srhmatFileName, mesh, nodeStrings, units="Meters"):
             #loop over all triangles
             for triI in range(mesh.cells[cells_blockI].data.shape[0]):
                 cellI += 1
+
+                #determine the orientation of the triangle
+                xA = mesh.points[mesh.cells[cells_blockI].data[triI][0], 0]
+                yA = mesh.points[mesh.cells[cells_blockI].data[triI][0], 1]
+
+                xB = mesh.points[mesh.cells[cells_blockI].data[triI][1], 0]
+                yB = mesh.points[mesh.cells[cells_blockI].data[triI][1], 1]
+
+                xC = mesh.points[mesh.cells[cells_blockI].data[triI][2], 0]
+                yC = mesh.points[mesh.cells[cells_blockI].data[triI][2], 1]
+
+                sign = orientation_2D(xA, yA, xB, yB, xC, yC)
+
                 fid.write("Elem ")
-                fid.write("%d %d %d %d \n" % (cellI,
+
+                if sign > 0: #nodes in counterclockwise direction
+                    fid.write("%d %d %d %d \n" % (cellI,
                                               mesh.cells[cells_blockI].data[triI][0]+1,
                                               mesh.cells[cells_blockI].data[triI][1]+1,
                                               mesh.cells[cells_blockI].data[triI][2]+1
                                               ))
+                else:        #nodes in clockwise direction; need to revise the order
+                    fid.write("%d %d %d %d \n" % (cellI,
+                                                  mesh.cells[cells_blockI].data[triI][0] + 1,
+                                                  mesh.cells[cells_blockI].data[triI][2] + 1,
+                                                  mesh.cells[cells_blockI].data[triI][1] + 1
+                                                  ))
+
 
         #quads
         elif mesh.cells[cells_blockI].type == 'quad':
             # loop over all triangles
             for quadI in range(mesh.cells[cells_blockI].data.shape[0]):
                 cellI += 1
+
+                # determine the orientation of the quad (only need to use the first three nodes)
+                xA = mesh.points[mesh.cells[cells_blockI].data[quadI][0], 0]
+                yA = mesh.points[mesh.cells[cells_blockI].data[quadI][0], 1]
+
+                xB = mesh.points[mesh.cells[cells_blockI].data[quadI][1], 0]
+                yB = mesh.points[mesh.cells[cells_blockI].data[quadI][1], 1]
+
+                xC = mesh.points[mesh.cells[cells_blockI].data[quadI][2], 0]
+                yC = mesh.points[mesh.cells[cells_blockI].data[quadI][2], 1]
+
+                sign = orientation_2D(xA, yA, xB, yB, xC, yC)
+
                 fid.write("Elem ")
-                fid.write("%d %d %d %d %d\n" % (cellI,
+
+                if sign > 0:  # nodes in counterclockwise direction
+                    fid.write("%d %d %d %d %d\n" % (cellI,
                                               mesh.cells[cells_blockI].data[quadI][0]+1,
                                               mesh.cells[cells_blockI].data[quadI][1]+1,
                                               mesh.cells[cells_blockI].data[quadI][2]+1,
                                               mesh.cells[cells_blockI].data[quadI][3]+1
                                               ))
+                else:  # nodes in clockwise direction; need to revise the order
+                    fid.write("%d %d %d %d %d\n" % (cellI,
+                                                    mesh.cells[cells_blockI].data[quadI][0] + 1,
+                                                    mesh.cells[cells_blockI].data[quadI][3] + 1,
+                                                    mesh.cells[cells_blockI].data[quadI][2] + 1,
+                                                    mesh.cells[cells_blockI].data[quadI][1] + 1
+                                                    ))
         else:
             raise Exception("Gmesh element type is not supported.")
 
@@ -226,8 +293,8 @@ def write_srhgeom(srhmatFileName, mesh, nodeStrings, units="Meters"):
     # all points
     for pointI in range(mesh.points.shape[0]):
         fid.write("Node %d " % (pointI + 1))  # pointI+1 because SRH-2D is 1-based
-        curr_point_coordinates = [mesh.points[pointI, 0],
-                                  mesh.points[pointI, 1],
+        curr_point_coordinates = [mesh.points[pointI, 0] + shift_x,
+                                  mesh.points[pointI, 1] + shift_y,
                                   mesh.points[pointI, 2]]
 
         fid.write(" ".join(map(str, curr_point_coordinates)))
