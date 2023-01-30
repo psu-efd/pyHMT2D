@@ -593,6 +593,9 @@ class SRH_2D_SRHGeom:
 
         self.srhgeom_filename = srhgeom_filename
 
+        self.Name = ''
+        self.GridUnit = ''
+
         #boundary condition dictionary. In srhgeom file, not all nodeStrings are boundary conditions. Some of them
         #could be monitoring lines. This bcDict is passed in to distinguish the two (srhgeom does not have this
         #information; only srhhydro has). An SRH_2D_SRHHydro object has to be previously created, and then
@@ -782,9 +785,11 @@ class SRH_2D_SRHGeom:
                     nodeStringCound += 1
                     self.nodeStringsDict[int(search[1])] = [int(i) for i in search[2:]]
                     currentNodeStringID = int(search[1])
-                elif ("SRHGEOM".lower() not in search[0].lower()) and \
-                     ("Name".lower() not in search[0].lower()) and \
-                     ("Grid".lower() not in search[0].lower()): #assume this is still nodeString
+                elif search[0].lower() == "Name".lower():
+                    self.Name = search[1]
+                elif search[0].lower() == "GridUnit".lower():
+                    self.GridUnit = search[1]
+                elif ("SRHGEOM".lower() not in search[0].lower()) : #assume this is still nodeString
                     node_list = self.nodeStringsDict[currentNodeStringID]
                     for i in search:
                         node_list.append(int(i))
@@ -822,6 +827,74 @@ class SRH_2D_SRHGeom:
             print("nodeCoordinates = ", self.nodeCoordinates)
             print("elementBedElevation = ", self.elementBedElevation)
             print("nodeStrings = ", self.nodeStringsDict)
+
+    def save_as(self, srhgeomFileName, dir=''):
+        """ Save as a srhgeom file.
+
+        It can be used to save to a new srhgeom file after things have been modified, e.g., bathymetry
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Saving the SRHGEOM file ...")
+
+        if len(dir) != 0:
+            srhgeomFileName = dir + "/" + srhgeomFileName
+
+        try:
+            fid = open(srhgeomFileName, 'w')
+        except IOError:
+            print('srhgeom file open error')
+            sys.exit()
+
+        fid.write('SRHGEOM 30\n')
+        fid.write('Name \"Saved from pyHMT2D \"\n')
+
+        fid.write('\n')
+
+        fid.write('GridUnit %s \n' % self.GridUnit)
+
+        #write elements
+        for elemI in range(1, self.numOfElements + 1):
+            fid.write('Elem %d' % elemI)
+            for nodeI in range(1, self.elementNodesCount[elemI-1] + 1):
+                fid.write(' %d' % self.elementNodesList[elemI-1, nodeI-1])
+            fid.write('\n')
+
+        #write nodes
+        for nodeI in range(1, self.numOfNodes + 1):
+            fid.write('Node %d %f %f %f\n' % (nodeI,
+                                            self.nodeCoordinates[nodeI-1, 0],
+                                            self.nodeCoordinates[nodeI-1, 1],
+                                            self.nodeCoordinates[nodeI-1, 2]))
+
+        #write nodeStrings
+        for nodeStringID, nodeStringNodeList in self.nodeStringsDict.items():
+            fid.write('NodeString %d' % nodeStringID)
+
+            # line break counter (start a new line every 10 nodes)
+            line_break_counter = 0
+
+            for nodeI in nodeStringNodeList:
+                fid.write(' %d' % nodeI)
+
+                line_break_counter += 1
+
+                # 10 numbers per line
+                if ((line_break_counter % 10) == 0):
+                    fid.write("\n")
+
+                    line_break_counter = 0
+
+            fid.write('\n')
+
+        fid.close()
+
 
     def buildNodeElements(self):
         """ Build node's element list for all nodes
