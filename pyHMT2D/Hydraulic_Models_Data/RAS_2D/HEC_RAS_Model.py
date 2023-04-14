@@ -2,7 +2,7 @@
 RAS_2D_Model:
 """
 
-#import win32com.client as win32
+#import win32com.client as win32  #moved inside code
 import os.path
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
@@ -294,7 +294,16 @@ class HEC_RAS_Model(HydraulicModel):
 
         print("Initializing HEC-RAS ...")
 
-        import win32com.client as win32
+        import platform
+
+        if platform.system().startswith('Windows'):
+            try:
+                import win32com.client as win32
+            except ImportError:
+                raise ImportError('Error in importing pywin32 package. Make sure it has been installed properly.')
+        else:
+            print("Current OS: ", platform.system())
+            raise ImportError('The use of pyHMT2D for HEC-RAS Model is only supported on Windows.')
 
         # Should we kill all currently running HEC-RAS instances? Probably not a good idea.
         #kill_all_hec_ras()

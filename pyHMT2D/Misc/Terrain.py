@@ -58,8 +58,8 @@ class Terrain(HydraulicData):
 
         """
 
-        from osgeo import gdal
-        from osgeo import osr
+        #from osgeo import gdal
+        #from osgeo import osr
 
         HydraulicData.__init__(self, "Terrain")
 
@@ -143,6 +143,11 @@ class Terrain(HydraulicData):
         -------
 
         """
+
+        try:
+            from osgeo import gdal
+        except ImportError:
+            raise ImportError('Error in importing GDAL package. Make sure GDAL has been installed properly.')
 
         for i in range(gdal.GetDriverCount()):
             drv = gdal.GetDriver(i)
@@ -381,6 +386,12 @@ class Terrain(HydraulicData):
             GDAL raster driver names, such as 'GTiff'
 
         """
+
+        try:
+            from osgeo import gdal
+            from osgeo import osr
+        except ImportError:
+            raise ImportError('Error in importing GDAL package. Make sure GDAL has been installed properly.')
 
         print("Save the terrain to file:", terrainFileName)
 
