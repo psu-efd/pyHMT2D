@@ -10,6 +10,8 @@ from scipy import interpolate
 
 import xml.etree.cElementTree as ET
 
+import h5py
+
 #from osgeo import gdal
 
 
@@ -112,7 +114,10 @@ def build_gdal_vrt(vrtFileName, sourceGeoTiffFileNameList):
 
     """
 
-    from osgeo import gdal
+    try:
+        from osgeo import gdal
+    except ImportError:
+        raise ImportError('Error in importing GDAL package. Make sure GDAL has been installed properly.')
 
     vrt_options = gdal.BuildVRTOptions(resampleAlg='cubic', addAlpha=True)
 

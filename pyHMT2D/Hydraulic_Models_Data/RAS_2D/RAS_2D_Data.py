@@ -28,7 +28,6 @@ import h5py
 import vtk
 from vtk.util import numpy_support as VN
 from scipy import interpolate
-#from osgeo import gdal
 import affine
 import os.path
 import copy
@@ -257,12 +256,14 @@ class RAS_2D_Data(HydraulicData):
             self.version = '6.0.0'
         elif b'6.1.0' in file_version:
             self.version = '6.1.0'
+        elif b'6.2' in file_version:
+            self.version = '6.2'
         else:
             #raise Exception("The file version of the HEC-RAS result file is not supported.")
 
             print("The file version of the HEC-RAS result file is not supported.")
             print("    Version of the HEC-RAS result file: ", file_version)
-            print("    Supported versions: 5.0.7, 6.0.0, and 6.1.0")
+            print("    Supported versions: 5.0.7, 6.0.0, 6.1.0, and 6.2")
             sys.exit(-1)
 
         #print("HEC-RAS file version = ", self.version)
@@ -954,7 +955,10 @@ class RAS_2D_Data(HydraulicData):
         """
         if gVerbose: print('Building 2D interpolator from GeoTiff file ...')
 
-        from osgeo import gdal
+        try:
+            from osgeo import gdal
+        except ImportError:
+            raise ImportError('Error in importing GDAL package. Make sure GDAL has been installed properly.')
 
         # Read raster
         source = gdal.Open(geoTiffFileName,gdal.GA_ReadOnly)
@@ -1000,7 +1004,10 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        from osgeo import gdal
+        try:
+            from osgeo import gdal
+        except ImportError:
+            raise ImportError('Error in importing GDAL package. Make sure GDAL has been installed properly.')
 
         #check whether the geoTiff file exists
         if not os.path.isfile(geoTiffFileName):
@@ -1669,7 +1676,8 @@ class RAS_2D_Data(HydraulicData):
         elif self.version == '6.0.0' or self.version == '6.1.0':
             full_landcover_filename = (fileBase+self.landcover_filename[:-4])+b'.tif'   #note: it may already has the ".tif" extension
         else:
-            raise Exception("HEC-RAS version not supported. ")
+            errMessage = "HEC-RAS version not supported. version = " + self.version
+            raise Exception(errMessage)
 
         if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
             ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]
@@ -1714,7 +1722,7 @@ class RAS_2D_Data(HydraulicData):
                     
             
 
-    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,dir=''):
+    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,fileNameBase='',dir='',bFlat=False):
         """Save HEC-RAS 2D solutions to VTK files.
 
         Note:
@@ -1772,6 +1780,9 @@ class RAS_2D_Data(HydraulicData):
     
             #get the FacePoint coordinates (3D, the elevation is interpolated from terrain)
             facePointsCoordinates = self.get2DAreaFacePointsCoordinates(area)
+
+            if bFlat: # if we want the mesh to be flat, then z = 0.0
+                facePointsCoordinates[:,2] = 0.0
     
             #get cells face and orientation info
             cellsFaceOrientationInfo = self.get2DAreaCellsFaceOrientationInfo(area)
@@ -1909,11 +1920,14 @@ class RAS_2D_Data(HydraulicData):
                 field_data = {'TIME': np.array([self.solution_time[timeI]])}
 
                 #write to vtk file
+                if fileNameBase=='':
+                    fileNameBase='RAS2D_'
+
                 fileName_temp = []
                 if dir!= '':
-                    fileName_temp = [dir, '/', 'RAS2D_', self.plan, '_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
+                    fileName_temp = [dir, '/', fileNameBase, self.plan, '_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
                 else:
-                    fileName_temp = ['RAS2D_', self.plan, '_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
+                    fileName_temp = [fileNameBase, self.plan, '_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
                 vtkFileName = "".join(fileName_temp)
 
                 # write out the ugrid

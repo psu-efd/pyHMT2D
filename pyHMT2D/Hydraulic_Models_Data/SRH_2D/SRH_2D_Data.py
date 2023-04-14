@@ -437,8 +437,8 @@ class SRH_2D_SRHHydro:
     def get_HydroMat_FileName(self):
         return self.srhhydro_content['HydroMat']
 
-    def write_to_file(self, new_srhhydro_file_name):
-        """Write to a SRHHydro file (useful for modification of the SRHHydro file)
+    def save_as(self, new_srhhydro_file_name):
+        """Save as a new SRHHydro file (useful for modification of the SRHHydro file)
 
         Parameters
         -------
@@ -447,7 +447,7 @@ class SRH_2D_SRHHydro:
 
         """
 
-        print("Wring the SRHHYDRO file %s \n" % new_srhhydro_file_name)
+        if gVerbose: print("Wring the SRHHYDRO file %s \n" % new_srhhydro_file_name)
 
         try:
             fid = open(new_srhhydro_file_name, 'w')
@@ -828,7 +828,7 @@ class SRH_2D_SRHGeom:
             print("elementBedElevation = ", self.elementBedElevation)
             print("nodeStrings = ", self.nodeStringsDict)
 
-    def save_as(self, srhgeomFileName, dir=''):
+    def save_as(self, newSrhgeomFileName, dir=''):
         """ Save as a srhgeom file.
 
         It can be used to save to a new srhgeom file after things have been modified, e.g., bathymetry
@@ -841,13 +841,13 @@ class SRH_2D_SRHGeom:
 
         """
 
-        if gVerbose: print("Saving the SRHGEOM file ...")
+        if gVerbose: print("Wring the SRHGEOM file %s \n" % newSrhgeomFileName)
 
         if len(dir) != 0:
-            srhgeomFileName = dir + "/" + srhgeomFileName
+            newSrhgeomFileName = dir + "/" + newSrhgeomFileName
 
         try:
-            fid = open(srhgeomFileName, 'w')
+            fid = open(newSrhgeomFileName, 'w')
         except IOError:
             print('srhgeom file open error')
             sys.exit()
@@ -1643,6 +1643,50 @@ class SRH_2D_SRHMat:
             return 0 #return the default (?)
             #sys.exit()
 
+    def save_as(self, new_srhmat_file_name):
+        """Save as a new SRHMat file (useful for modification of the SRHMAT file)
+
+        Parameters
+        -------
+        new_srhmat_file_name : str
+            name of the new srhmat file
+
+        """
+
+        if gVerbose: print("Wring the SRHMAT file %s \n" % new_srhmat_file_name)
+
+        try:
+            fid = open(new_srhmat_file_name, 'w')
+        except IOError:
+            print('srhmat file open error')
+            sys.exit()
+
+        fid.write('SRHMAT 30\n')
+        fid.write('NMaterials %d\n' % (self.numOfMaterials))
+
+        for matID, matName in self.matNameList.items():
+            fid.write('MatName %s %s\n' % (matID, matName))
+
+        element_counter = 0
+
+        for matID, cellList in self.matZoneCells.items():
+
+            #don't write out the default
+            if matID==-1:
+                continue
+
+            fid.write('Material %d' % (matID))
+
+            for cellI in cellList:
+                element_counter += 1
+                fid.write(' %d' % cellI)
+
+                if element_counter==10:
+                    element_counter = 0
+                    fid.write('\n')
+
+        fid.close()
+
 
 class SRH_2D_Data(HydraulicData):
     """
@@ -1926,8 +1970,10 @@ class SRH_2D_Data(HydraulicData):
                     #fixe the water elevation = -999 in SRH-2D
                     if varName == "Water_Elev_ft" or varName == "Water_Elev_m":
                         for nodeI in range(len(self.xmdfAllData_Nodal[varName])):
-                            if self.xmdfAllData_Nodal[varName][nodeI] == -999:
-                                self.xmdfAllData_Nodal[varName][nodeI] = self.srhgeom_obj.nodeCoordinates[nodeI, 2] #use node elevation
+                            #loop over time steps
+                            for timeI in range(self.xmdfAllData_Nodal[varName].shape[0]):
+                                if self.xmdfAllData_Nodal[varName][timeI, nodeI] == -999:
+                                    self.xmdfAllData_Nodal[varName][timeI, nodeI] = self.srhgeom_obj.nodeCoordinates[nodeI, 2] #use node elevation
 
 
                 if np.array(xmdfFile[varName]['Values']).shape[1] != self.srhgeom_obj.numOfNodes:
