@@ -619,8 +619,8 @@ class RAS_2D_Data(HydraulicData):
 
             #The way the land cover and Manning's n information stored in v5 and v6 is different.
             if self.version == '5.0.7':
-                #hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
-                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
+                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                #hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
                 dset = hfManningN['IDs']
 
@@ -640,7 +640,8 @@ class RAS_2D_Data(HydraulicData):
                 hfManningN.close()
 
             elif self.version == '6.0.0':
-                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
+                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                #hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
                 dset_raster_map = hfManningN['Raster Map']
                 dset_variables = hfManningN['Variables']
@@ -667,8 +668,8 @@ class RAS_2D_Data(HydraulicData):
                 #      Land Cover HDF fiel has "Raster Map, Variables".
 
 
-                #hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
-                hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
+                hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
+                #hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
                 if (("Raster Map" in hfManningN.keys()) and ("Variables" in hfManningN.keys())): #for new version >= 6
                     dset_raster_map = hfManningN['Raster Map']
