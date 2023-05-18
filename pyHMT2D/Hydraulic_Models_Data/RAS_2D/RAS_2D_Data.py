@@ -639,7 +639,7 @@ class RAS_2D_Data(HydraulicData):
 
                 hfManningN.close()
 
-            elif self.version == '6.0.0':
+            elif self.version == '6.0.xxx':  #not used any more; somehow new (>6) versions of HEC-RAS messed up
                 hfManningN = h5py.File(fileBase + self.landcover_layername + b'.hdf', 'r')
                 #hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
@@ -661,7 +661,7 @@ class RAS_2D_Data(HydraulicData):
 
                 hfManningN.close()
 
-            elif self.version == '6.1.0':
+            elif self.version == '6.1.0' or self.version == '6.0.0':
                 #Note: In v6 and above, it seems HEC-RAS can handle different formats of Land Cover (Manning's n) HDF
                 #      file for backward compatability. For example, if a HEC-RAS case was originally created by v5.0.7, the
                 #      Land Cover HDF file has "IDs, ManningsN, and Names". But for cases created by v6 and later, the
