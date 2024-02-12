@@ -340,6 +340,8 @@ class HEC_RAS_Model(HydraulicModel):
             self._RASController = win32.gencache.EnsureDispatch('RAS610.HECRASController')
         elif (self.getVersion() == '6.3.1'):
             self._RASController = win32.gencache.EnsureDispatch('RAS631.HECRASController')
+        elif (self.getVersion() == '6.4.1'):
+            self._RASController = win32.gencache.EnsureDispatch('RAS641.HECRASController')
         else:
             raise Exception("The specified version of HEC-RAS is not currently supported.")
 
