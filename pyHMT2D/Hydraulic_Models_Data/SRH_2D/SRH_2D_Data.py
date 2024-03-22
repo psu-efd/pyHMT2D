@@ -1881,7 +1881,9 @@ class SRH_2D_Data(HydraulicData):
 
 
     def readSRHXMDFFile(self, xmdfFileName, bNodal):
-        """ Read SRH-2D result file in XMDF format (current version 13.1.6 of SMS only support data at node).
+        """ Read SRH-2D result file in XMDFC format (In current version 13.1.6 of SMS, the initial results of SRH2D is saved at center
+        of the elements (XMDFC file). and using post processing they are interpolated to the nodes (XMDF) file). Currently 
+        the pyHMT2D support XMDFC files created befpre post processing.
 
         Parameters
         ----------
@@ -1911,6 +1913,9 @@ class SRH_2D_Data(HydraulicData):
         if gVerbose: print("Reading the XMDF file ...\n")
 
         xmdfFile = h5py.File(xmdfFileName, "r")
+        
+        if bNodal:                                      #It is added by Ali because when it is nodal
+            xmdfFile=xmdfFile['Datasets']                  #variables are inside Datasets
 
         #build the list of solution variables
         varNameList = []
@@ -1921,7 +1926,7 @@ class SRH_2D_Data(HydraulicData):
         for ds in xmdfFile.keys():
             #print(ds)
 
-            if ds != "File Type" and ds != "File Version":
+            if ds != "File Type" and ds != "File Version" and ds != "Guid":   #Ali added Guide for Nodal files
                 if "Velocity" in ds:
                     varNameVelocity = '%s' % ds
                     vel_x = ds.replace("Velocity","Vel_X",1)
