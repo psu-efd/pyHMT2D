@@ -975,7 +975,7 @@ class RAS_2D_Data(HydraulicData):
 
         nx, ny = source.RasterXSize, source.RasterYSize
         gt = source.GetGeoTransform()
-        band_array = source.GetRasterBand(1).ReadAsArray().astype(np.float)
+        band_array = source.GetRasterBand(1).ReadAsArray().astype(np.float64)
 
         # Compute mid-point grid spacings
         ax = np.array([gt[0] + ix*gt[1] + gt[1]/2.0 for ix in range(nx)])
@@ -988,7 +988,7 @@ class RAS_2D_Data(HydraulicData):
     
         return bilinterp
 
-    def interpolatorFromGeoTiff(self, geoTiffFileName, pointList, dataType=np.float):
+    def interpolatorFromGeoTiff(self, geoTiffFileName, pointList, dataType=np.float64):
         """Interpolate from a GeoTiff file given a point list.
 
         Parameters
