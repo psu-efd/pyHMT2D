@@ -6,14 +6,21 @@ to the 2D mesh. Gmsh's 2D mesh usually do not have elevation information.
 import numpy as np
 import sys
 import meshio
+import math
 
 
-def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units="Meters"):
-    """Convert Gmsh 2D mesh into SRH-2D format
+def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units="Meters",
+                  bAddMonitoringLines=False, monitoringLines=[], monitoringlineTol=0.001
+                  ):
+    """Convert Gmsh 2D mesh into SRH-2D format with the option to add monitoring lines.
 
     It generates two files: srhgeom for mesh and srhmat for Manning's n
 
     The srhhydro file has to be generated separately.
+
+    For monitoring lines: SRH-2D treats the monitoring lines similarly as boundaries. Both are nodeStrings in the srhgeom
+    file. However, Gmsh2d does not directly support internal boundary such as the monitoring lines. Thus, for any
+    monitoring line, we need to add it to the nodeStrings list here.
 
     Parameters
     ----------
@@ -27,6 +34,9 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units
         shift of coordinates in y direction
     units : str, default Meters
         length units of Gmsh file
+    bAddMonitoringLines: whether add monitoring lines
+    monitoringLines: list of monitoring lines. Currently only straightlines are supported.
+    monitoringlineTol: a float tolerance to check whether a node is close to the monitoring line
 
     Returns
     -------
@@ -42,7 +52,7 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units
     mesh.write("check_mesh.vtk")
 
     #build the nodeStrings (boundaries)
-    nodeStrings = build_nodeStrings(mesh)
+    nodeStrings = build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol)
 
     #write srhgeom file
     write_srhgeom(srh_caseName, mesh, nodeStrings, shift_x, shift_y, units)
@@ -56,13 +66,16 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units
     print("Finished converting Gmsh's MSH mesh to SRH-2D format.")
 
 
-def build_nodeStrings(mesh):
+def build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol):
     """Build the nodeStrings (boundary lines)
 
     Parameters
     ----------
     mesh : meshio's mesh
         meshio's mesh object
+    bAddMonitoringLines: whether there is any monitoring line
+    monitoringLines: a list for the definitions of monitoring lines (straightlines only for now)
+    monitoringlineTol: a float tolerance to check whether a node is close to monitoring line.
 
     Returns
     -------
@@ -101,9 +114,123 @@ def build_nodeStrings(mesh):
         #add the nodeString to the nodeStrings dictionary
         nodeStrings[nodeStringID] = current_node_list
 
+    #deal with monitoring lines
+    if bAddMonitoringLines:
+
+        #start ID for the monitoring lines
+        nodeStringID = max(unique_line_physical_group_IDs) + 1
+
+        #get the edge lists. For now, monitoring lines are only defined with internal edges.
+        boundary_edges, internal_edges = get_msh_edges(mesh)
+
+        for monitoringLine in monitoringLines:
+
+            current_node_list = []
+
+            xML_start = monitoringLine[0, 0]
+            yML_start = monitoringLine[0, 1]
+            xML_end = monitoringLine[1, 0]
+            yML_end = monitoringLine[1, 1]
+
+            #loop over all internal edges and check whether they are close the monitoring lines
+            for edge in internal_edges:
+                nodeIDStart = edge[0]
+                nodeIDEnd = edge[1]
+
+                coordNodeStart = mesh.points[nodeIDStart]
+                coordNodeEnd = mesh.points[nodeIDEnd]
+
+                distanceNodeStart = point_to_segment_distance(coordNodeStart[0], coordNodeStart[1],
+                                                              xML_start, yML_start,
+                                                              xML_end, yML_end)
+
+                distanceNodeEnd = point_to_segment_distance(coordNodeEnd[0], coordNodeEnd[1],
+                                                              xML_start, yML_start,
+                                                              xML_end, yML_end)
+
+                #if (distanceNodeStart+distanceNodeEnd)/2 < monitoringlineTol:
+                if distanceNodeStart < monitoringlineTol and distanceNodeEnd < monitoringlineTol:
+                    if (nodeIDStart + 1) not in current_node_list:
+                        current_node_list.append(nodeIDStart + 1)  # +1 because meshio is 0-based; gmsh is 1-based
+
+                    if (nodeIDEnd + 1) not in current_node_list:
+                        current_node_list.append(nodeIDEnd + 1)  # +1 because meshio is 0-based; gmsh is 1-based
+
+            # add the nodeString to the nodeStrings dictionary
+            nodeStrings[nodeStringID] = current_node_list
+
+            nodeStringID += 1
+
     #print(type(nodeStrings))
 
     return nodeStrings
+
+def point_to_segment_distance(x0, y0, x1, y1, x2, y2):
+    # Calculate the squared length of the segment
+    segment_len_squared = (x2 - x1) ** 2 + (y2 - y1) ** 2
+
+    # Handle the case where the segment length is zero (start and end points are the same)
+    if segment_len_squared == 0:
+        return math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
+
+    # Calculate the projection of (x0, y0) onto the line (x1, y1) to (x2, y2)
+    t = ((x0 - x1) * (x2 - x1) + (y0 - y1) * (y2 - y1)) / segment_len_squared
+
+    # Clamp t to the range [0, 1] to find the closest point on the segment
+    t = max(0, min(1, t))
+
+    # Find the closest point on the segment to (x0, y0)
+    closest_x = x1 + t * (x2 - x1)
+    closest_y = y1 + t * (y2 - y1)
+
+    # Calculate the distance from (x0, y0) to the closest point on the segment
+    distance = math.sqrt((x0 - closest_x) ** 2 + (y0 - closest_y) ** 2)
+
+    return distance
+
+def get_msh_edges(mesh):
+    """
+    Get the boundary and internal lists of edges.
+
+    :param mesh:
+    :return:
+    """
+
+    # Initialize edge counter dictionary
+    edge_count = {}
+
+    # Process 2D elements (triangles and quadrilaterals)
+    for cell_block in mesh.cells:
+        if cell_block.type == "triangle":
+            for triangle in cell_block.data:
+                # Extract triangle edges
+                edges = [
+                    tuple(sorted((triangle[0], triangle[1]))),
+                    tuple(sorted((triangle[1], triangle[2]))),
+                    tuple(sorted((triangle[2], triangle[0])))
+                ]
+                # Count each edge
+                for edge in edges:
+                    edge_count[edge] = edge_count.get(edge, 0) + 1
+
+        elif cell_block.type == "quad":
+            for quad in cell_block.data:
+                # Extract quadrilateral edges
+                edges = [
+                    tuple(sorted((quad[0], quad[1]))),
+                    tuple(sorted((quad[1], quad[2]))),
+                    tuple(sorted((quad[2], quad[3]))),
+                    tuple(sorted((quad[3], quad[0])))
+                ]
+                # Count each edge
+                for edge in edges:
+                    edge_count[edge] = edge_count.get(edge, 0) + 1
+
+    # Separate boundary and internal edges based on their counts
+    boundary_edges = [edge for edge, count in edge_count.items() if count == 1]
+    internal_edges = [edge for edge, count in edge_count.items() if count == 2]
+
+    return boundary_edges, internal_edges
 
 def build_ManningNZones(mesh):
     """Build Manning's n zones
@@ -181,6 +308,7 @@ def orientation_2D(xA, yA, xB, yB, xC, yC):
 
 def write_srhgeom(srhmatFileName, mesh, nodeStrings, shift_x=0.0, shift_y=0.0, units="Meters"):
     """
+
 
     Parameters
     ----------
