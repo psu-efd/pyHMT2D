@@ -621,6 +621,10 @@ class SRH_2D_SRHGeom:
         # number of nodes for each element (3,4,...,gMax_Nodes_per_Element)
         self.elementNodesCount = np.zeros(self.numOfElements, dtype=int)
 
+        # list of edges for all elements (For each element, the number of nodes and the number of edges are the same.
+        # Thus, there is no need for elementEdgesCount.
+        self.elementEdgesList = np.zeros([self.numOfElements, gMax_Nodes_per_Element], dtype=int)
+
         # each element's vtk cell type
         self.vtkCellTypeCode = np.zeros(self.numOfElements, dtype=int)
 
@@ -747,7 +751,7 @@ class SRH_2D_SRHGeom:
         count = 0
         elemCount = 0
         nodeCount = 0
-        nodeStringCound = 0
+        nodeStringCount = 0
 
         # nodeString could be long enough to have more than one line. Use this to record the current nodeString during reading.
         currentNodeStringID = -1
@@ -782,7 +786,7 @@ class SRH_2D_SRHGeom:
                     # print("Node # %d: %s" % (nodeCount, line))
                     self.nodeCoordinates[nodeCount - 1] = [float(i) for i in search[2:]]
                 elif search[0] == "NodeString":
-                    nodeStringCound += 1
+                    nodeStringCount += 1
                     self.nodeStringsDict[int(search[1])] = [int(i) for i in search[2:]]
                     currentNodeStringID = int(search[1])
                 elif search[0].lower() == "Name".lower():
@@ -1009,16 +1013,22 @@ class SRH_2D_SRHGeom:
                 nodeID_1 = nodeString_nodeList[i]
                 nodeID_2 = nodeString_nodeList[i + 1]
 
-                curr_edge_node_IDs = tuple(sorted([nodeID_1, nodeID_2]))
+                #curr_edge_node_IDs = tuple(sorted([nodeID_1, nodeID_2]))
+                curr_edge_node_IDs = tuple([nodeID_1, nodeID_2])
+                curr_edge_node_IDs_reverse = tuple([nodeID_2, nodeID_1])
 
                 #check whether the edge is in the edge list. If not, we got a problem.
-                if curr_edge_node_IDs not in self.edges:
+                if curr_edge_node_IDs in self.edges:
+                    current_boundary_edge_list.append(self.edges[curr_edge_node_IDs])
+                    allBoundaryEdgeUsageFlag[self.edges[curr_edge_node_IDs]] = True
+                elif curr_edge_node_IDs_reverse in self.edges:
+                    current_boundary_edge_list.append(-self.edges[curr_edge_node_IDs_reverse])
+                    allBoundaryEdgeUsageFlag[self.edges[curr_edge_node_IDs_reverse]] = True
+                else:
                     print("Boundary edge ", curr_edge_node_IDs, "in NodeString", nodeString, "can not be found in edge list. Mesh is wrong. Exiting...")
                     sys.exit()
 
-                current_boundary_edge_list.append(self.edges[curr_edge_node_IDs])
 
-                allBoundaryEdgeUsageFlag[self.edges[curr_edge_node_IDs]] = True
 
             self.boundaryEdges[nodeString] = current_boundary_edge_list
 
@@ -1029,13 +1039,45 @@ class SRH_2D_SRHGeom:
             if not allBoundaryEdgeUsageFlag[boundaryEdgeID]: #if not used
                 unusedBoundaryEdgeList.append(boundaryEdgeID)
 
-        defaultWallNodeStringID = self.numOfNodeStrings+1   #nodeString ID for default boundary
-        self.boundaryEdges[defaultWallNodeStringID] = unusedBoundaryEdgeList
+        if len(unusedBoundaryEdgeList) > 0:  #if there are unused boundary edges
+            defaultWallBoundaryID = len(self.boundaryEdges)+1   #boundary ID for default boundary
+            self.boundaryEdges[defaultWallBoundaryID] = unusedBoundaryEdgeList
+
+        #build elementEdgesList
+        # loop over all elements
+        for cellI in range(self.numOfElements):
+            # loop over all edges of current element
+            for i in range(self.elementNodesCount[cellI]):    #i is the current edge index for this element
+                # get the node ID of current and next nodes
+                # connecting current edge
+
+                nodeID_1 = 0
+                nodeID_2 = 0
+
+                if i != (self.elementNodesCount[cellI] - 1):  # if not the last edge
+                    nodeID_1 = self.elementNodesList[cellI][i]
+                    nodeID_2 = self.elementNodesList[cellI][i + 1]
+                else:  # if the last edge
+                    nodeID_1 = self.elementNodesList[cellI][i]
+                    nodeID_2 = self.elementNodesList[cellI][0]
+
+                curr_edge_node_IDs = tuple([nodeID_1, nodeID_2])           #the original order of the edge nodes from mesh file
+                curr_edge_node_IDs_reverse = tuple([nodeID_2, nodeID_1])   #the order of the edge nodes reversed
+
+                # check whether the current edge is in the edges dictionary or not
+                if curr_edge_node_IDs in self.edges:
+                    self.elementEdgesList[cellI, i] = self.edges[curr_edge_node_IDs]
+                elif curr_edge_node_IDs_reverse in self.edges:
+                    self.elementEdgesList[cellI, i] = -self.edges[curr_edge_node_IDs_reverse]   #negative means the order is opposite.
+                else:  # something is wrong if the edge is not found in the edge list.
+                    print("Cell: ", cellI, " , edge: ", i, "  edge node IDs: ", curr_edge_node_IDs, "can not be found in edge list. Mesh is wrong. Exiting...")
+                    sys.exit()
 
         #debug
         if False:
             print("edges", self.edges)
             print("edgeElements",self.edgeElements)
+            print("elementEdgesList", self.elementEdgesList)
             print("allBoundaryEdgeIDs",self.allBoundaryEdgeIDs)
             print("boundaryEdges", self.boundaryEdges)
 
