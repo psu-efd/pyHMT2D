@@ -334,9 +334,9 @@ class vtkHandler:
 
         bounds = data.GetBounds()
 
-        #print("Unstructured Grid VTK bounds = ", bounds)
-        #print("Unstructured Grid number of cells: ", data.GetNumberOfCells())
-        #print("Unstructured Grid number of points: ", data.GetNumberOfPoints())
+        print("Unstructured Grid VTK bounds = ", bounds)
+        print("Unstructured Grid number of cells: ", data.GetNumberOfCells())
+        print("Unstructured Grid number of points: ", data.GetNumberOfPoints())
 
         if radius is None:
             boundingArea = (bounds[1] - bounds[0]) * (bounds[3] - bounds[2])   #assume 2D Grid
