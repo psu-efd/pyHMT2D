@@ -1592,6 +1592,9 @@ class SRH_2D_SRHMat:
         res_MatNames = {} #dict to hold "MatName" entries for material names list: ID and name
         res_Materials = {} #dict to hold "Material" information: ID and list of cells
 
+        #add default material name
+        res_MatNames["-1"] = "Default"
+
         current_MaterialID = -1
         current_MaterialCellList = []
 
@@ -1616,8 +1619,10 @@ class SRH_2D_SRHMat:
                     continue
                 elif search[0] == "NMaterials":
                     self.numOfMaterials = int(search[1])
+                    continue
                 elif search[0] == "MatName":
                     res_MatNames[search[1]] = search[2]
+                    continue
                 elif search[0] == "Material": # a new material zone starts
                     #if this is not the first Material zone; save the previous Material zone
                     if ((current_MaterialID != -1) and (len(current_MaterialCellList)!=0)):
@@ -1637,6 +1642,10 @@ class SRH_2D_SRHMat:
             res_Materials[current_MaterialID] = copy.deepcopy(current_MaterialCellList)
 
         srhmatfile.close()
+
+        #within SRHMat file, we have no idea whether there are any cells in the default material zone. Add a default
+        #wiht an empty cell list. The user of SRH_2D_SRHMat should take care of that.
+        res_Materials[-1] = []
 
         #convert material ID from str to int
         for zoneID, cellList in res_Materials.items():
@@ -1681,7 +1690,7 @@ class SRH_2D_SRHMat:
         #cells in srhmat (no warning given either). Here, if we can't find the cell in material list,
         #simply use the default Manning's n ID.
         if not bFound:
-            print("In find_cell_material_ID(cellID), cellID =", cellID, "is not found. Check mesh and material coverage. Default is used.")
+            print("pyHMT2D: In find_cell_material_ID(cellID), cellID =", cellID, "is not found. Check mesh and material coverage. Default is used.")
             return 0 #return the default (?)
             #sys.exit()
 
