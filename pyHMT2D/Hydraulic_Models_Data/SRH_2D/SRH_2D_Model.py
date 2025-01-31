@@ -11,6 +11,7 @@ import sys
 import subprocess
 import os
 import time
+import platform
 
 
 class SRH_2D_Model(HydraulicModel):
@@ -24,11 +25,11 @@ class SRH_2D_Model(HydraulicModel):
         _faceless : bool
             whether show the SRH-2D window when it is running
         _srh_path : str
-            path to the SRH_2D program (e.g., srh_2d.exe depending on the version)
+            path to the SRH_2D program (e.g., srh_2d.exe depending on the version of SRH-2D and the operating system)
         _srh_pre_path : str
-            path to the SRH_2D preprocessing program (e.g., srh_2d_pre.exe depending on the version)
+            path to the SRH_2D preprocessing program (e.g., srh_2d_pre.exe depending on the version of SRH-2D and the operating system)
         _extra_dll_path : str
-            path for library Dlls, such as XMDL, zlib, hdf5, and msvcr used by SRH-2D.
+            path for library Dlls, such as XMDL, zlib, hdf5, and msvcr used by SRH-2D (only relevant for Windows).
         _srh_2d_data : SRH_2D_Data
             a SRH_2D_Data object to hold the simulation case data.
 
@@ -66,11 +67,15 @@ class SRH_2D_Model(HydraulicModel):
         #including srhhydro, srhgeom, srhmat, etc.
         self._srh_2d_data = None
 
+        #check the operating system
+        self._os_type = platform.system()
+
+
     def init_model(self):
         """Initialize SRH-2D model
 
         It will check the existance of SRH-2D executable files and add extra DLL path
-        to the system PATH environment.
+        to the system PATH environment (only relevant for Windows).
 
         Returns
         -------
@@ -79,40 +84,70 @@ class SRH_2D_Model(HydraulicModel):
 
         print("Initializing SRH-2D ...")
 
-        #check whether the specified srh_2d_pre.exe and srh_2d.exe exist
+        #check whether the specified executable files exist
         if not path.isfile(self._srh_pre_path):
             print("The SRH-2D Pre executable file", self._srh_pre_path, "does not exists. Exiting ...")
             sys.exit()
+
 
         if not path.isfile(self._srh_path):
             print("The SRH-2D executable file", self._srh_path, "does not exists. Exiting ...")
             sys.exit()
 
-        #check whether the specified extra Dll path exists
-        if not path.isdir(self._extra_dll_path):
-            print("The extra DLL library path", self._extra_dll_path, "does not exists. Exiting ...")
-            sys.exit()
+        #check whether the specified extra Dll path exists (only relevant for Windows)
+        if self._os_type == "Windows":
+            if not path.isdir(self._extra_dll_path):
+                print("The extra DLL library path", self._extra_dll_path, "does not exists. Exiting ...")
+                sys.exit()
 
-        #add the extra Dll path to "PATH" environment (only temporarily)
-        extra_path = os.path.abspath(self._extra_dll_path)
-        os.environ['PATH'] = extra_path + ";" + os.environ['PATH']
+            #add the extra Dll path to "PATH" environment (only temporarily)
+            extra_path = os.path.abspath(self._extra_dll_path)
+            os.environ['PATH'] = extra_path + ";" + os.environ['PATH']
 
-    def open_project(self, srhhydro_filename):
-        """Open a SRH-2D project with the specified srhhydro file
+    def open_project(self, srhcontrol_filename):
+        """Open a SRH-2D project with the specified srhcontrol file which can be a srhhydro or SIF file
 
         A SRH_2D_Data object will be created to hold the project information.
 
         Parameters
         ----------
-        srhhydro_filename : str
-            name of the srhhydro file (which contains srhgeom_filename and srhmat_filename)
+        srhcontrol_filename : str
+            name of the srhcontrol file which can be a srhhydro or SIF file
 
         Returns
         -------
 
         """
 
-        self._srh_2d_data = SRH_2D_Data(srhhydro_filename)
+        #check whether it is a srhhydro or SIF file
+        if not srhcontrol_filename.endswith(".srhhydro") and \
+           not ("sif" in srhcontrol_filename.lower()):  #contains "sif" or "SIF"
+            print("The SRH-2D control file must be either srhhydro or SIF file. Exiting ...")
+            sys.exit()
+
+        #check if the srhcontrol file exists
+        if not path.isfile(srhcontrol_filename):
+
+            print("The SRH-2D control file", srhcontrol_filename, "does not exists. Exiting ...")
+            sys.exit()
+
+
+        self._srh_2d_data = SRH_2D_Data(srhcontrol_filename)
+
+        #currently, pyHMT2D only supports srhhydro file on Windows and SIF file on Linux
+        if self._os_type == "Windows":
+            if self._srh_2d_data.control_type == "SRHHydro":
+                pass
+            elif self._srh_2d_data.control_type == "SIF":
+                print("Currently, pyHMT2D only supports SIF file on Linux, not Windows. Exiting ...")
+                sys.exit()
+        elif self._os_type == "Linux":
+            if self._srh_2d_data.control_type == "SRHHydro":
+                print("Currently, pyHMT2D only supports SRHHydro file on Windows, not Linux. Exiting ...")
+                sys.exit()
+            elif self._srh_2d_data.control_type == "SIF":
+                pass
+
 
     def set_simulation_case(self, srh_2d_data):
         """Set the simulation case to srh_2D_data (if it has been created already)
@@ -278,15 +313,20 @@ class SRH_2D_Model(HydraulicModel):
         """
 
         cmd = self._srh_pre_path
-        case_srhhydro_file_name = self._srh_2d_data.srhhydro_filename
+        case_srhcontrol_file_name = self._srh_2d_data.srhcontrol_filename
 
-        print("Running SRH-2D Pre with case SRHHYDRO input file:", case_srhhydro_file_name)
+        print("Running SRH-2D Pre with case control input file (srhhydro or SIF):", case_srhcontrol_file_name)
 
-        if not path.isfile(case_srhhydro_file_name):
-            print("The case SRHHYDRO input file does not exist:", case_srhhydro_file_name, "Exiting ...")
+        if not path.isfile(case_srhcontrol_file_name):
+            print("The case control file does not exist:", case_srhcontrol_file_name, "Exiting ...")
             sys.exit()
 
-        p = subprocess.run([cmd, '3', case_srhhydro_file_name], stdout=subprocess.PIPE,
+        #depending on the control file type, call the corresponding preprocessing program
+        if self._srh_2d_data.control_type == "SRHHydro":
+            p = subprocess.run([cmd, '3', case_srhcontrol_file_name], stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+        elif self._srh_2d_data.control_type == "SIF":
+            p = subprocess.run([cmd, case_srhcontrol_file_name], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 
         if str.encode("successfully executed") in p.stdout:

@@ -11,17 +11,555 @@ import sys
 import os
 import copy
 import numpy as np
+import glob
 import h5py
 from os import path
 import shlex
 import vtk
 from vtk.util import numpy_support as VN
 
+
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
 
 from pyHMT2D.__common__ import *
 from pyHMT2D.Misc.vtk_utilities import vtkCellTypeMap
 from pyHMT2D.Misc import vtkHandler
+
+class SRH_2D_SIF:
+    """Class to parse and manage SRH-2D SIF (Simulation Input File) data"""
+    
+    VALID_MODULES = ['RIVER', 'WATERSHED', 'COAST']
+    VALID_SOLVERS = ['FLOW', 'MOBILE', 'DIFF', 'SED_DIFF']
+    VALID_TIME_TYPES = ['STEADY', 'UNSTEADY']
+    VALID_MESH_UNITS = ['FOOT', 'METER', 'INCH', 'MM', 'MILE', 'KM', 'GSCALE']
+    VALID_INIT_CONDITIONS = ['DRY', 'RST', 'AUTO', 'ZONAL', 'VARY_WSE', 'VARY_WD']
+    VALID_MANNING_OPTIONS = ['SPATIAL', 'SPATIAL VEG', 'SPATIAL GRAIN']
+    VALID_OUTPUT_FORMATS = ['SRHC', 'TEC', 'SRHN', 'XMDF', 'XMDFC', 'VTK']
+    VALID_OUTPUT_UNITS = ['SI', 'EN']
+
+    def __init__(self, filename):
+        """Initialize SIF parser with filename"""
+        self.filename = filename
+        self.srhsif_content = {
+            'ManningN': {},
+            'BC': {},
+            'IQParams': {},
+            'EWSParamsC': {},
+            'MONITORING': {},
+            'wall_roughness': {},
+            'pressurized_zones': {},
+            'flow_obstructions': {},
+            'output_max_dat': False,
+            'intermediate_output': {}
+        }
+        self.comments = {}
+
+        try:
+            self._parse_file()
+        except Exception as e:
+            raise ValueError(f"Error parsing SIF file: {str(e)}")
+
+    def _parse_file(self):
+        """Parse the SIF file and store data in self.data dictionary"""
+        try:
+            with open(self.filename, 'r') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"SIF file not found: {self.filename}")
+
+
+        #get the case name from the filename: assume the filename is like "Muncie_SIF.dat"
+        case_name = self.filename.split("_SIF.dat")[0]  #strip off "_SIF.dat" 
+        self.srhsif_content["Case"] = case_name        
+
+        i = 0
+        while i < len(lines):
+
+            line = lines[i].strip()
+            if line.startswith('//'):
+                comment = line[2:].strip()
+                self.comments[i] = comment
+                i += 1
+                if i >= len(lines):
+                    break
+                value = lines[i].strip()
+                
+                try:
+                    if "Simulation Description" in comment:
+                        self.srhsif_content['simulation_description'] = value
+                    elif "Module Selected" in comment:
+                        self._validate_module(value.upper())
+                        self.srhsif_content['module'] = value
+                    elif "Solver Selection" in comment:
+                        self._validate_solver(value.upper())
+                        self.srhsif_content['solver'] = value
+                    elif "Monitor-Point-Info" in comment:
+                        self.srhsif_content['monitor_point_info'] = int(value)
+                    elif "Steady-or-Unsteady" in comment:
+                        self._validate_time_type(value.upper())
+                        self.srhsif_content['time_type'] = value
+                    elif "Time Parameters" in comment:
+                        self.srhsif_content['time_params'] = self._parse_time_parameters(value)
+                    elif "Turbulence-Model" in comment:
+                        self.srhsif_content['turbulence_model'] = value
+                    elif "A_TURB for the PARA Model" in comment:
+                        self.srhsif_content['a_turb'] = float(value)
+                    elif "Mesh-Unit" in comment:
+                        self.srhsif_content['mesh_unit'] = value
+                    elif "Mesh FILE_NAME and FORMAT" in comment:
+                        self.srhsif_content['mesh_file_name'] = value.split()[0]
+                        self.srhsif_content['mesh_format'] = value.split()[1]
+                    elif "Initial Flow Condition Setup Option" in comment:
+                        self._validate_init_condition(value.upper())
+                        self.srhsif_content['initial_flow_condition'] = value
+                    elif "Manning Coefficient" in comment:
+                        i = self._parse_manning_coefficients(lines, i, value)
+                    elif "Any-Special-Modeling-Options" in comment:
+                        self.srhsif_content['special_modeling_options'] = int(value)
+                    elif "Boundary Type" in comment:
+                        i = self._parse_boundary_conditions(lines, i)
+                    elif "Wall-Roughess-Height-Specification" in comment:
+                        i = self._parse_wall_roughness(lines, i)
+                    elif "Pressurized Zone exists?" in comment:
+                        i = self._parse_pressurized_zones(lines, i)
+                    elif "Any In-Stream Flow Obstructions?" in comment:
+                        i = self._parse_flow_obstructions(lines, i)       
+                    elif "Results-Output-Format" in comment:
+                        self._parse_output_format(value)
+                    elif "Output File _MAX.dat" in comment:
+                        self._parse_max_output(value)
+                    elif "Intermediate Result Output Control" in comment:
+                        i = self._parse_intermediate_output(lines, i)
+                except ValueError as e:
+                    raise ValueError(f"Error parsing line {i+1}: {str(e)}")
+            i += 1
+
+    def _parse_boundary_conditions(self, lines, start_index):
+        """Parse all boundary conditions from the file
+        
+        Args:
+            lines: List of all file lines
+            start_index: Current line index where first boundary is found
+        
+        Returns:
+            next_index: Index of the next line after all boundaries
+        """
+
+        res_BC = {}
+        res_IQParams = {}
+        res_EWSParamsC = {}
+
+        i = start_index - 1  # Start from the line before the first boundary for the while loop below        
+
+
+        index_BC = 0
+        
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Check if we've hit the next section (indicated by '//' without 'Boundary')
+            if line.startswith('//') and 'Boundary' not in line:
+                break
+                
+            # Parse boundary type
+            if line.startswith('// Boundary Type'):
+                index_BC += 1
+                i += 1
+                boundary_type = lines[i].strip().lower()
+
+                res_BC[index_BC] = boundary_type
+                
+
+                # Get boundary values from next two lines
+                i += 1  # Skip to values comment line
+                i += 1  # Skip to actual values line
+                boundary_values = lines[i].strip().split()
+
+                if boundary_type == 'inlet-q':
+                    res_IQParams[index_BC] = boundary_values
+                elif boundary_type == 'exit-h':
+                    res_EWSParamsC[index_BC] = boundary_values
+                else:
+
+                    raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
+            
+            i += 1
+
+        self.srhsif_content['BC'] = res_BC
+        self.srhsif_content['IQParams'] = res_IQParams
+        self.srhsif_content['EWSParamsC'] = res_EWSParamsC
+        
+        return i  # Return the index of the next section
+
+
+    def _parse_wall_roughness(self, lines, i):
+        """Parse wall roughness section"""
+        value = lines[i].strip()
+        if value and value not in ['0', '']:
+            self.srhsif_content['wall_roughness'] = value.split()
+        return i
+
+    def _parse_pressurized_zones(self, lines, i):
+        """Parse pressurized zones section"""
+        value = lines[i].strip()
+        if value and value not in ['0', '']:
+            self.srhsif_content['pressurized_zones'] = value.split()
+        return i
+
+    def _parse_flow_obstructions(self, lines, i):
+        """Parse flow obstructions section"""
+        value = lines[i].strip()
+        if value and value not in ['0', '']:
+            self.srhsif_content['flow_obstructions'] = value.split()
+        return i
+
+    def _parse_output_format(self, value):
+        """Parse output format and units"""
+        parts = value.split()
+        format_parts = parts[0].split('/')
+        output_format = format_parts[0].upper()
+        if output_format not in self.VALID_OUTPUT_FORMATS:
+            raise ValueError(f"Invalid output format: {output_format}")
+        
+        output_unit = parts[1].upper() if len(parts) > 1 else 'EN'
+        if output_unit not in self.VALID_OUTPUT_UNITS:
+            raise ValueError(f"Invalid output unit: {output_unit}")
+        
+        self.srhsif_content['OutputFormat'] = output_format
+        self.srhsif_content['OutputUnit'] = output_unit
+        
+        # Check for optional STL FACE
+        if len(parts) > 2 and parts[2:] == ['STL', 'FACE']:
+            self.srhsif_content['output_stl_face'] = True
+
+    def _parse_max_output(self, value):
+        """Parse _MAX.dat output option"""
+        self.srhsif_content['output_max_dat'] = bool(value.strip())
+
+    def _parse_intermediate_output(self, lines, i):
+        """Parse intermediate output control"""
+        value = lines[i].strip()
+        if value.lower() != 'empty':
+            try:
+                # Try parsing as a single interval
+                interval = float(value)
+                self.srhsif_content['intermediate_output'] = {'type': 'interval', 'value': interval}
+            except ValueError:
+                # Parse as list of times
+                times = [float(t) for t in value.split()]
+                self.srhsif_content['intermediate_output'] = {'type': 'list', 'value': times}
+        return i
+
+    def save(self, filename=None):
+        """Save the current data back to a SIF file"""
+        if filename is None:
+            filename = self.filename
+        
+        try:
+            with open(filename, 'w') as f:
+                # Simulation Description
+                f.write("// Simulation Description (not used by SRH):\n")
+                f.write(f"{self.srhsif_content.get('simulation_description', '')}\n")
+                
+                # Module
+                f.write("// Module Selected (RIVER WATERSHED COAST)\n")
+                f.write(f"{self.srhsif_content.get('module', '')}\n")
+                
+                # Solver
+                f.write("// Solver Selection (FLOW MOBile DIFF SED_DIFF ...)\n")
+                f.write(f"{self.srhsif_content.get('solver', '')}\n")
+                
+                # Monitor Points
+                f.write("// Monitor-Point-Info: NPOINT\n")
+                f.write(f"{self.srhsif_content.get('monitor_point_info', '0')}\n")
+                
+                # Time Type
+                f.write("// Steady-or-Unsteady (STEADY/UNS)\n")
+                f.write(f"{self.srhsif_content.get('time_type', '')}\n")
+                
+                # Time Parameters
+                f.write("// Time Parameters: T_Start(hr) T_end(hr) Dt(s) [Dt_max(s) CFL]\n")
+                f.write(" ".join(map(str, self.srhsif_content['time_params'])) + "\n")
+                    
+                # Turbulence Model
+                f.write("// Turbulence-Model\n")
+                f.write(f"{self.srhsif_content.get('turbulence_model', '')}\n")
+                
+                # A_TURB Parameter
+                f.write("// A_TURB for the PARA Model (0.05 to 1.0)\n")
+                f.write(f"{self.srhsif_content.get('a_turb', '')}\n")
+                
+                # Mesh Unit
+                f.write("// Mesh-Unit (FOOT METER INCH MM MILE KM GSCALE)\n")
+                f.write(f"{self.srhsif_content.get('mesh_unit', '')}\n")
+                
+                # Mesh File
+                f.write("// Mesh FILE_NAME and FORMAT(SMS...)\n")
+                f.write(f"{self.srhsif_content.get('mesh_file_name', '')} {str(self.srhsif_content.get('mesh_format', '')).strip()}\n")
+                
+                # Initial Flow Condition
+                f.write("// Initial Flow Condition Setup Option (DRY RST AUTO ZONAL Vary_WSE/Vary_WD)\n")
+                f.write(f"{self.srhsif_content.get('initial_flow_condition', '')}\n")
+                
+                # Manning Coefficients
+                f.write("// Manning Coefficient n Input Options: SPATIAL or SPATIAL VEG GRAIN for 2D Model; SPATIAL for 3D model\n")
+                f.write(f"{self.srhsif_content.get('manning_option', '')}\n")
+                f.write("// Number of Material Types in 2D Mesh File\n")
+                f.write(f"{str(self.srhsif_content.get('n_manning_zones', '')).strip()}\n")
+                f.write("// Manning Coefficient in each mesh zone: a real value or a WD~n file name or Landuse\n")
+                if 'manning_values' in self.srhsif_content:
+                    for value in self.srhsif_content['manning_values']:
+                        f.write(f"{value}\n")
+                
+                # Special Modeling Options
+                f.write("// Any-Special-Modeling-Options? (0/1=no/yes)\n")
+                f.write(f"{self.srhsif_content.get('special_modeling_options', '0')}\n")
+                
+                # Boundary Conditions
+                if 'boundaries' in self.srhsif_content:
+                    for boundary in self.srhsif_content['boundaries']:
+                        f.write("// Boundary Type (INLET-Q EXIT-H etc)\n")
+                        f.write(f"{boundary['type']}\n")
+                        f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
+                        f.write(" ".join(boundary['values']) + "\n")
+                
+                # Wall Roughness
+                f.write("// Wall-Roughess-Height-Specification (empty-line=DONE)\n")
+                if self.srhsif_content.get('wall_roughness'):
+                    f.write(" ".join(map(str, self.srhsif_content['wall_roughness'])) + "\n")
+                else:
+                    f.write(" \n")
+                
+                # Pressurized Zones
+                f.write("// Pressurized Zone exists? (empty-line or 0 == NO)\n")
+                if self.srhsif_content.get('pressurized_zones'):
+                    f.write(" ".join(map(str, self.srhsif_content['pressurized_zones'])) + "\n")
+                else:
+                    f.write(" \n")
+                
+                # Flow Obstructions
+                f.write("// Any In-Stream Flow Obstructions? (empty-line or 0 = NO)\n")
+                if self.srhsif_content.get('flow_obstructions'):
+                    f.write(" ".join(map(str, self.srhsif_content['flow_obstructions'])) + "\n")
+                else:
+                    f.write(" \n")
+                
+                # Output Format
+                f.write("// Results-Output-Format-and-Unit(SRHC/TEC/SRHN/XMDF/XMDFC/VTK;SI/EN) + Optional STL FACE\n")
+                output_str = f"{self.srhsif_content.get('output_format', '')} {self.srhsif_content.get('output_unit', '')}"
+                if self.srhsif_content.get('output_stl_face'):
+                    output_str += " STL FACE"
+                f.write(output_str + "\n")
+                
+                # MAX.dat Output
+                f.write("// Output File _MAX.dat is requested? (empty means NO)\n")
+                f.write("1\n" if self.srhsif_content.get('output_max_dat') else " \n")
+                
+                # Intermediate Output
+                f.write("// Intermediate Result Output Control: INTERVAL(hour) OR List of T1 T2 ...  EMPTY means the end\n")
+                if 'intermediate_output' in self.srhsif_content:
+                    output_data = self.srhsif_content['intermediate_output']
+                    if output_data['type'] == 'interval':
+                        f.write(f"{output_data['value']}\n")
+                    else:
+                        f.write(" ".join(map(str, output_data['value'])) + "\n")
+                else:
+                    f.write("EMPTY\n")
+
+        except Exception as e:
+            raise IOError(f"Error saving SIF file: {str(e)}")
+
+    # Additional getter methods
+    def get_wall_roughness(self):
+        """Return wall roughness specifications"""
+        return self.data.get('wall_roughness', [])
+
+    def get_pressurized_zones(self):
+        """Return pressurized zones specifications"""
+        return self.data.get('pressurized_zones', [])
+
+    def get_flow_obstructions(self):
+        """Return flow obstructions specifications"""
+        return self.data.get('flow_obstructions', [])
+
+    def get_output_format(self):
+        """Return output format and unit"""
+        return {
+            'format': self.data.get('output_format'),
+            'unit': self.data.get('output_unit'),
+            'stl_face': self.data.get('output_stl_face', False)
+        }
+
+    def get_intermediate_output(self):
+        """Return intermediate output control settings"""
+        return self.data.get('intermediate_output', None)
+
+    # Additional setter methods
+    def set_wall_roughness(self, values):
+        """Set wall roughness specifications"""
+        self.data['wall_roughness'] = values
+
+    def set_output_format(self, format_type, unit='EN', stl_face=False):
+        """Set output format and unit"""
+        if format_type not in self.VALID_OUTPUT_FORMATS:
+            raise ValueError(f"Invalid output format: {format_type}")
+        if unit not in self.VALID_OUTPUT_UNITS:
+            raise ValueError(f"Invalid output unit: {unit}")
+        
+        self.data['output_format'] = format_type
+        self.data['output_unit'] = unit
+        self.data['output_stl_face'] = stl_face
+
+    def set_intermediate_output(self, value, output_type='interval'):
+        """Set intermediate output control
+        
+        Args:
+            value: float or list of floats
+            output_type: 'interval' or 'list'
+        """
+        if output_type not in ['interval', 'list']:
+            raise ValueError("output_type must be 'interval' or 'list'")
+            
+        self.data['intermediate_output'] = {
+            'type': output_type,
+            'value': value
+        }
+
+    def _validate_module(self, value):
+        """Validate module selection"""
+        if value.upper() not in self.VALID_MODULES:
+            raise ValueError(f"Invalid module: {value}. Must be one of {self.VALID_MODULES}")
+
+    def _validate_solver(self, value):
+        """Validate solver selection"""
+        if value.upper() not in self.VALID_SOLVERS:
+            raise ValueError(f"Invalid solver: {value}. Must be one of {self.VALID_SOLVERS}")
+
+    def _validate_time_type(self, value):
+        """Validate time type selection"""
+        if value.upper() not in self.VALID_TIME_TYPES:
+            raise ValueError(f"Invalid time type: {value}. Must be one of {self.VALID_TIME_TYPES}")
+
+    def _validate_mesh_unit(self, value):
+        """Validate mesh unit selection"""
+        if value.upper() not in self.VALID_MESH_UNITS:
+            raise ValueError(f"Invalid mesh unit: {value}. Must be one of {self.VALID_MESH_UNITS}")
+
+    def _validate_init_condition(self, value):
+        """Validate initial condition selection"""
+        if value.upper() not in self.VALID_INIT_CONDITIONS:
+            raise ValueError(f"Invalid initial condition: {value}. Must be one of {self.VALID_INIT_CONDITIONS}")
+
+    def _validate_manning_option(self, value):
+        """Validate Manning option selection"""
+        if value.upper() not in self.VALID_MANNING_OPTIONS:
+            raise ValueError(f"Invalid Manning option: {value}. Must be one of {self.VALID_MANNING_OPTIONS}")
+
+    def _parse_time_parameters(self, value):
+        """Parse time parameters line
+        
+        Format: T_Start(hr) T_end(hr) Dt(s) [Dt_max(s) CFL]
+        Last two parameters are optional
+        
+        Args:
+            value: String containing space-separated time parameters
+            
+        Returns:
+            List of float values for time parameters
+            
+        Raises:
+            ValueError: If parameters are invalid or missing required values
+        """
+        try:
+            params = [float(x) for x in value.split()]
+            if len(params) < 3:
+                raise ValueError("Time parameters must include at least t_start, t_end, and dt")
+            return params
+        except ValueError as e:
+            raise ValueError(f"Invalid time parameters format: {str(e)}")
+
+    def _parse_manning_coefficients(self, lines, i, value):
+        """Parse Manning coefficients section
+        
+        Args:
+            lines: List of all file lines
+            i: Current line index where "VARY" is found
+            value: String containing "VARY"
+            
+        Returns:
+            next_index: Index of the next line after Manning coefficients
+            
+        Raises:
+            ValueError: If Manning coefficient values are invalid
+        """
+        try:
+            # First line should be the option, e.g., "VARY"
+            manning_option = value.upper()
+            self.srhsif_content['manning_option'] = manning_option
+            
+            # Next line should be the comment about number of materials
+            i += 1
+            if i >= len(lines) or not lines[i].strip().startswith('//'):
+                raise ValueError("Expected comment line for number of materials")
+                
+            # Next line contains the actual number
+            i += 1
+            if i >= len(lines):
+                raise ValueError("Unexpected end of file while reading number of materials")
+            
+            try:
+                n_materials = int(lines[i].strip())
+            except ValueError:
+                raise ValueError(f"Invalid number of materials: {lines[i].strip()}")
+                
+            self.srhsif_content['n_manning_zones'] = n_materials
+
+            # Read the comment line for the Manning values
+            i += 1
+            if i >= len(lines) or not lines[i].strip().startswith('//'):
+                raise ValueError("Expected comment line for Manning values")
+            
+            # Read the Manning values
+            res_ManningsN = {}  # dict for ManningsN (there cuould be multiple entries)
+
+            #add a default value for the ManningN (not sure why SIF file does not have this)
+            res_ManningsN[0] = 0.03
+
+            for material_id in range(n_materials):
+                i += 1
+
+                if i >= len(lines):
+                    raise ValueError("Unexpected end of file while reading Manning coefficients")
+
+                value = lines[i].strip()
+                # Handle both numeric values and file names
+                try:
+                    res_ManningsN[material_id+1] = float(value)
+                except ValueError:
+                    # If not a number, store as string (could be a file name)
+                    res_ManningsN[material_id+1] = value
+            
+            self.srhsif_content['ManningN'] = res_ManningsN
+            return i
+
+        except ValueError as e:
+            raise ValueError(f"Invalid Manning coefficient values: {str(e)}")
+        
+    def modify_manning_n(self, material_id, new_manning_n):
+        """Modify Manning's n value for a specific material ID"""
+
+        #check material_id is an integer and is within the range of the Manning's n list
+        if not isinstance(material_id, int) or material_id < 0 or material_id >= len(self.srhsif_content['manning_values']):
+            raise ValueError(f"Invalid material ID: {material_id}. Must be an integer within the range of the Manning's n list.")
+
+        #check new_manning_n is a float
+        if not isinstance(new_manning_n, float):
+            raise ValueError(f"Invalid Manning's n value: {new_manning_n}. Must be a float.")
+
+        #modify the Manning's n value
+        self.srhsif_content['manning_values'][material_id] = new_manning_n
+
+        print(f"Manning's n value for material ID {material_id} has been modified to {new_manning_n}")
 
 class SRH_2D_SRHHydro:
     """A class to handle srhhydro file for SRH-2D
@@ -119,8 +657,9 @@ class SRH_2D_SRHHydro:
                 res_EQParams[int(parts[1])] = parts[2]
             elif parts[0] == 'NDParams': #need to check these
                 res_NDParams[int(parts[1])] = parts[2]
-            elif parts[0] == 'OutputFormat':
-                res_all[parts[0]] = [parts[1],parts[2]]
+            elif parts[0] == 'OutputFormat':  #output format and unit
+                res_all[parts[0]] = parts[1]
+                res_all['OutputUnit'] = parts[2]
             elif parts[0] == 'SimTime':
                 res_all[parts[0]] = [float(parts[1]),float(parts[2]),float(parts[3])]
             elif parts[0] == 'ParabolicTurbulence':
@@ -525,7 +1064,7 @@ class SRH_2D_SRHHydro:
         return value[1]
 
     def get_grid_file_name(self):
-        """Get grid file name (shoudl be like "xxx.srhgeom")
+        """Get grid file name (should be like "xxx.srhgeom")
 
         Returns
         -------
@@ -539,7 +1078,7 @@ class SRH_2D_SRHHydro:
         return value
 
     def get_mat_file_name(self):
-        """Get material file name (shoudl be like "xxx.srhmat")
+        """Get material file name (should be like "xxx.srhmat")
 
         Returns
         -------
@@ -556,9 +1095,9 @@ class SRH_2D_SRHGeom:
     """A class to handle srhgeom file for SRH-2D
 
     Notes:
-        1. In SMS (SRH-2D), monitoring lines (ML) and monitoring points (MP) are treated seperately and differently.
+        1. In SMS (SRH-2D), monitoring lines (ML) and monitoring points (MP) are treated separately and differently.
            ML is created in the same way as boundary lines. Nodes closest to the line are recorded as a NodeString
-           in SRHGEOM file. MP is created as a feature point and its coordiantes are recorded in the "srhmpoint" file.
+           in SRHGEOM file. MP is created as a feature point and its coordinates are recorded in the "srhmpoint" file.
            Interpolation is done to probe the results at MPs.
 
            This potentially have some drawbacks:
@@ -569,7 +1108,7 @@ class SRH_2D_SRHGeom:
            b. The way MLs are defined if slightly limited by the mesh (node locations). To be exactly at a ML, one has
               to interpolate the simulated solution to the points on MLs.
 
-        2. Becasue BC and ML are mixed together, we need to separate them. However, this can only be done with the BC
+        2. Because BC and ML are mixed together, we need to separate them. However, this can only be done with the BC
            information in the srhhydro file. That is why we need to pass in bcDict in the constructor.
 
     Attributes
@@ -1747,6 +2286,9 @@ class SRH_2D_Data(HydraulicData):
     save SRH-2D results into VTK format for visualization in Paraview, parse
     SRH-2D mesh information and convert/save to other formats, query SRH-2D
     results (e.g., for calibration), etc.
+
+    Between srhdryo and srhsif, only one of them is needed depending on the
+    type of the input file.
     
     Attributes
     ----------
@@ -1754,6 +2296,8 @@ class SRH_2D_Data(HydraulicData):
         The name for the HDF result file generated by HEC-RAS
     srhhydro_obj : SRH_2D_SRHHydro
         An object to hold information in the SRHHYDRO file
+    srhsif_obj : SRH_2D_SIF
+        An object to hold information in the SIF file
     srhgeom_obj : SRH_2D_SRHGeom
         An object to hold information in the SRHGEOM file
     srhmat_obj : SRH_2D_SRHMat
@@ -1765,41 +2309,70 @@ class SRH_2D_Data(HydraulicData):
     
     """
     
-    def __init__(self, srhhydro_filename):
+    def __init__(self, srhcontrol_filename):
         """Constructor for SRH_2D_Data
 
-        srhgeom_filename and srhmat_filename are contained in the SRHHydro file.
+        srhgeom_filename and srhmat_filename are contained in the SRHHydro or SRH-2D SIF file.
 
         Parameters
         ----------
-        srhhydro_filename : str
-            Name of the SRHHydro file
+        srhcontrol_filename : str
+            Name of the SRH-2D control file: either SRHHydro or SIF file
 
         """
 
         HydraulicData.__init__(self, "SRH-2D")
 
-        self.srhhydro_filename = srhhydro_filename
+        #make sure the control file is either SRHHydro or SIF
+        if not srhcontrol_filename.endswith(".srhhydro") and \
+           not ("sif" in srhcontrol_filename.lower()):  #contains "sif" or "SIF"
+            raise ValueError("SRH-2D control file must be either SRHHydro or SIF file")
 
-        #extract path in srhhydro_filename. We assume the SRHGeom and SRHMat files
-        #are located in the same directory as the SRHHydro file. In the SRHHydro file,
+        #check if the control file is a SRHHydro or SIF file
+        self.control_type = "SRHHydro" if srhcontrol_filename.endswith(".srhhydro") else "SIF"
+
+        self.srhcontrol_filename = srhcontrol_filename
+
+        #extract path in srhcontrol_filename. We assume the SRHGeom and SRHMat files
+        #are located in the same directory as the srhcontrol_filename file, which can be
+        #either a srhhydro or sif file. In the control file,
         #the file names for SRHGeom and SRHMat do not contain the directory.
-        file_path, _, = os.path.split(srhhydro_filename)
+        file_path, _, = os.path.split(srhcontrol_filename)
 
         #read SRH_2D_SRHHydro file and build SRH_2D_SRHHydro object
-        self.srhhydro_obj = SRH_2D_SRHHydro(self.srhhydro_filename)
+        self.srhhydro_obj = None
+        self.srhsif_obj = None
+        if self.control_type == "SRHHydro":
+            self.srhhydro_obj = SRH_2D_SRHHydro(self.srhcontrol_filename)
+        else:
+            self.srhsif_obj = SRH_2D_SIF(self.srhcontrol_filename)
 
         #get the srhgeom_filename and srhmat_filename from srhhydro_obj
-        self.srhgeom_filename =      self.srhhydro_obj.get_grid_file_name() if len(file_path) == 0 \
-                                else file_path+"/"+self.srhhydro_obj.get_grid_file_name()
+        self.srhgeom_filename = None
+        self.srhmat_filename = None    #Note: it seems SRH-2D preprocess assumes the file name for srhmat is the same as srhgeom. For example, if srhgeom is "Muncie.srhgeom", then srhmat is "Muncie.srhmat".
+        if self.control_type == "SRHHydro":
+            self.srhgeom_filename =      self.srhhydro_obj.get_grid_file_name() if len(file_path) == 0 \
+                                    else file_path+"/"+self.srhhydro_obj.get_grid_file_name()
 
-        self.srhmat_filename =       self.srhhydro_obj.get_mat_file_name() if len(file_path) == 0 \
-                                else file_path+"/"+self.srhhydro_obj.get_mat_file_name()
+            self.srhmat_filename =       self.srhhydro_obj.get_mat_file_name() if len(file_path) == 0 \
+                                    else file_path+"/"+self.srhhydro_obj.get_mat_file_name()
+        else:
+            self.srhgeom_filename = self.srhsif_obj.srhsif_content["mesh_file_name"]
+            self.srhmat_filename = self.srhsif_obj.srhsif_content["mesh_file_name"].replace(".srhgeom", ".srhmat")
 
-        #read and build SRH_2D_SRHHydro, SRH_2D_Geom, and SRH_2D_Mat objects
-        self.srhhydro_obj = SRH_2D_SRHHydro(self.srhhydro_filename)
-        self.srhgeom_obj = SRH_2D_SRHGeom(self.srhgeom_filename,self.srhhydro_obj.srhhydro_content["BC"])
-        self.srhmat_obj = SRH_2D_SRHMat(self.srhmat_filename)
+
+        print("self.srhgeom_filename = ", self.srhgeom_filename)
+        print("self.srhmat_filename = ", self.srhmat_filename)
+
+        #read and build SRH_2D_Geom, and SRH_2D_Mat objects
+        self.srhgeom_obj = None
+        self.srhmat_obj = None
+        if self.control_type == "SRHHydro":
+            self.srhgeom_obj = SRH_2D_SRHGeom(self.srhgeom_filename, self.srhhydro_obj.srhhydro_content["BC"])
+            self.srhmat_obj = SRH_2D_SRHMat(self.srhmat_filename)
+        else:
+            self.srhgeom_obj = SRH_2D_SRHGeom(self.srhgeom_filename, self.srhsif_obj.srhsif_content["BC"])
+            self.srhmat_obj = SRH_2D_SRHMat(self.srhmat_filename)
 
         #Manning's n value at cell centers and nodes
         self.ManningN_cell = np.zeros(self.srhgeom_obj.numOfElements, dtype=float)
@@ -1826,7 +2399,10 @@ class SRH_2D_Data(HydraulicData):
             Case name
 
         """
-        return self.srhhydro_obj.srhhydro_content["Case"]
+        if self.control_type == "SRHHydro":
+            return self.srhhydro_obj.srhhydro_content["Case"]
+        else:
+            return self.srhsif_obj.srhsif_content["Case"]
 
     def buildManningN_cells_nodes(self):
         """ Build Manning's n values at cell centers and nodes
@@ -1841,9 +2417,14 @@ class SRH_2D_Data(HydraulicData):
 
         if gVerbose: print("Building Manning's n values for cells and nodes in SRH-2D mesh ...")
 
-        #Manning's n dictionary in srhhydro
-        nDict = self.srhhydro_obj.srhhydro_content["ManningsN"]
+        if self.control_type == "SRHHydro":
+            #Manning's n dictionary in srhhydro
+            nDict = self.srhhydro_obj.srhhydro_content["ManningsN"]
+        elif self.control_type == "SIF":
+            nDict = self.srhsif_obj.srhsif_content["ManningN"]
+
         if gVerbose: print("nDict = ", nDict)
+
 
         #loop over all cells in the mesh
         for cellI in range(self.srhgeom_obj.numOfElements):
@@ -1868,6 +2449,7 @@ class SRH_2D_Data(HydraulicData):
 
             #take the average
             self.ManningN_node[nodeI] = n_temp/self.srhgeom_obj.nodeElementsCount[nodeI]
+        
 
     def output_boundary_manning_n_profile(self, nodeStringID, nodeStringFileName, dir=''):
         """ Output Manning's n profile for a specified boundary
@@ -1932,7 +2514,7 @@ class SRH_2D_Data(HydraulicData):
 
 
     def readSRHXMDFFile(self, xmdfFileName, bNodal):
-        """ Read SRH-2D result file in XMDF format (current version 13.1.6 of SMS only support data at node).
+        """ Read SRH-2D result file in XMDF format. The XMDF file can be either nodal or cell center. It also contains results from multiple time steps.
 
         Parameters
         ----------
@@ -2105,11 +2687,21 @@ class SRH_2D_Data(HydraulicData):
         vtkFileName_base = ''
         #print("self.srhhydro_obj.srhhydro_content[\"Case\"] = ", self.srhhydro_obj.srhhydro_content["Case"])
 
-        if dir!='':
-            vtkFileName_base = dir + '/' + 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"] #use the case name of the
-            # SRH-2D case
+        if self.control_type == "SRHHydro":
+
+            if dir!='':
+                vtkFileName_base = dir + '/' + 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"] #use the case name of the
+                # SRH-2D case
+            else:
+                vtkFileName_base = 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"]  # use the case name of the SRH-2D case
+
         else:
-            vtkFileName_base = 'SRH2D_' + self.srhhydro_obj.srhhydro_content["Case"]  # use the case name of the SRH-2D case
+            if dir!='':
+                vtkFileName_base = dir + '/' + 'SRH2D_' + self.srhsif_obj.srhsif_content["Case"] #use the case name of the
+                # SRH-2D case
+            else:
+                vtkFileName_base = 'SRH2D_' + self.srhsif_obj.srhsif_content["Case"]  # use the case name of the SRH-2D case
+
         if gVerbose: print("vtkFileName_base = ", vtkFileName_base)
 
         #build result variable names
@@ -2126,7 +2718,14 @@ class SRH_2D_Data(HydraulicData):
         #add bed elevation at nodes regardless whether bNodal is True or False. Nodal elevation is more accurate representation
         #of the terrain because cell center elevation is averaged from nodal elevations.
         #get the units of the results
-        units = self.srhhydro_obj.srhhydro_content['OutputFormat'][1]
+        if self.control_type == "SRHHydro":
+            units = self.srhhydro_obj.srhhydro_content['OutputUnit']
+        elif self.control_type == "SIF":
+            units = self.srhsif_obj.srhsif_content['OutputUnit']
+        else:
+            raise NotImplementedError("TODO: implement the outputXMDFDataToVTK for SIF file")
+        
+
         if gVerbose: print("SRH-2D result units:", units)
         bedElevationVarName = ''
         velocityVarName = ''
@@ -2291,6 +2890,84 @@ class SRH_2D_Data(HydraulicData):
         #vtkFileNameList
         return vtkFileNameList
 
+    def readSRHCFiles(self, case_name):
+        """Read SRH-2D results from SRHC files (cell-centered data)
+    
+        Args:
+            case_name (str): Base filename without _SIF.dat extension
+        """
+        # Get directory and base name
+        directory = os.path.dirname(self.srhsif_obj.filename)
+        
+        # Find all SRHC files
+        pattern = os.path.join(directory, f"{case_name}_SRHC*.dat")
+        srhc_files = sorted(glob.glob(pattern))
+
+        print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
+        print(f"SRHC files: {srhc_files}")
+        
+        if not srhc_files:
+            print(f"No SRHC files found matching pattern: {pattern}")
+            return
+            
+        # Initialize data structures for cell-centered data
+        self.xmdfTimeArray_Cell = []
+        self.xmdfAllData_Cell = {}
+        
+        # Read first file to get variable names
+        data = np.genfromtxt(srhc_files[0], delimiter=',', names=True, dtype=None, encoding='utf-8')
+        # Remove the empty field name caused by trailing comma
+        var_names = list(data.dtype.names)[:-1]  # Skip the last empty field
+            
+        # Initialize data arrays for each variable
+        for var_name in var_names[3:]:  # 3: is for skipping Point_ID, X, and Y
+            self.xmdfAllData_Cell[var_name] = []
+            
+        # Read each SRHC file (each represents a timestep)
+        for timestep, srhc_file in enumerate(srhc_files):
+            # Use genfromtxt to read the data
+            data = np.genfromtxt(srhc_file, delimiter=',', skip_header=1, filling_values=0.0)
+            # Remove the last column (empty due to trailing comma)
+            data = data[:, :-1]
+            
+            # Store time (we'll use timestep number since actual time isn't in SRHC files)
+            self.xmdfTimeArray_Cell.append(float(timestep))
+            
+            # Store data for each variable
+            for i, var_name in enumerate(var_names[3:], 3):  # Skip Point_ID, X, and Y
+                values = data[:, i]     
+
+                #debug
+                print("var_name = ", var_name)
+                print("values = ", values[0:10])
+
+                # Fix water elevation -999 values
+                if var_name == "Water_Elev_ft" or var_name == "Water_Elev_m":
+                    values = np.where(values == -999, 
+                                    self.srhgeom_obj.elementBedElevation,
+                                    values)
+                    
+                self.xmdfAllData_Cell[var_name].append(values)
+                
+        # Convert lists to numpy arrays
+        self.xmdfTimeArray_Cell = np.array(self.xmdfTimeArray_Cell)
+        for var_name in self.xmdfAllData_Cell:
+            self.xmdfAllData_Cell[var_name] = np.array(self.xmdfAllData_Cell[var_name])
+
+    def outputSRHCDataToVTK(self, timeStep=-1, lastTimeStep=False, dir=''):
+        """Output SRHC data to VTK format
+        
+        Args:
+            timeStep (int): Specific timestep to output (-1 for all timesteps)
+            lastTimeStep (bool): Only output last timestep if True
+            dir (str): Output directory
+        """
+        # SRHC data is always at cell center
+        bNodal = False    
+
+        # Use existing outputXMDFDataToVTK function since data structure is same
+        return self.outputXMDFDataToVTK(bNodal, timeStep, lastTimeStep, dir)
+
 
     def outputVTK(self, vtkFileName, resultVarNames, resultData, bNodal):
         """ Output result to VTK file
@@ -2324,8 +3001,16 @@ class SRH_2D_Data(HydraulicData):
             sys.exit()
 
         #get the units of the results
-        units = self.srhhydro_obj.srhhydro_content['OutputFormat'][1]
+        if self.control_type == "SRHHydro":
+            units = self.srhhydro_obj.srhhydro_content['OutputUnit']
+        elif self.control_type == "SIF":
+            units = self.srhsif_obj.srhsif_content['OutputUnit']
+        else:
+            raise NotImplementedError("TODO: implement the outputVTK for SIF file")
+
+
         if gVerbose: print("SRH-2D result units:", units)
+
 
         fid.write('# vtk DataFile Version 3.0\n')
         fid.write('Results from SRH-2D Modeling Run\n')
@@ -2442,8 +3127,8 @@ class SRH_2D_Data(HydraulicData):
         #just call srhgeom_obj's function
         self.srhgeom_obj.output_2d_mesh_to_vtk(meshVTKFileName, bFlat, dir)
 
-    def readSRHFile(self, srhFileName):
-        """ Read SRH-2D result file in SRHC (cell center) or SRH (point) format.
+    def readOneSRHFile(self, srhFileName):
+        """ Read one single SRH-2D result file in SRHC (cell center) or SRH (point) format.
 
         Note: SRH-2D outputs an extra "," to each line. As a result, Numpy's
         genfromtext(...) function adds a column of "nan" to the end. Need to take care of this.
