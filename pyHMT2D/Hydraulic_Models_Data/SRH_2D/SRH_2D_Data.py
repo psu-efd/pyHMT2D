@@ -37,9 +37,10 @@ class SRH_2D_SIF:
     VALID_OUTPUT_FORMATS = ['SRHC', 'TEC', 'SRHN', 'XMDF', 'XMDFC', 'VTK']
     VALID_OUTPUT_UNITS = ['SI', 'EN']
 
-    def __init__(self, filename):
-        """Initialize SIF parser with filename"""
-        self.filename = filename
+    def __init__(self, srhsif_filename):
+        """Initialize SIF parser with srhsif_filename"""
+        self.srhsif_filename = srhsif_filename
+
         self.srhsif_content = {
             'ManningN': {},
             'BC': {},
@@ -62,14 +63,13 @@ class SRH_2D_SIF:
     def _parse_file(self):
         """Parse the SIF file and store data in self.data dictionary"""
         try:
-            with open(self.filename, 'r') as f:
+            with open(self.srhsif_filename, 'r') as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            raise FileNotFoundError(f"SIF file not found: {self.filename}")
-
+            raise FileNotFoundError(f"SIF file not found: {self.srhsif_filename}")
 
         #get the case name from the filename: assume the filename is like "Muncie_SIF.dat"
-        case_name = self.filename.split("_SIF.dat")[0]  #strip off "_SIF.dat" 
+        case_name = self.srhsif_filename.split("_SIF.dat")[0]  #strip off "_SIF.dat" 
         self.srhsif_content["Case"] = case_name        
 
         i = 0
@@ -180,7 +180,6 @@ class SRH_2D_SIF:
                 elif boundary_type == 'exit-h':
                     res_EWSParamsC[index_BC] = boundary_values
                 else:
-
                     raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
             
             i += 1
@@ -250,13 +249,24 @@ class SRH_2D_SIF:
                 self.srhsif_content['intermediate_output'] = {'type': 'list', 'value': times}
         return i
 
-    def save(self, filename=None):
-        """Save the current data back to a SIF file"""
-        if filename is None:
-            filename = self.filename
+    def save_as(self, srhsif_filename=None):
+        """Save the current data in self.srhsif_content back to a SIF file
+
+        So to modify a SIF file, one needs to change the data in self.srhsif_content, and then call this function to save the data back to the SIF file.
         
+        Parameters
+        ----------
+        srhsif_filename : str, optional
+            The filename to save the SIF file to. If not provided, the filename will be the same as the original filename.
+
+        Returns
+        -------
+        """
+        if srhsif_filename is None:
+            srhsif_filename = self.srhsif_filename
+
         try:
-            with open(filename, 'w') as f:
+            with open(srhsif_filename, 'w') as f:
                 # Simulation Description
                 f.write("// Simulation Description (not used by SRH):\n")
                 f.write(f"{self.srhsif_content.get('simulation_description', '')}\n")
@@ -370,9 +380,14 @@ class SRH_2D_SIF:
             raise IOError(f"Error saving SIF file: {str(e)}")
 
     # Additional getter methods
+    def get_manning_values(self):
+        """Return Manning's n values"""
+        return self.srhsif_content.get('ManningN', [])
+
     def get_wall_roughness(self):
         """Return wall roughness specifications"""
         return self.data.get('wall_roughness', [])
+
 
     def get_pressurized_zones(self):
         """Return pressurized zones specifications"""
@@ -545,8 +560,8 @@ class SRH_2D_SIF:
         except ValueError as e:
             raise ValueError(f"Invalid Manning coefficient values: {str(e)}")
         
-    def modify_manning_n(self, material_id, new_manning_n):
-        """Modify Manning's n value for a specific material ID"""
+    def modify_one_manning_n_in_srhsif_content(self, material_id, new_manning_n):
+        """Modify one Manning's n value for a specific material ID in self.srhsif_content"""
 
         #check material_id is an integer and is within the range of the Manning's n list
         if not isinstance(material_id, int) or material_id < 0 or material_id >= len(self.srhsif_content['manning_values']):
@@ -561,7 +576,128 @@ class SRH_2D_SIF:
 
         print(f"Manning's n value for material ID {material_id} has been modified to {new_manning_n}")
 
+
+    def modify_ManningsN(self, materialIDs, newManningsNValues, ManningN_MaterialNames):
+        """Modify materialID's Manning's n values to new values for a given list of material IDs
+
+        Parameters
+        ----------
+        materialIDs : list
+            material ID list
+        newManningsNValues : list
+            new Manning's n value list
+        ManningN_MaterialNames : list
+            name of materials list
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modify Manning's n values ...")
+
+        if not isinstance(materialIDs[0], int):
+            raise Exception("Material ID has to be an integer. The type of materialID passed in is ", type(materialIDs[0]))
+
+        if not isinstance(newManningsNValues[0], float):
+            raise Exception("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]))
+
+        #get the Manning's n dictionary
+        nDict = self.get_ManningN_dict()
+
+        #loop over all the material IDs and modify the Manning's n values
+        for i in range(len(materialIDs)):
+            materialID = materialIDs[i]
+
+            if materialID in nDict:
+                if gVerbose: print("    Old Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+                nDict[materialID] = newManningsNValues[i]
+                if gVerbose: print("    New Manning's n value =", nDict[materialID], "for material ID = ", materialID)
+
+                #also modify the srhsif_content
+                self.modify_one_manning_n_in_srhsif_content(materialID, newManningsNValues[i])
+            else:
+                print("The specified materialID", materialID, "is not in the Manning's n list. Please check.")
+
+    def modify_InletQ(self, bcIDs, newInletQValues):
+        """Modify the inlet flow rate for the specified boundary IDs
+
+        Parameters
+        ----------
+        bcIDs : list
+            list of boundary IDs
+        newInletQValues : list
+            list of new inlet flow rate values
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modifying inlet flow rate for the specified boundary IDs ...")
+
+        if not isinstance(bcIDs[0], int):
+            raise Exception("Boundary ID has to be an integer. The type of bcID passed in is ", type(bcIDs[0]))
+
+        if not isinstance(newInletQValues[0], float):
+            raise Exception("Inlet flow rate has to be a float. The type of newInletQValues passed in is ", type(newInletQValues[0]))
+        
+        #get the inlet flow rate dictionary
+        bcDict = self.srhsif_content['BC']
+        IQParamsDict = self.srhsif_content['IQParams']
+
+        #loop over all the boundary IDs and modify the inlet flow rate values
+        for i in range(len(bcIDs)):
+            bcID = bcIDs[i]
+
+            if bcID in bcDict:
+                if gVerbose: print("    Old inlet flow rate =", IQParamsDict[bcID][0], "for boundary ID = ", bcID)
+                IQParamsDict[bcID][0] = newInletQValues[i]
+                if gVerbose: print("    New inlet flow rate =", IQParamsDict[bcID][0], "for boundary ID = ", bcID)
+            else:
+                print("The specified boundary ID", bcID, "is not in the inlet flow rate list. Please check.")
+
+    def modify_ExitH(self, bcIDs, newExitHValues):
+        """Modify the exit water surface elevation for the specified boundary IDs
+
+        Parameters
+        ----------
+        bcIDs : list
+            list of boundary IDs
+        newExitHValues : list
+            list of new exit water surface elevation values
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modifying exit water surface elevation for the specified boundary IDs ...")
+
+        if not isinstance(bcIDs[0], int):
+            raise Exception("Boundary ID has to be an integer. The type of bcID passed in is ", type(bcIDs[0]))
+
+        if not isinstance(newExitHValues[0], float):
+            raise Exception("Exit water surface elevation has to be a float. The type of newExitHValues passed in is ", type(newExitHValues[0]))
+
+        #get the exit water surface elevation dictionary
+        bcDict = self.srhsif_content['BC']
+        EWSParamsC_Dict = self.srhsif_content['EWSParamsC']
+
+        #loop over all the boundary IDs and modify the exit water surface elevation values
+        for i in range(len(bcIDs)):
+            bcID = bcIDs[i]
+
+            if bcID in bcDict:
+                if gVerbose: print("    Old exit water surface elevation =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
+                EWSParamsC_Dict[bcID][0] = newExitHValues[i]
+                if gVerbose: print("    New exit water surface elevation =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
+            else:
+                print("The specified boundary ID", bcID, "is not in the exit water surface elevation list. Please check.")
+
+
 class SRH_2D_SRHHydro:
+
     """A class to handle srhhydro file for SRH-2D
 
     Attributes
@@ -824,10 +960,9 @@ class SRH_2D_SRHHydro:
         BC_Dict = self.srhhydro_content["BC"]
 
         if 'IQParams' not in self.srhhydro_content:
-            raise Exception("There is INLET-Q boundary in the SRHHydro file.")
+            raise Exception("There is no INLET-Q boundary in the SRHHydro file.")
 
         IQParams_Dict = self.srhhydro_content['IQParams']
-
 
         for i in range(len(bcIDs)):
             bcID = bcIDs[i]
@@ -841,9 +976,9 @@ class SRH_2D_SRHHydro:
                 if bcID not in IQParams_Dict:
                     raise Exception("The specified bcID ", bcID, "is not in the IQParams dictionary.")
 
-                if gVerbose: print("    Old InletQ value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                if gVerbose: print("    Old InletQ value =", IQParams_Dict[bcID][0], "for boundary ID = ", bcID)
                 IQParams_Dict[bcID][0] = newInletQValues[i]
-                if gVerbose: print("    New InletQ value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                if gVerbose: print("    New InletQ value =", IQParams_Dict[bcID][0], "for boundary ID = ", bcID)
             else:
                 print("The specified bcID", bcID, "is not in the boundary list. Please check.")
 
@@ -887,7 +1022,7 @@ class SRH_2D_SRHHydro:
                             type(bcIDs[0]))
 
         if not isinstance(newExitHValues[0], float):
-            raise Exception("IneltQ value has to be a float. The type of newInletQValues passed in is ",
+            raise Exception("Exit-H value has to be a float. The type of newExitHValues passed in is ",
                             type(newExitHValues[0]))
 
         BC_Dict = self.srhhydro_content["BC"]
@@ -896,7 +1031,6 @@ class SRH_2D_SRHHydro:
             raise Exception("There is no constant stage exit boundary in the SRHHydro file.")
 
         EWSParamsC_Dict = self.srhhydro_content['EWSParamsC']
-
 
         for i in range(len(bcIDs)):
             bcID = bcIDs[i]
@@ -910,9 +1044,9 @@ class SRH_2D_SRHHydro:
                 if bcID not in EWSParamsC_Dict:
                     raise Exception("The specified bcID ", bcID, "is not in the EWSParamsC dictionary.")
 
-                if gVerbose: print("    Old EXIT-H value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                if gVerbose: print("    Old EXIT-H value =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
                 EWSParamsC_Dict[bcID][0] = newExitHValues[i]
-                if gVerbose: print("    New EXIT-H value =", BC_Dict[bcID], "for boundary ID = ", bcID)
+                if gVerbose: print("    New EXIT-H value =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
             else:
                 print("The specified bcID", bcID, "is not in the boundary list. Please check.")
 
@@ -976,17 +1110,21 @@ class SRH_2D_SRHHydro:
     def get_HydroMat_FileName(self):
         return self.srhhydro_content['HydroMat']
 
-    def save_as(self, new_srhhydro_file_name):
+    def save_as(self, new_srhhydro_file_name=None):
         """Save as a new SRHHydro file (useful for modification of the SRHHydro file)
 
         Parameters
         -------
         new_srhhydro_file_name : str
-            name of the new srhhydro file
+            name of the new srhhydro file. If not provided, the original filename will be used.
 
         """
 
+        if new_srhhydro_file_name is None:
+            new_srhhydro_file_name = self.srhhydro_filename
+
         if gVerbose: print("Wring the SRHHYDRO file %s \n" % new_srhhydro_file_name)
+
 
         try:
             fid = open(new_srhhydro_file_name, 'w')
@@ -1024,12 +1162,19 @@ class SRH_2D_SRHHydro:
                         or "HydroMat" in key or "MonitorPtFile" in key:
                     fid.write(str(key) + ' \"' + str(value) + '\"\n')
                 elif "OutputFormat" in key:
-                    fid.write(str(key) + ' ' + str(value[0]) + ' ' + str(value[1]) + '\n')
+                    fid.write(str(key) + ' ' + str(value) + ' ' + str(self.srhhydro_content["OutputUnit"]) + '\n')
                 elif "SimTime" in key:
                     fid.write(str(key) + ' ' + str(value[0]) + ' ' + str(value[1]) + ' ' + str(value[2]) + '\n')
                 else:
                     #print("last, key, value", key, value, str(key), str(value))
-                    fid.write(str(key) + ' ' + str(value) + '\n')
+
+                    #OutputFormat and OutputUnit should be written in the same line, which has been taken care of above. Thus, no need to check for them here.
+                    if key == "OutputFormat":
+                        continue
+                    elif key == "OutputUnit":
+                        continue
+                    else:
+                        fid.write(str(key) + ' ' + str(value) + '\n')                    
 
         fid.close()
 
@@ -2512,8 +2657,96 @@ class SRH_2D_Data(HydraulicData):
 
         fid.close()
 
+    def get_ManningN_dict(self):
+        """ Get the Manning's n dictionary from the SRH-2D control file
+
+        Returns
+        -------
+        
+        """
+
+        if self.control_type == "SRHHydro":
+            return self.srhhydro_obj.srhhydro_content["ManningsN"]
+        else:
+            return self.srhsif_obj.srhsif_content["ManningN"]
+        
+    def modify_ManningsNs(self, materialIDs, newManningsNValues, materialNames):
+        """ Modify the Manning's n value for the specified material IDs
+
+        Parameters
+        ----------
+        materialIDs : list
+            list of material IDs
+        newManningsNValues : list
+            list of new Manning's n values
+        materialNames : list
+            list of material names
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modifying Manning's n values for the specified material IDs ...")
+
+        if self.control_type == "SRHHydro":
+            self.srhhydro_obj.modify_ManningsN(materialIDs, newManningsNValues, materialNames)
+        else:
+            self.srhsif_obj.modify_ManningsN(materialIDs, newManningsNValues, materialNames)
+
+
+        #update the ManningN at cells and nodes after the modification
+        self.buildManningN_cells_nodes()
+
+
+    def modify_InletQ(self, inlet_q_bc_IDs, new_inlet_q_values):
+        """ Modify the inlet flow rate for the specified boundary IDs
+
+
+        Parameters
+        ----------
+        inlet_q_bc_IDs : list   
+            list of inlet flow rate boundary IDs
+        new_inlet_q_values : list
+            list of new inlet flow rate values
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modifying inlet flow rate for the specified boundary IDs ...")
+
+        if self.control_type == "SRHHydro":
+            self.srhhydro_obj.modify_InletQ(inlet_q_bc_IDs, new_inlet_q_values)
+        else:
+            self.srhsif_obj.modify_InletQ(inlet_q_bc_IDs, new_inlet_q_values)
+
+    def modify_ExitH(self, exit_h_bc_IDs, new_exit_h_values):
+        """ Modify the exit water surface elevation for the specified boundary IDs
+
+        Parameters
+        ----------
+        exit_h_bc_IDs : list
+            list of exit water surface elevation boundary IDs
+        new_exit_h_values : list
+            list of new exit water surface elevation values
+
+        Returns
+        -------
+
+        """
+
+        if gVerbose: print("Modifying exit water surface elevation for the specified boundary IDs ...")
+
+        if self.control_type == "SRHHydro":
+            self.srhhydro_obj.modify_ExitH(exit_h_bc_IDs, new_exit_h_values)
+        else:
+            self.srhsif_obj.modify_ExitH(exit_h_bc_IDs, new_exit_h_values)
 
     def readSRHXMDFFile(self, xmdfFileName, bNodal):
+
+
         """ Read SRH-2D result file in XMDF format. The XMDF file can be either nodal or cell center. It also contains results from multiple time steps.
 
         Parameters

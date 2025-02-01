@@ -45,8 +45,8 @@ class HydraulicData(object):
         """
         pass
 
-    def modify_ManningsN(self, materialID, newManningsNValue, materialName):
-        """Modify materialID's Manning's n value to new value
+    def modify_ManningsN(self, materialIDs, newManningsNValues, materialNames):
+        """Modify materialIDs's Manning's n values to new values
 
         Parameters
         ----------
