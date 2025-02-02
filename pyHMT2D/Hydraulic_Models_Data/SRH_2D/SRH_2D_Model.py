@@ -208,14 +208,20 @@ class SRH_2D_Model(HydraulicModel):
         """
 
         cmd = self._srh_path
-        case_srhhydro_file_name = self._srh_2d_data.get_case_name() + ".DAT"
-        case_INF_file_name = self._srh_2d_data.get_case_name() + "_INF.DAT"
+        case_file_name = self._srh_2d_data.get_case_name() + ".DAT"           #e.g., Cimarron.DAT
+        case_INF_file_name = self._srh_2d_data.get_case_name() + "_INF.DAT"   #e.g., Cimarron_INF.DAT
 
-        print("Running SRH-2D case with input file:", case_srhhydro_file_name)
+        print("Running SRH-2D case with input file:", case_file_name)
 
         #get the start and end time in hours
-        startTime, endTime = self._srh_2d_data.srhhydro_obj.get_simulation_start_end_time()
-        deltaT = self._srh_2d_data.srhhydro_obj.get_simulation_time_step_size()
+        startTime, endTime = 0.0, 0.0
+        deltaT = 0.0
+        if self._srh_2d_data.control_type == "SRHHydro":
+            startTime, endTime = self._srh_2d_data.srhhydro_obj.get_simulation_start_end_time()
+            deltaT = self._srh_2d_data.srhhydro_obj.get_simulation_time_step_size()
+        elif self._srh_2d_data.control_type == "SIF":
+            startTime, endTime = self._srh_2d_data.srhsif_obj.get_simulation_start_end_time()
+            deltaT = self._srh_2d_data.srhsif_obj.get_simulation_time_step_size()
 
         print("startTime, endTime (hr) = ", startTime, endTime)
         print("Time step size (s) = ", deltaT)
@@ -228,7 +234,7 @@ class SRH_2D_Model(HydraulicModel):
             print("Error while deleting case's existing _INF.DAT file. Exiting ...")
             sys.exit()
 
-        p = subprocess.Popen([cmd, case_srhhydro_file_name], shell=False, stdout=subprocess.PIPE,
+        p = subprocess.Popen([cmd, case_file_name], shell=False, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
 
         if bShowProgress:
@@ -326,7 +332,9 @@ class SRH_2D_Model(HydraulicModel):
             p = subprocess.run([cmd, '3', case_srhcontrol_file_name], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
         elif self._srh_2d_data.control_type == "SIF":
-            p = subprocess.run([cmd, case_srhcontrol_file_name], stdout=subprocess.PIPE,
+            #get the base case name, e.g., Cimarron_SIF.dat -> Cimarron
+            base_case_name = self._srh_2d_data.get_case_name()
+            p = subprocess.run([cmd, base_case_name], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 
         if str.encode("successfully executed") in p.stdout:
