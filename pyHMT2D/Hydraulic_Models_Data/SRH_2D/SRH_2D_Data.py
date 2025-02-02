@@ -317,21 +317,38 @@ class SRH_2D_SIF:
                 f.write("// Number of Material Types in 2D Mesh File\n")
                 f.write(f"{str(self.srhsif_content.get('n_manning_zones', '')).strip()}\n")
                 f.write("// Manning Coefficient in each mesh zone: a real value or a WD~n file name or Landuse\n")
-                if 'manning_values' in self.srhsif_content:
-                    for value in self.srhsif_content['manning_values']:
-                        f.write(f"{value}\n")
+                if 'ManningN' in self.srhsif_content:
+                    # Sort the ManningN values by their keys before writing
+                    sorted_values = sorted(self.srhsif_content['ManningN'].items(), key=lambda x: x[0])
+                    for key, value in sorted_values:
+                        if key != 0:    #Don't need the default Manning's n value
+                            f.write(f"{value}\n")                        
+                else:
+                    #something is wrong
+                    raise ValueError("ManningN is not found in the SIF file.")
                 
                 # Special Modeling Options
                 f.write("// Any-Special-Modeling-Options? (0/1=no/yes)\n")
                 f.write(f"{self.srhsif_content.get('special_modeling_options', '0')}\n")
                 
                 # Boundary Conditions
-                if 'boundaries' in self.srhsif_content:
-                    for boundary in self.srhsif_content['boundaries']:
-                        f.write("// Boundary Type (INLET-Q EXIT-H etc)\n")
-                        f.write(f"{boundary['type']}\n")
-                        f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
-                        f.write(" ".join(boundary['values']) + "\n")
+                bcDict = self.srhsif_content['BC']
+                IQParams = self.srhsif_content['IQParams']
+                EWSParamsC = self.srhsif_content['EWSParamsC']
+
+                # loop over all the boundaries
+                for index_BC, boundary_type in bcDict.items():
+                    f.write("// Boundary Type (INLET-Q EXIT-H etc)\n")
+                    f.write(f"{boundary_type}\n")                    
+                    f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
+
+                    if boundary_type == 'inlet-q':
+                        f.write(" ".join(str(x) for x in IQParams[index_BC]) + "\n")
+                    elif boundary_type == 'exit-h':
+                        f.write(" ".join(str(x) for x in EWSParamsC[index_BC]) + "\n")
+                    else:
+                        raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
+              
                 
                 # Wall Roughness
                 f.write("// Wall-Roughess-Height-Specification (empty-line=DONE)\n")
@@ -356,7 +373,7 @@ class SRH_2D_SIF:
                 
                 # Output Format
                 f.write("// Results-Output-Format-and-Unit(SRHC/TEC/SRHN/XMDF/XMDFC/VTK;SI/EN) + Optional STL FACE\n")
-                output_str = f"{self.srhsif_content.get('output_format', '')} {self.srhsif_content.get('output_unit', '')}"
+                output_str = f"{self.srhsif_content.get('OutputFormat', '')} {self.srhsif_content.get('OutputUnit', '')}"
                 if self.srhsif_content.get('output_stl_face'):
                     output_str += " STL FACE"
                 f.write(output_str + "\n")
@@ -380,7 +397,15 @@ class SRH_2D_SIF:
             raise IOError(f"Error saving SIF file: {str(e)}")
 
     # Additional getter methods
-    def get_manning_values(self):
+    def get_simulation_start_end_time(self):
+        """Return simulation start and end time"""
+        return self.srhsif_content['time_params'][0], self.srhsif_content['time_params'][1]
+
+    def get_simulation_time_step_size(self):
+        """Return simulation time step size"""
+        return self.srhsif_content['time_params'][2]
+
+    def get_ManningN_dict(self):
         """Return Manning's n values"""
         return self.srhsif_content.get('ManningN', [])
 
@@ -400,8 +425,8 @@ class SRH_2D_SIF:
     def get_output_format(self):
         """Return output format and unit"""
         return {
-            'format': self.data.get('output_format'),
-            'unit': self.data.get('output_unit'),
+            'format': self.data.get('OutputFormat'),
+            'unit': self.data.get('OutputUnit'),
             'stl_face': self.data.get('output_stl_face', False)
         }
 
@@ -564,7 +589,7 @@ class SRH_2D_SIF:
         """Modify one Manning's n value for a specific material ID in self.srhsif_content"""
 
         #check material_id is an integer and is within the range of the Manning's n list
-        if not isinstance(material_id, int) or material_id < 0 or material_id >= len(self.srhsif_content['manning_values']):
+        if not isinstance(material_id, int) or material_id < 0 or material_id >= len(self.srhsif_content['ManningN']):
             raise ValueError(f"Invalid material ID: {material_id}. Must be an integer within the range of the Manning's n list.")
 
         #check new_manning_n is a float
@@ -572,9 +597,10 @@ class SRH_2D_SIF:
             raise ValueError(f"Invalid Manning's n value: {new_manning_n}. Must be a float.")
 
         #modify the Manning's n value
-        self.srhsif_content['manning_values'][material_id] = new_manning_n
+        self.srhsif_content['ManningN'][material_id] = new_manning_n
 
-        print(f"Manning's n value for material ID {material_id} has been modified to {new_manning_n}")
+        if gVerbose:
+            print(f"Manning's n value for material ID {material_id} has been modified to {new_manning_n}")
 
 
     def modify_ManningsN(self, materialIDs, newManningsNValues, ManningN_MaterialNames):
@@ -675,10 +701,12 @@ class SRH_2D_SIF:
         if gVerbose: print("Modifying exit water surface elevation for the specified boundary IDs ...")
 
         if not isinstance(bcIDs[0], int):
-            raise Exception("Boundary ID has to be an integer. The type of bcID passed in is ", type(bcIDs[0]))
+            raise Exception("Boundary ID has to be an integer. The type of bcID passed in is ",
+                            type(bcIDs[0]))
 
         if not isinstance(newExitHValues[0], float):
-            raise Exception("Exit water surface elevation has to be a float. The type of newExitHValues passed in is ", type(newExitHValues[0]))
+            raise Exception("Exit water surface elevation has to be a float. The type of newExitHValues passed in is ",
+                            type(newExitHValues[0]))
 
         #get the exit water surface elevation dictionary
         bcDict = self.srhsif_content['BC']
@@ -2506,8 +2534,9 @@ class SRH_2D_Data(HydraulicData):
             self.srhmat_filename = self.srhsif_obj.srhsif_content["mesh_file_name"].replace(".srhgeom", ".srhmat")
 
 
-        print("self.srhgeom_filename = ", self.srhgeom_filename)
-        print("self.srhmat_filename = ", self.srhmat_filename)
+        if gVerbose:
+            print("self.srhgeom_filename = ", self.srhgeom_filename)
+            print("self.srhmat_filename = ", self.srhmat_filename)
 
         #read and build SRH_2D_Geom, and SRH_2D_Mat objects
         self.srhgeom_obj = None
@@ -3130,14 +3159,15 @@ class SRH_2D_Data(HydraulicData):
             case_name (str): Base filename without _SIF.dat extension
         """
         # Get directory and base name
-        directory = os.path.dirname(self.srhsif_obj.filename)
+        directory = os.path.dirname(self.srhsif_obj.srhsif_filename)
         
         # Find all SRHC files
         pattern = os.path.join(directory, f"{case_name}_SRHC*.dat")
         srhc_files = sorted(glob.glob(pattern))
 
-        print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
-        print(f"SRHC files: {srhc_files}")
+        if gVerbose:
+            print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
+            print(f"SRHC files: {srhc_files}")
         
         if not srhc_files:
             print(f"No SRHC files found matching pattern: {pattern}")
@@ -3171,8 +3201,9 @@ class SRH_2D_Data(HydraulicData):
                 values = data[:, i]     
 
                 #debug
-                print("var_name = ", var_name)
-                print("values = ", values[0:10])
+                if gVerbose:
+                    print("var_name = ", var_name)
+                    print("values = ", values[0:10])
 
                 # Fix water elevation -999 values
                 if var_name == "Water_Elev_ft" or var_name == "Water_Elev_m":
