@@ -2578,8 +2578,22 @@ class SRH_2D_Data(HydraulicData):
         else:
             return self.srhsif_obj.srhsif_content["Case"]
 
+    def get_output_format_unit(self):
+        """ Get the format and unit of the output
+
+        Returns
+        -------
+        
+        """
+
+        if self.control_type == "SRHHydro":
+            return self.srhhydro_obj.srhhydro_content["OutputFormat"], self.srhhydro_obj.srhhydro_content["OutputUnit"]
+        else:
+            return self.srhsif_obj.srhsif_content["OutputFormat"], self.srhsif_obj.srhsif_content["OutputUnit"]
+
     def buildManningN_cells_nodes(self):
         """ Build Manning's n values at cell centers and nodes
+
 
         This calculation is based on the srhhydro and srhgeom files, not interpolation from a GeoTiff file. This is the
         Manning's n value used by SRH-2D.
