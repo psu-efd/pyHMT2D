@@ -2,6 +2,7 @@
 *.vtk
 *.dat
 
+
 sandbox
 
 examples/misc
@@ -18,6 +19,7 @@ examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/try_isolines.py
 
 GUI
 CHIC
+
 
 #exclude SRH-2D results and output files
 *RST*.dat
