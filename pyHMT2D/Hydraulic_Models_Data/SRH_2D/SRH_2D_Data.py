@@ -834,7 +834,12 @@ class SRH_2D_SRHHydro:
                 res_all[parts[0]] = float(parts[1])
             else:
                 #res_all[parts[0].lstrip()] = parts[1].strip('"').split(' ')
-                res_all[parts[0].lstrip()] = parts[1]
+                #res_all[parts[0].lstrip()] = parts[1]
+                #Just keep all the parts (there might be more than one part)
+                #res_all[parts[0].lstrip()] = [part for part in parts[1:]]
+                
+                res_all[parts[0].lstrip()] = ' '.join(parts[1:])
+
 
         # add ManningsN, BC and all other sub-dict to res_all
         if res_ManningsN:
@@ -1396,6 +1401,7 @@ class SRH_2D_SRHGeom:
 
         # read the "srhgeom" mesh file
         try:
+            #print("Opening the SRHGEOM file %s" % self.srhgeom_filename)
             srhgeomfile = open(self.srhgeom_filename, 'r')
         except:
             raise Exception('Failed openning the SRHGEOM file %s' % self.srhgeom_filename)
