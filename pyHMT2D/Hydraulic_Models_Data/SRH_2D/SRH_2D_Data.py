@@ -179,6 +179,9 @@ class SRH_2D_SIF:
                     res_IQParams[index_BC] = boundary_values
                 elif boundary_type == 'exit-h':
                     res_EWSParamsC[index_BC] = boundary_values
+                elif boundary_type == 'monitoring':
+                    #do nothing  
+                    pass
                 else:
                     raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
             
@@ -346,6 +349,9 @@ class SRH_2D_SIF:
                         f.write(" ".join(str(x) for x in IQParams[index_BC]) + "\n")
                     elif boundary_type == 'exit-h':
                         f.write(" ".join(str(x) for x in EWSParamsC[index_BC]) + "\n")
+                    elif boundary_type == 'monitoring':
+                        #do nothing  
+                        pass
                     else:
                         raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
               
