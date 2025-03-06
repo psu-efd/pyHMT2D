@@ -191,9 +191,9 @@ class SRH_2D_SIF:
         self.srhsif_content['IQParams'] = res_IQParams
         self.srhsif_content['EWSParamsC'] = res_EWSParamsC
 
-        print("res_BC = ", res_BC)
-        print("res_IQParams = ", res_IQParams)
-        print("res_EWSParamsC = ", res_EWSParamsC)
+        #print("res_BC = ", res_BC)
+        #print("res_IQParams = ", res_IQParams)
+        #print("res_EWSParamsC = ", res_EWSParamsC)
         
         return i  # Return the index of the next section
 
