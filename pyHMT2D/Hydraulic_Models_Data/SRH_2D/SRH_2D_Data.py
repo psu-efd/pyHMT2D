@@ -168,28 +168,32 @@ class SRH_2D_SIF:
                 boundary_type = lines[i].strip().lower()
 
                 res_BC[index_BC] = boundary_type
-                
 
-                # Get boundary values from next two lines
-                i += 1  # Skip to values comment line
-                i += 1  # Skip to actual values line
-                boundary_values = lines[i].strip().split()
-
-                if boundary_type == 'inlet-q':
-                    res_IQParams[index_BC] = boundary_values
-                elif boundary_type == 'exit-h':
-                    res_EWSParamsC[index_BC] = boundary_values
-                elif boundary_type == 'monitoring' or boundary_type == 'monitor':
-                    #do nothing  
+                if boundary_type == 'monitoring' or boundary_type == 'monitor':
+                    #do nothing (there is no boundary values for monitoring)
                     pass
                 else:
-                    raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
+                    # Get boundary values from next two lines
+                    i += 1  # Skip to values comment line
+                    i += 1  # Go to actual values line
+                    boundary_values = lines[i].strip().split()
+
+                    if boundary_type == 'inlet-q':
+                        res_IQParams[index_BC] = boundary_values
+                    elif boundary_type == 'exit-h':
+                        res_EWSParamsC[index_BC] = boundary_values
+                    else:
+                        raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
             
             i += 1
 
         self.srhsif_content['BC'] = res_BC
         self.srhsif_content['IQParams'] = res_IQParams
         self.srhsif_content['EWSParamsC'] = res_EWSParamsC
+
+        print("res_BC = ", res_BC)
+        print("res_IQParams = ", res_IQParams)
+        print("res_EWSParamsC = ", res_EWSParamsC)
         
         return i  # Return the index of the next section
 
