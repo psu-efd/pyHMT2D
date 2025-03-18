@@ -17,6 +17,7 @@ from os import path
 import shlex
 import vtk
 from vtk.util import numpy_support as VN
+import re
 
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
@@ -3193,7 +3194,9 @@ class SRH_2D_Data(HydraulicData):
         
         # Find all SRHC files
         pattern = os.path.join(directory, f"{case_name}_SRHC*.dat")
-        srhc_files = sorted(glob.glob(pattern))
+        srhc_files = sorted(glob.glob(pattern), key=self.natural_sort_key)
+
+        print("srhc_files = ", srhc_files)
 
         if gVerbose:
             print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
@@ -3498,3 +3501,7 @@ class SRH_2D_Data(HydraulicData):
 
         """
         pass
+
+    def natural_sort_key(self, s):
+        return [int(text) if text.isdigit() else text.lower()
+                for text in re.split(r'(\d+)', s)]
