@@ -169,8 +169,8 @@ class SRH_2D_SIF:
 
                 res_BC[index_BC] = boundary_type
 
-                if boundary_type == 'monitoring' or boundary_type == 'monitor':
-                    #do nothing (there is no boundary values for monitoring)
+                if boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
+                    #do nothing (there is no boundary values for monitoring, symmetry, or symmetry)
                     pass
                 else:
                     # Get boundary values from next two lines
@@ -353,7 +353,7 @@ class SRH_2D_SIF:
                         f.write(" ".join(str(x) for x in IQParams[index_BC]) + "\n")
                     elif boundary_type == 'exit-h':
                         f.write(" ".join(str(x) for x in EWSParamsC[index_BC]) + "\n")
-                    elif boundary_type == 'monitoring' or boundary_type == 'monitor':
+                    elif boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
                         #do nothing  
                         pass
                     else:
