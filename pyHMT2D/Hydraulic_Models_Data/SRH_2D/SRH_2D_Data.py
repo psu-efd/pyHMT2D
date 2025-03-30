@@ -94,7 +94,9 @@ class SRH_2D_SIF:
                         self._validate_solver(value.upper())
                         self.srhsif_content['solver'] = value
                     elif "Monitor-Point-Info" in comment:
-                        self.srhsif_content['monitor_point_info'] = int(value)
+                        self.srhsif_content['monitor_point_npoints'] = int(value)    #number of monitor points
+                        if self.srhsif_content['monitor_point_npoints'] > 0:
+                            self._parse_monitoring_points(lines, i)
                     elif "Steady-or-Unsteady" in comment:
                         self._validate_time_type(value.upper())
                         self.srhsif_content['time_type'] = value
@@ -287,8 +289,13 @@ class SRH_2D_SIF:
                 f.write(f"{self.srhsif_content.get('solver', '')}\n")
                 
                 # Monitor Points
-                f.write("// Monitor-Point-Info: NPOINT\n")
-                f.write(f"{self.srhsif_content.get('monitor_point_info', '0')}\n")
+                f.write("// Monitor-Point-Npoints: NPOINT\n")
+                f.write(f"{self.srhsif_content.get('monitor_point_npoints', '0')}\n")
+
+                # Monitoring Points
+                if self.srhsif_content.get('monitor_point_npoints') > 0:
+                    f.write("// Monitor Point Coordinates: x1 y1 x2 y2 ...\n")
+                    f.write(f"{self.srhsif_content.get('monitor_points', '')}\n")
                 
                 # Time Type
                 f.write("// Steady-or-Unsteady (STEADY/UNS)\n")
@@ -528,6 +535,43 @@ class SRH_2D_SIF:
         except ValueError as e:
             raise ValueError(f"Invalid time parameters format: {str(e)}")
 
+    def _parse_monitoring_points(self, lines, i):
+        """Parse monitoring points section
+        
+        Args:
+            lines: List of all file lines
+            i: Current line index (where NPOINT is specified)
+            
+        Returns:
+            next_index: Index of the next line after monitoring points section
+        """
+        try:
+            # Get number of monitoring points            
+            n_points = int(lines[i].strip())
+            
+            # Skip comment line
+            i += 1
+            if not lines[i].strip().startswith('//'):
+                raise ValueError("Expected comment line for monitoring point coordinates")
+                
+            # Get coordinates
+            i += 1
+            coords = lines[i].strip().split()
+            
+            # Convert coordinates to float and pair them
+            if len(coords) != 2 * n_points:
+                raise ValueError(f"Expected {2*n_points} coordinates for {n_points} points")
+                
+            coords = [float(x) for x in coords]
+                            
+            # Store in data dictionary            
+            self.data['monitor_points'] = coords
+            
+            return i
+            
+        except ValueError as e:
+            raise ValueError(f"Error parsing monitoring points: {str(e)}")
+    
     def _parse_manning_coefficients(self, lines, i, value):
         """Parse Manning coefficients section
         
@@ -820,7 +864,7 @@ class SRH_2D_SRHHydro:
                 else:                        #this is a real BC
                     res_BC[int(parts[1])] = parts[2]
             elif parts[0] == 'IQParams':
-                res_IQParams[int(parts[1])] = [parts[2], parts[3], parts[4]]
+                res_IQParams[int(parts[1])] = [parts[2], parts[3], parts[4]]    #key in IQParams is the boundary ID (1-based)
             elif parts[0] == 'ISupCrParams': #need to check these
                 res_ISupCrParams[int(parts[1])] = parts[2]
             elif parts[0] == 'EWSParamsC':
@@ -1005,7 +1049,7 @@ class SRH_2D_SRHHydro:
         if 'IQParams' not in self.srhhydro_content:
             raise Exception("There is no INLET-Q boundary in the SRHHydro file.")
 
-        IQParams_Dict = self.srhhydro_content['IQParams']
+        IQParams_Dict = self.srhhydro_content['IQParams']    #key in IQParams is the boundary ID (1-based)
 
         for i in range(len(bcIDs)):
             bcID = bcIDs[i]
