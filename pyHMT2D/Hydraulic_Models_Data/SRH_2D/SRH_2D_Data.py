@@ -296,7 +296,9 @@ class SRH_2D_SIF:
                 # Monitoring Points
                 if self.srhsif_content.get('monitor_point_npoints') > 0:
                     f.write("// Monitor Point Coordinates: x1 y1 x2 y2 ...\n")
-                    f.write(f"{self.srhsif_content.get('monitor_points', '')}\n")
+
+                    #join the list of monitor points into a string
+                    f.write(" ".join(map(str, self.srhsif_content['monitor_points'])) + "\n")
                 
                 # Time Type
                 f.write("// Steady-or-Unsteady (STEADY/UNS)\n")
@@ -566,7 +568,7 @@ class SRH_2D_SIF:
             coords = [float(x) for x in coords]
                             
             # Store in data dictionary            
-            self.data['monitor_points'] = coords
+            self.srhsif_content['monitor_points'] = coords
             
             return i
             
