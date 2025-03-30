@@ -49,7 +49,7 @@ def gmsh2d_to_srh(gmsh2d_fileName, srh_caseName, shift_x=0.0, shift_y=0.0, units
     mesh = meshio.read(gmsh2d_fileName)
 
     #output the mesh as vtk for checking
-    mesh.write("check_mesh.vtk")
+    mesh.write("check_mesh.vtk", file_format="vtk42")
 
     #build the nodeStrings (boundaries)
     nodeStrings = build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol)
