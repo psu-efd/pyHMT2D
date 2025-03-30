@@ -17,6 +17,7 @@ from os import path
 import shlex
 import vtk
 from vtk.util import numpy_support as VN
+import re
 
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
@@ -171,8 +172,8 @@ class SRH_2D_SIF:
 
                 res_BC[index_BC] = boundary_type
 
-                if boundary_type == 'monitoring' or boundary_type == 'monitor':
-                    #do nothing (there is no boundary values for monitoring)
+                if boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
+                    #do nothing (there is no boundary values for monitoring, symmetry, or symmetry)
                     pass
                 else:
                     # Get boundary values from next two lines
@@ -360,7 +361,7 @@ class SRH_2D_SIF:
                         f.write(" ".join(str(x) for x in IQParams[index_BC]) + "\n")
                     elif boundary_type == 'exit-h':
                         f.write(" ".join(str(x) for x in EWSParamsC[index_BC]) + "\n")
-                    elif boundary_type == 'monitoring' or boundary_type == 'monitor':
+                    elif boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
                         #do nothing  
                         pass
                     else:
@@ -3237,7 +3238,9 @@ class SRH_2D_Data(HydraulicData):
         
         # Find all SRHC files
         pattern = os.path.join(directory, f"{case_name}_SRHC*.dat")
-        srhc_files = sorted(glob.glob(pattern))
+        srhc_files = sorted(glob.glob(pattern), key=self.natural_sort_key)
+
+        print("srhc_files = ", srhc_files)
 
         if gVerbose:
             print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
@@ -3542,3 +3545,7 @@ class SRH_2D_Data(HydraulicData):
 
         """
         pass
+
+    def natural_sort_key(self, s):
+        return [int(text) if text.isdigit() else text.lower()
+                for text in re.split(r'(\d+)', s)]
