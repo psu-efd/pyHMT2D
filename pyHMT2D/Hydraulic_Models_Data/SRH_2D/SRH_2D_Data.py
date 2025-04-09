@@ -1556,6 +1556,9 @@ class SRH_2D_SRHGeom:
                     if len(search[2:]) < 1 or len(search[2:]) > gMax_Nodes_per_Element:
                         sys.exit("Number of nodes for element %d is less than 1 or larger than the max of %d." % (elemCount,gMax_Nodes_per_Element))
                     self.vtkCellTypeCode[elemCount - 1] = vtkCellTypeMap[len(search[2:])]
+
+                    #print("elem ID = ", elemCount-1)
+                    #print("elementNodesList = ", self.elementNodesList[elemCount - 1])
                 elif search[0] == "Node":
                     nodeCount += 1
                     # print("Node # %d: %s" % (nodeCount, line))
@@ -1585,7 +1588,11 @@ class SRH_2D_SRHGeom:
             for nodeI in range(self.elementNodesCount[cellI]):
                 elev_temp += self.nodeCoordinates[self.elementNodesList[cellI][nodeI]-1,2]  #z elevation; nodeI-1 because node number is 1-based for SRH-2D
 
-            self.elementBedElevation[cellI] = elev_temp / self.elementNodesCount[cellI]
+            if self.elementNodesCount[cellI] > 0:
+                self.elementBedElevation[cellI] = elev_temp / self.elementNodesCount[cellI]
+            else:
+                print("element ", cellI, " has no nodes. Exiting...")
+                sys.exit()
 
         #calculate the 2D mesh's bounding box
         xmin = np.min(self.nodeCoordinates[:,0])
