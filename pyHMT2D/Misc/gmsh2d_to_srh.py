@@ -82,7 +82,7 @@ def build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol
 
     """
 
-    #get all the lines's physcial group number
+    #get all the lines's physical group number
     lines_physical_group_IDs = mesh.cell_data_dict['gmsh:physical']['line']
 
     #how many different line boundaries
@@ -94,6 +94,7 @@ def build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol
     #build node strings for each line boundary
     nodeStrings = {}
 
+    #loop through each line group
     for nodeStringID in unique_line_physical_group_IDs:
         #print("nodeStringID =", nodeStringID)
 
@@ -108,7 +109,15 @@ def build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol
                 if (lines_nodes[line_ID][0]+1) not in current_node_list:
                     current_node_list.append(lines_nodes[line_ID][0]+1)  #+1 because meshio is 0-based; gmsh is 1-based
 
+                #For a closed loop, one node shows up in the list twice; thus it can repeat. Need to consider this scenario, i.e., 
+                #if the node is already in the list, but not the last one, then we need to add the last one.
+                if (lines_nodes[line_ID][0]+1) in current_node_list and current_node_list[-1] != (lines_nodes[line_ID][0]+1):
+                    current_node_list.append(lines_nodes[line_ID][0]+1)  #+1 because meshio is 0-based; gmsh is 1-based
+
                 if (lines_nodes[line_ID][1]+1) not in current_node_list:
+                    current_node_list.append(lines_nodes[line_ID][1]+1)  #+1 because meshio is 0-based; gmsh is 1-based
+
+                if (lines_nodes[line_ID][1]+1) in current_node_list and current_node_list[-1] != (lines_nodes[line_ID][1]+1):
                     current_node_list.append(lines_nodes[line_ID][1]+1)  #+1 because meshio is 0-based; gmsh is 1-based
 
         #add the nodeString to the nodeStrings dictionary

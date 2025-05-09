@@ -172,7 +172,7 @@ class SRH_2D_SIF:
 
                 res_BC[index_BC] = boundary_type
 
-                if boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
+                if boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry' or boundary_type == 'wall':
                     #do nothing (there is no boundary values for monitoring, symmetry, or symmetry)
                     pass
                 else:
@@ -184,7 +184,7 @@ class SRH_2D_SIF:
                     if boundary_type == 'inlet-q':
                         res_IQParams[index_BC] = boundary_values
                     elif boundary_type == 'exit-h':
-                        res_EWSParamsC[index_BC] = boundary_values
+                        res_EWSParamsC[index_BC] = boundary_values                    
                     else:
                         raise ValueError(f"Boundary type: {boundary_type} is not supported yet.")
             
@@ -818,129 +818,177 @@ class SRH_2D_SRHHydro:
         self.parse_srhhydro_file()
 
     def parse_srhhydro_file(self):
-        """ Parse the SRHHydro file
-
-        It will read the SRHHydro file and build the dictionary self.srhhydro_content
-
-        Returns
-        -------
-
-        """
-
+        """Parse the SRHHydro file"""
+        
         res_all = {}
-        res_ManningsN = {}  # dict for ManningsN (there cuould be multiple entries)
-        res_BC = {}  # dict for BC (there could be multiple entries)
-        res_MONITORING = {} #dict for monitoring lines (it is under BC in SRHHYDRO)
-        res_IQParams = {}  # dict for subcritical inlet discharge boundary condition
-        res_ISupCrParams = {}  # dict for supercritical inlet, the same as IQParams, with the additon of WSE
-        res_EWSParamsC = {}  # dict for stage exit boundary condition (constant)
-        res_EWSParamsRC = {}  # dict for stage exit boundary condition (rating curve)
-        res_EQParams = {}  # dict for exit discharge boundary condition
-        res_NDParams = {}  # dict for normal depth outlet boundary condition
+        res_ManningsN = {}
+        
+        res_BC = {}
+        res_MONITORING = {}
+        res_PRESSURE = {}
+        res_INLET_Q = {}
+        res_EXIT_H = {}
+        res_WALL = {}
 
-        res_PressureParams = {}  #dict for PressureParams
-        res_PressOvertop = {}    #dict for PressOvertop
-
-
-        #check whether the srhhydro file exists
-        if not path.isfile(self.srhhydro_filename):
-            raise Exception("The SRHHYDRO file", self.srhhydro_filename, "does not exists. Exiting ...")
-
-        for line in open(self.srhhydro_filename):
-            #parts = line.strip().split(' ')
-            parts = shlex.split(line.strip())
-
-            #print(parts)
-
-            map(str.strip, parts)
-
-            #print(parts)
-
-            if len(parts) <= 1:  # if there is only one word, assume it is a comment; do nothing
-                continue
-
-            if parts[0] == 'ManningsN':
-                res_ManningsN[int(parts[1])] = float(parts[2])
-            elif parts[0] == 'BC': #contains both boundary conditions and monitoring lines ("MONITORING")
-                if parts[2] == 'MONITORING': #this is a monitoring line, not a BC
-                    res_MONITORING[int(parts[1])] = parts[2]
-                else:                        #this is a real BC
-                    res_BC[int(parts[1])] = parts[2]
-            elif parts[0] == 'IQParams':
-                res_IQParams[int(parts[1])] = [parts[2], parts[3], parts[4]]    #key in IQParams is the boundary ID (1-based)
-            elif parts[0] == 'ISupCrParams': #need to check these
-                res_ISupCrParams[int(parts[1])] = parts[2]
-            elif parts[0] == 'EWSParamsC':
-                res_EWSParamsC[int(parts[1])] = [parts[2], parts[3], parts[4]]
-            elif parts[0] == 'EWSParamsRC':
-                res_EWSParamsRC[int(parts[1])] = [parts[2], parts[3], parts[4]]
-            elif parts[0] == 'EQParams': #need to check these
-                res_EQParams[int(parts[1])] = parts[2]
-            elif parts[0] == 'NDParams': #need to check these
-                res_NDParams[int(parts[1])] = parts[2]
-            elif parts[0] == 'OutputFormat':  #output format and unit
-                res_all[parts[0]] = parts[1]
-                res_all['OutputUnit'] = parts[2]
-            elif parts[0] == 'SimTime':
-                res_all[parts[0]] = [float(parts[1]),float(parts[2]),float(parts[3])]
-            elif parts[0] == 'ParabolicTurbulence':
-                res_all[parts[0]] = float(parts[1])
-            elif parts[0] == 'OutputOption':
-                res_all[parts[0]] = int(parts[1])
-            elif parts[0] == 'OutputInterval':
-                res_all[parts[0]] = float(parts[1])
-            else:
-                #res_all[parts[0].lstrip()] = parts[1].strip('"').split(' ')
-                #res_all[parts[0].lstrip()] = parts[1]
-                #Just keep all the parts (there might be more than one part)
-                #res_all[parts[0].lstrip()] = [part for part in parts[1:]]
+        res_IQParams = {}
+        res_ISupCrParams = {}
+        res_EWSParamsC = {}
+        res_EWSParamsRC = {}
+        res_EQParams = {}
+        res_NDParams = {}
+        res_PressureNodestrings = {}
+        res_PressureParams = {}
+        res_PressOvertop = {}  # Add dictionary for pressure overtop parameters
+        res_PressWeirParams = {}  # Add dictionary for pressure weir parameters
+        
+        try:
+            with open(self.srhhydro_filename, 'r') as f:
+                lines = f.readlines()
                 
-                res_all[parts[0].lstrip()] = ' '.join(parts[1:])
+            for i, line in enumerate(lines):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                parts = line.split()
+                
+                # Handle different line types
+                if line.startswith('SRHHYDRO'):
+                    res_all['Version'] = parts[1]
+                elif line.startswith('Case'):
+                    res_all['Case'] = parts[1].strip('"')
+                elif line.startswith('Description'):
+                    res_all['Description'] = ' '.join(parts[1:]).strip('"')
+                elif line.startswith('RunType'):
+                    res_all['RunType'] = parts[1]
+                elif line.startswith('ModelTemp'):
+                    res_all['ModelTemp'] = parts[1]
+                elif line.startswith('UnsteadyOutput'):
+                    res_all['UnsteadyOutput'] = parts[1]
+                elif line.startswith('SimTime'):
+                    res_all['SimTime'] = [float(x) for x in parts[1:]]
+                elif line.startswith('TurbulenceModel'):
+                    res_all['TurbulenceModel'] = parts[1]
+                elif line.startswith('ParabolicTurbulence'):
+                    res_all['ParabolicTurbulence'] = float(parts[1])
+                elif line.startswith('InitCondOption'):
+                    res_all['InitCondOption'] = parts[1]
+                elif line.startswith('Grid'):
+                    res_all['Grid'] = parts[1].strip('"')
+                elif line.startswith('HydroMat'):
+                    res_all['HydroMat'] = parts[1].strip('"')
+                elif line.startswith('OutputFormat'):
+                    res_all['OutputFormat'] = parts[1]
+                    res_all['OutputUnit'] = parts[2]
+                elif line.startswith('OutputOption'):
+                    res_all['OutputOption'] = int(parts[1])
+                elif line.startswith('OutputInterval'):
+                    res_all['OutputInterval'] = float(parts[1])
+                elif line.startswith('ManningsN'):
+                    zone_id = int(parts[1])
+                    n_value = float(parts[2])
+                    res_ManningsN[zone_id] = n_value
+                elif line.startswith('BC'):
+                    bc_id = int(parts[1])
+                    bc_type = parts[2]
+                    res_BC[bc_id] = bc_type
+                    
+                    # Track monitoring and pressure BCs
+                    if bc_type == 'MONITORING':
+                        res_MONITORING[int(parts[1])] = parts[2]
+                    elif bc_type == 'PRESSURE':
+                        res_PRESSURE[int(parts[1])] = parts[2]
+                    elif bc_type == 'INLET-Q':
+                        res_INLET_Q[int(parts[1])] = parts[2]
+                    elif bc_type == 'EXIT-H':
+                        res_EXIT_H[int(parts[1])] = parts[2]
+                    elif bc_type == 'WALL':
+                        res_WALL[int(parts[1])] = parts[2]
+                elif line.startswith('IQParams'):
+                    bc_id = int(parts[1])
+                    res_IQParams[bc_id] = {
+                        'discharge': float(parts[2]),
+                        'unit': parts[3],
+                        'type': parts[4]
+                    }
+                elif line.startswith('EWSParamsRC'):
+                    bc_id = int(parts[1])
+                    res_EWSParamsRC[bc_id] = {
+                        'curve_file': parts[2].strip('"'),
+                        'unit': parts[3],
+                        'type': parts[4]
+                    }
+                elif line.startswith('PressureNodestrings'):
+                    group_id = int(parts[1])
+                    nodestring_ids = [int(x) for x in parts[2:]]
+                    res_PressureNodestrings[group_id] = nodestring_ids
+                elif line.startswith('PressureParams'):
+                    nodestring_id = int(parts[1])
+                    res_PressureParams[nodestring_id] = {
+                        'type': parts[2],
+                        'var1': float(parts[3]),    #not sure the meaning of var1, var2, var3
+                        'var2': float(parts[4]),
+                        'var3': float(parts[5]),
+                        'unit': parts[6]
+                    }
 
+                    #If the current line is PressureParams, the next line should be PressOvertop
+                    next_line = lines[i + 1].strip()
+                    if next_line.startswith('PressOvertop'):
+                        nodestring_id_overtop = int(parts[1])
 
-        # add ManningsN, BC and all other sub-dict to res_all
-        if res_ManningsN:
-            res_all['ManningsN'] = res_ManningsN
+                        if nodestring_id_overtop != nodestring_id:
+                            raise ValueError(f"Mismatched nodestring IDs between PressureParams and PressOvertop: {nodestring_id} != {nodestring_id_overtop}")
 
-        if res_BC:
-            res_all['BC'] = res_BC
+                        overtop_flag = int(parts[2])
 
-        if res_MONITORING:
-            res_all['MONITORING'] = res_MONITORING
-
-        if res_IQParams:
-            res_all['IQParams'] = res_IQParams
-
-        if res_ISupCrParams:
-            res_all['ISupCrParams'] = res_ISupCrParams
-
-        if res_EWSParamsC:
-            res_all['EWSParamsC'] = res_EWSParamsC
-
-        if res_EWSParamsRC:
-            res_all['EWSParamsRC'] = res_EWSParamsRC
-
-        if res_EQParams:
-            res_all['EQParams'] = res_EQParams
-
-        if res_NDParams:
-            res_all['NDParams'] = res_NDParams
-
-
-        if False:
-            print(res_all)
-
-            if res_ManningsN: print(res_all['ManningsN'])
-            if res_BC: print(res_all['BC'])
-            if res_MONITORING: print(res_all['MONITORING'])
-            if res_IQParams: print(res_all['IQParams'])
-            if res_ISupCrParams: print(res_all['ISupCrParams'])
-            if res_EWSParamsC: print(res_all['EWSParamsC'])
-            if res_EWSParamsRC: print(res_all['EWSParamsRC'])
-            if res_EQParams: print(res_all['EQParams'])
-            if res_NDParams: print(res_all['NDParams'])
-
-        self.srhhydro_content = res_all
+                        res_PressureParams[nodestring_id]['overtop_flag'] = overtop_flag                        
+                        
+                        # If overtop_flag is 1, next line should be PressWeirParams2
+                        if overtop_flag == 1:
+                            next_line = lines[i + 1].strip()
+                            if next_line.startswith('PressWeirParams2'):
+                                weir_parts = next_line.split()
+                                weir_id = int(weir_parts[1])
+                                if weir_id != nodestring_id:
+                                    raise ValueError(f"Mismatched nodestring IDs between PressOvertop and PressWeirParams2: {nodestring_id} != {weir_id}")
+                                
+                                res_PressWeirParams[nodestring_id] = {
+                                    'crest_elevation': float(weir_parts[2]),
+                                    'weir_coefficient': float(weir_parts[3]),
+                                    'unit': weir_parts[4],
+                                    'type': weir_parts[5]
+                                }
+                            else:
+                                raise ValueError(f"PressWeirParams2 not found for nodestring ID {nodestring_id}")
+                    else:                        
+                        raise ValueError(f"PressOvertop not found for nodestring ID {nodestring_id}")
+                
+            # Store all results in srhhydro_content
+            self.srhhydro_content = {
+                **res_all,
+                'ManningsN': res_ManningsN,
+                'BC': res_BC,
+                'MONITORING': res_MONITORING,
+                'PRESSURE': res_PRESSURE,
+                'INLET-Q': res_INLET_Q,
+                'EXIT-H': res_EXIT_H,
+                'WALL': res_WALL,
+                'IQParams': res_IQParams,
+                'ISupCrParams': res_ISupCrParams,
+                'EWSParamsC': res_EWSParamsC,
+                'EWSParamsRC': res_EWSParamsRC,
+                'EQParams': res_EQParams,
+                'NDParams': res_NDParams,
+                'PressOvertop': res_PressOvertop,
+                'PressWeirParams': res_PressWeirParams,
+                'PressureNodestrings': res_PressureNodestrings,
+                'PressureParams': res_PressureParams
+            }
+            
+        except Exception as e:
+            print(f"Error parsing SRHHYDRO file: {str(e)}")
+            raise
 
     def get_ManningN_dict(self):
         """
@@ -1207,14 +1255,12 @@ class SRH_2D_SRHHydro:
         -------
         new_srhhydro_file_name : str
             name of the new srhhydro file. If not provided, the original filename will be used.
-
         """
 
         if new_srhhydro_file_name is None:
             new_srhhydro_file_name = self.srhhydro_filename
 
-        if gVerbose: print("Wring the SRHHYDRO file %s \n" % new_srhhydro_file_name)
-
+        if gVerbose: print("Writing the SRHHYDRO file %s \n" % new_srhhydro_file_name)
 
         try:
             fid = open(new_srhhydro_file_name, 'w')
@@ -1222,49 +1268,98 @@ class SRH_2D_SRHHydro:
             print('srhhydro file open error')
             sys.exit()
 
-        for key, value in self.srhhydro_content.items():
-            #print("key, value = ", key, value)
-            if type(value) is dict: #if the current item is dictionary itself
-                for subkey, subvalue in value.items():
-                    if "ManningsN" in key:
-                        fid.write("ManningsN " + str(subkey) + ' ' + str(subvalue) + '\n')
-                    elif "MONITORING" in key:
-                        fid.write("BC " + str(subkey) + ' ' + str(subvalue) + '\n')
-                    elif "BC" in key:
-                        fid.write("BC " + str(subkey) + ' ' + str(subvalue) + '\n')
-                    elif "IQParams" in key:
-                        fid.write("IQParams " + str(subkey) + ' ' + str(subvalue[0]) + ' ' + str(subvalue[1])+ ' ' +
-                                  str(subvalue[2]) + '\n' )
-                    elif "EWSParamsC" in key:
-                        fid.write("EWSParamsC " + str(subkey) + ' ' + str(subvalue[0])+ ' ' + str(subvalue[1])+ ' ' +
-                                  str(subvalue[2]) + '\n' )
-                    elif "EWSParamsRC" in key:
-                        fid.write("EWSParamsRC " + str(subkey) + ' \"' + str(subvalue[0])+ '\" ' + str(subvalue[1])+
-                                  ' ' + str(subvalue[2]) + '\n' )
-                    elif "ISupCrParams" in key:  #need to check these (no reference)
-                        fid.write("ISupCrParams " + str(subkey) + ' ' + str(subvalue) + '\n' )
-                    elif "EQParams" in key:      #need to check these (no reference)
-                        fid.write("EQParams " + str(subkey) + ' ' + str(subvalue) + '\n' )
-                    elif "NDParams" in key:      #need to check these (no reference)
-                        fid.write("NDParams " + str(subkey) + ' ' + str(subvalue) + '\n' )
+        # Write header and basic parameters in order
+        fid.write(f"SRHHYDRO {self.srhhydro_content.get('SRHHYDRO', '')}\n")
+        
+        # Write quoted string parameters
+        for param in ['Case', 'Description']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} "{self.srhhydro_content[param]}"\n')
             else:
-                if "Case" in key or "Description" in key or "Grid" in key \
-                        or "HydroMat" in key or "MonitorPtFile" in key:
-                    fid.write(str(key) + ' \"' + str(value) + '\"\n')
-                elif "OutputFormat" in key:
-                    fid.write(str(key) + ' ' + str(value) + ' ' + str(self.srhhydro_content["OutputUnit"]) + '\n')
-                elif "SimTime" in key:
-                    fid.write(str(key) + ' ' + str(value[0]) + ' ' + str(value[1]) + ' ' + str(value[2]) + '\n')
-                else:
-                    #print("last, key, value", key, value, str(key), str(value))
+                raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
 
-                    #OutputFormat and OutputUnit should be written in the same line, which has been taken care of above. Thus, no need to check for them here.
-                    if key == "OutputFormat":
-                        continue
-                    elif key == "OutputUnit":
-                        continue
-                    else:
-                        fid.write(str(key) + ' ' + str(value) + '\n')                    
+        # Write basic simulation parameters
+        for param in ['RunType', 'ModelTemp', 'UnsteadyOutput']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} {self.srhhydro_content[param]}\n')
+            else:
+                raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
+
+        # Write SimTime
+        if 'SimTime' in self.srhhydro_content:
+            value = self.srhhydro_content['SimTime']
+            fid.write(f'SimTime {value[0]} {value[1]} {value[2]}\n')
+        else:
+            raise ValueError("Parameter SimTime not found in the SRHHydro content.")
+
+        # Write turbulence and initial condition parameters
+        for param in ['TurbulenceModel', 'ParabolicTurbulence', 'InitCondOption']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} {self.srhhydro_content[param]}\n')
+            else:
+                raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
+
+        # Write grid and material files
+        for param in ['Grid', 'HydroMat']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} "{self.srhhydro_content[param]}"\n')
+            else:
+                raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
+
+        # Write output parameters
+        if 'OutputFormat' in self.srhhydro_content:
+            fid.write(f'OutputFormat {self.srhhydro_content["OutputFormat"]} {self.srhhydro_content.get("OutputUnit", "")}\n')
+        else:
+            raise ValueError("Parameter OutputFormat not found in the SRHHydro content.")
+
+        for param in ['OutputOption', 'OutputInterval']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} {self.srhhydro_content[param]}\n')
+            else:
+                raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
+
+        # Write Manning's n values
+        if 'ManningsN' in self.srhhydro_content:
+            for material_id, value in sorted(self.srhhydro_content['ManningsN'].items()):
+                fid.write(f'ManningsN {material_id} {value}\n')
+        else:
+            raise ValueError("Parameter ManningsN not found in the SRHHydro content.")
+
+        # Write boundary conditions
+        if 'BC' in self.srhhydro_content:
+            for bc_id, bc_type in sorted(self.srhhydro_content['BC'].items()):
+                fid.write(f'BC {bc_id} {bc_type}\n')
+        else:
+            raise ValueError("Parameter BC not found in the SRHHydro content.")
+
+        # Write inlet and exit parameters
+        if 'IQParams' in self.srhhydro_content:
+            for bc_id, params in sorted(self.srhhydro_content['IQParams'].items()):
+                fid.write(f'IQParams {bc_id} {params[0]} {params[1]} {params[2]}\n')
+
+        if 'EWSParamsRC' in self.srhhydro_content:
+            for bc_id, params in sorted(self.srhhydro_content['EWSParamsRC'].items()):
+                fid.write(f'EWSParamsRC {bc_id} "{params[0]}" {params[1]} {params[2]}\n')
+
+        # Write pressure nodestrings
+        if 'PressureNodestrings' in self.srhhydro_content:
+            for group_id, nodestrings in sorted(self.srhhydro_content['PressureNodestrings'].items()):
+                fid.write(f'PressureNodestrings {group_id} {" ".join(map(str, nodestrings))}\n')
+
+        # Write pressure parameters and overtop settings
+        if 'PressureParams' in self.srhhydro_content:
+            for group_id, params in sorted(self.srhhydro_content['PressureParams'].items()):
+                fid.write(f'PressureParams {group_id} {" ".join(map(str, params))}\n')
+                
+                # Write PressOvertop immediately after its corresponding PressureParams
+                if 'PressOvertop' in self.srhhydro_content and group_id in self.srhhydro_content['PressOvertop']:
+                    overtop_value = self.srhhydro_content['PressOvertop'][group_id]
+                    fid.write(f'PressOvertop {group_id} {overtop_value}\n')
+                    
+                    # If overtop is 1, write corresponding weir parameters
+                    if overtop_value == 1 and 'PressWeirParams' in self.srhhydro_content and group_id in self.srhhydro_content['PressWeirParams']:
+                        weir_params = self.srhhydro_content['PressWeirParams'][group_id]
+                        fid.write(f'PressWeirParams2 {group_id} {" ".join(map(str, weir_params))}\n')
 
         fid.close()
 
@@ -1325,6 +1420,33 @@ class SRH_2D_SRHHydro:
         value = self.srhhydro_content["HydroMat"]
 
         return value
+
+    # Add getter methods
+    def get_pressure_overtop(self, nodestring_id=None):
+        """Get pressure overtop parameters
+        
+        Args:
+            nodestring_id: Optional nodestring ID. If None, returns all parameters
+            
+        Returns:
+            dict: Pressure overtop parameters
+        """
+        if nodestring_id is None:
+            return self.srhhydro_content.get('PressOvertop', {})
+        return self.srhhydro_content.get('PressOvertop', {}).get(nodestring_id)
+
+    def get_pressure_weir_params(self, nodestring_id=None):
+        """Get pressure weir parameters
+        
+        Args:
+            nodestring_id: Optional nodestring ID. If None, returns all parameters
+            
+        Returns:
+            dict: Pressure weir parameters
+        """
+        if nodestring_id is None:
+            return self.srhhydro_content.get('PressWeirParams', {})
+        return self.srhhydro_content.get('PressWeirParams', {}).get(nodestring_id)
 
 class SRH_2D_SRHGeom:
     """A class to handle srhgeom file for SRH-2D
@@ -1411,6 +1533,9 @@ class SRH_2D_SRHGeom:
         # each element (cell)'s bed elevation (z)
         self.elementBedElevation = np.zeros(self.numOfElements, dtype=np.float64)
 
+        # center of each element
+        self.elementCenters = np.zeros([self.numOfElements, 3], dtype=np.float64)
+
         # each NodeString's list of nodes (stored in a dictionary)
         self.nodeStringsDict = {}
 
@@ -1438,6 +1563,7 @@ class SRH_2D_SRHGeom:
         #edges of each boundary. Only contains real boundaries, not monitoring lines.
         #boundaryID = nodeString ID read in from srhgeom file
         self.boundaryEdges = {} #dictionary: {boundaryID: [list of edge IDs]}
+        self.boundaryEdges_normal = {} #dictionary: {boundaryID: [list of edge normal vectors]}. The normal vector is pointing outwards.
 
         #list of all boundary edge IDs (all lumped to one list)
         self.allBoundaryEdgeIDs = []
@@ -1579,17 +1705,20 @@ class SRH_2D_SRHGeom:
 
         srhgeomfile.close()
 
-        #calculate the bed elevation at cell center
+        #calculate cell center and the bed elevation at cell center
         for cellI in range(self.numOfElements):
 
+            cell_center = np.array([0.0, 0.0, 0.0])
             elev_temp = 0.0
 
             #loop over all nodes of current element
             for nodeI in range(self.elementNodesCount[cellI]):
+                cell_center += self.nodeCoordinates[self.elementNodesList[cellI][nodeI]-1]
                 elev_temp += self.nodeCoordinates[self.elementNodesList[cellI][nodeI]-1,2]  #z elevation; nodeI-1 because node number is 1-based for SRH-2D
 
             if self.elementNodesCount[cellI] > 0:
                 self.elementBedElevation[cellI] = elev_temp / self.elementNodesCount[cellI]
+                self.elementCenters[cellI] = cell_center / self.elementNodesCount[cellI]
             else:
                 print("element ", cellI, " has no nodes. Exiting...")
                 sys.exit()
@@ -1692,7 +1821,7 @@ class SRH_2D_SRHGeom:
 
         if gVerbose: print("Building mesh's node, elements, and topology ...")
 
-        #create an emptp list of lists for all nodes
+        #create an empty list of lists for all nodes
         self.nodeElementsList = [[] for _ in range(self.numOfNodes)]
 
         #loop over all cells
@@ -1810,8 +1939,6 @@ class SRH_2D_SRHGeom:
                     print("Boundary edge ", curr_edge_node_IDs, "in NodeString", nodeString, "can not be found in edge list. Mesh is wrong. Exiting...")
                     sys.exit()
 
-
-
             self.boundaryEdges[nodeString] = current_boundary_edge_list
 
         #build default boundary as wall (in SMS, the default boundary is not exported in SRHGEOM)
@@ -1824,6 +1951,41 @@ class SRH_2D_SRHGeom:
         if len(unusedBoundaryEdgeList) > 0:  #if there are unused boundary edges
             defaultWallBoundaryID = len(self.boundaryEdges)+1   #boundary ID for default boundary
             self.boundaryEdges[defaultWallBoundaryID] = unusedBoundaryEdgeList
+
+        #compute the outward normal vectors of all boundary edges
+        for boundaryID in self.boundaryEdges:
+            self.boundaryEdges_normal[boundaryID] = []
+            for edgeID in self.boundaryEdges[boundaryID]:
+                #get the nodes of the current edge
+                edge_nodes = self.edges_r[abs(edgeID)]   #edgeID is negative for the reverse edge
+                node1 = edge_nodes[0]
+                node2 = edge_nodes[1]
+                p1 = self.nodeCoordinates[node1-1]
+                p2 = self.nodeCoordinates[node2-1]
+
+                edge_center = (p1 + p2) / 2
+
+                edge_vector = p2 - p1
+                edge_vector_magnitude = np.linalg.norm(edge_vector)
+                edge_normal_vector = edge_vector / edge_vector_magnitude
+
+                #make sure the normal vector is pointing outwards: get the cell/element that the edge belongs to, 
+                #get the cell center, 
+                element_ID = self.edgeElements[abs(edgeID)][0]
+                cell_center = self.elementCenters[element_ID-1]
+
+                #compute the vector from the cell center to the edge node
+                cell_center_vector = edge_center - cell_center
+
+                #compute the dot product of the cell center vector and the edge normal vector
+                dot_product = np.dot(cell_center_vector, edge_normal_vector)
+
+                #if the dot product is positive, the normal vector is pointing outwards
+                if dot_product < 0:
+                    edge_normal_vector = -edge_normal_vector
+
+                self.boundaryEdges_normal[boundaryID].append(edge_normal_vector)
+
 
         #build elementEdgesList
         # loop over all elements
