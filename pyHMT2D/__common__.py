@@ -1,6 +1,6 @@
 # Global variables
 
-gVerbose = False
+gVerbose = True
 """bool to define verbose or not"""
 
 gMax_Nodes_per_Element = 8
