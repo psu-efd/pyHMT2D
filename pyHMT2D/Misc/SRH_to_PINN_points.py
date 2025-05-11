@@ -55,6 +55,14 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
         
         # Get vertex coordinates
         vertex_coords = [my_srh_2d_mesh.nodeCoordinates[vid-1] for vid in cell_vertices]  # -1 because SRH-2D is 1-based
+
+        # Get the bed slope at the cell center (Sx, Sy)
+        cell_bed_slope = my_srh_2d_mesh.elementBedSlope[iCell]
+
+        # Get the Manning's n at the cell center
+        cell_ManningN = my_srh_2d_data.ManningN_cell[iCell]
+
+        #print(f"cell_bed_slope: {cell_bed_slope}")
         
         if num_vertices == 3:  # Triangle
             p0, p1, p2 = vertex_coords
@@ -73,6 +81,9 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
                     "x": point[0],
                     "y": point[1],
                     "z": point[2],
+                    "Sx": cell_bed_slope[0],       #use the same bed slope for all points in the cell (the bed slope is constant for each cell)
+                    "Sy": cell_bed_slope[1],
+                    "ManningN": cell_ManningN,     #use the same Manning's n for all points in the cell (the Manning's n is constant for each cell)
                     "spatial_dimensionality": 2
                 }
                 pointID += 1
@@ -99,6 +110,9 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
                     "x": point[0],
                     "y": point[1],
                     "z": point[2],
+                    "Sx": cell_bed_slope[0],       #use the same bed slope for all points in the cell (the bed slope is constant for each cell)
+                    "Sy": cell_bed_slope[1],
+                    "ManningN": cell_ManningN,     #use the same Manning's n for all points in the cell (the Manning's n is constant for each cell)
                     "spatial_dimensionality": 2
                 }
                 pointID += 1
@@ -106,8 +120,29 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
             raise ValueError(f"Unsupported cell type: {num_vertices}")
 
     # Write equation points for visualization
+    point_data = {
+        "zb": np.array([equation_points_dict[str(i)]["z"] for i in range(len(equation_points_dict))]),
+        "Sx": np.array([equation_points_dict[str(i)]["Sx"] for i in range(len(equation_points_dict))]),
+        "Sy": np.array([equation_points_dict[str(i)]["Sy"] for i in range(len(equation_points_dict))]), 
+        "S":  np.array([[equation_points_dict[str(i)]["Sx"], equation_points_dict[str(i)]["Sy"], 0.0] for i in range(len(equation_points_dict))]),       #bed slope vectors with 0 z-component
+        "ManningN": np.array([equation_points_dict[str(i)]["ManningN"] for i in range(len(equation_points_dict))])
+    }
     equation_points = np.array(equation_points_list)
-    meshio.write_points_cells("equation_points.vtk", equation_points, {}, {}, {}, binary=True)
+    
+    # Create a mesh with points only (no cells)
+    points = equation_points
+    cells = []  # Empty cells list since we only have points
+    cell_data = {}  # Empty cell data since we only have points
+    
+    # Write the VTK file with point data
+    meshio.write_points_cells(
+        "equation_points.vtk",
+        points=points,
+        cells=cells,
+        cell_data=cell_data,
+        point_data=point_data,
+        binary=True
+    )
 
     # Process boundary points
     boundary_points_dict = {}
@@ -123,6 +158,9 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
     bc_normal_vectors = np.zeros((total_boundary_points, 3))
     bc_IDs = np.zeros(total_boundary_points, dtype=np.int64)
     bc_represented_lengths = np.zeros(total_boundary_points, dtype=np.float64)
+    bc_bed_slope = np.zeros((total_boundary_points, 2))
+    bc_ManningN = np.zeros(total_boundary_points, dtype=np.float64)
+    bc_z = np.zeros(total_boundary_points, dtype=np.float64)
 
     pointID = 0
     #Loop over all boundaries
@@ -131,6 +169,9 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
             # Get the nodes for this edge 
             edge_nodes = my_srh_2d_mesh.edges_r[abs(edge_id)]  #edge_id might be negative when the direction of the edge is the opposite of boundary
             node1, node2 = edge_nodes[0], edge_nodes[1]
+
+            # Get the bed slope at the edge center (average of the two nodes)
+            edge_bed_slope = (my_srh_2d_mesh.nodeBedSlope[node1-1] + my_srh_2d_mesh.nodeBedSlope[node2-1]) / 2
                         
             if edge_id > 0:           #ensure the correct order of the nodes
                 p1 = nodes[node1-1]  
@@ -141,6 +182,9 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
             
             line_length = np.sqrt(np.sum((p2 - p1)**2))
             represented_length = line_length / refinement
+
+            # Get the Manning's n at the edge center
+            edge_ManningN = (my_srh_2d_data.ManningN_node[node1-1] + my_srh_2d_data.ManningN_node[node2-1]) / 2
 
             # Generate sampling points
             if refinement == 1:
@@ -160,6 +204,10 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
                 normal /= np.linalg.norm(normal[:2])
                 bc_normal_vectors[pointID] = normal
 
+                bc_bed_slope[pointID] = edge_bed_slope
+                bc_ManningN[pointID] = edge_ManningN
+                bc_z[pointID] = point[2]
+
                 bc_represented_lengths[pointID] = represented_length
                 pointID += 1
 
@@ -167,7 +215,12 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
     point_data = {
         'bc_ID': bc_IDs,
         'normal_vector': bc_normal_vectors,
-        'represented_length': bc_represented_lengths
+        'represented_length': bc_represented_lengths,        
+        'Sx': bc_bed_slope[:, 0],
+        'Sy': bc_bed_slope[:, 1],
+        'S': np.column_stack([bc_bed_slope, np.zeros(len(bc_bed_slope))]),  # Add 0 z-component
+        'ManningN': bc_ManningN,
+        'z': bc_z
     }
     meshio.write_points_cells("boundary_points.vtk", bc_points, {}, point_data, {}, binary=True)
 
@@ -179,18 +232,34 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
         
         for i, point in enumerate(bc_points[mask]):
             current_boundary_dict[str(i)] = {
-                "x": point[0],
-                "y": point[1],
-                "z": 0.0,
-                "normal_x": bc_normal_vectors[mask][i][0],
-                "normal_y": bc_normal_vectors[mask][i][1],
-                "normal_z": bc_normal_vectors[mask][i][2],
+                "x": float(point[0]),
+                "y": float(point[1]),
+                "z": float(point[2]),
+                "normal_x": float(bc_normal_vectors[mask][i][0]),
+                "normal_y": float(bc_normal_vectors[mask][i][1]),
+                "normal_z": float(bc_normal_vectors[mask][i][2]),
+                "Sx": float(bc_bed_slope[mask][i][0]),
+                "Sy": float(bc_bed_slope[mask][i][1]),
+                "S": [float(x) for x in bc_bed_slope[mask][i]],  # Convert numpy array to list
                 "spatial_dimensionality": 2,
-                "represented_length": bc_represented_lengths[mask][i]
+                "represented_length": float(bc_represented_lengths[mask][i]),
+                "ManningN": float(bc_ManningN[mask][i])                
             }
 
         boundary_points_dict[f"boundary_{bc_ID}"] = current_boundary_dict
 
+    # Convert equation points to JSON-serializable format
+    for point_id in equation_points_dict:
+        equation_points_dict[point_id] = {
+            "x": float(equation_points_dict[point_id]["x"]),
+            "y": float(equation_points_dict[point_id]["y"]),
+            "z": float(equation_points_dict[point_id]["z"]),
+            "Sx": float(equation_points_dict[point_id]["Sx"]),
+            "Sy": float(equation_points_dict[point_id]["Sy"]),
+            "spatial_dimensionality": 2,
+            "ManningN": float(equation_points_dict[point_id]["ManningN"])
+        }
+    
     # Assemble all points
     all_points = {
         "training_points": {
@@ -204,13 +273,7 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
         json.dump(all_points, f, indent=4, sort_keys=False)
 
 
-    # Process the boundary conditions: create a json file for boundary conditions dictionary from srhcontrol_file depending whether it is a srhhydro or SIF file
-    boundary_conditions_dict = {}
 
-    if srhcontrol_file.endswith(".srhhydro"):
-        # Read the srhhydro file
-        with open(srhcontrol_file, 'r') as f:
-            lines = f.readlines()
 
 
 

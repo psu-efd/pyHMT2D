@@ -1536,6 +1536,12 @@ class SRH_2D_SRHGeom:
         # center of each element
         self.elementCenters = np.zeros([self.numOfElements, 3], dtype=np.float64)
 
+        # bed slope of each element at cell center
+        self.elementBedSlope = np.zeros([self.numOfElements, 2], dtype=np.float64)
+
+        # bed slope of each node
+        self.nodeBedSlope = np.zeros([self.numOfNodes, 2], dtype=np.float64)
+
         # each NodeString's list of nodes (stored in a dictionary)
         self.nodeStringsDict = {}
 
@@ -1570,6 +1576,9 @@ class SRH_2D_SRHGeom:
 
         #build "lines" and "boundaryLines" dictionaries. SRH-2D has no such information in SRHGEOM. We need to build it.
         self.buildEdgesAndBoundaryEdges()
+
+        #calculate the bed slope of each element and then interpolate the bed slope to each node
+        self.calculate_bed_slope()
 
 
     def getNumOfElementsNodes(self):
@@ -1742,6 +1751,107 @@ class SRH_2D_SRHGeom:
             print("nodeCoordinates = ", self.nodeCoordinates)
             print("elementBedElevation = ", self.elementBedElevation)
             print("nodeStrings = ", self.nodeStringsDict)
+
+    def calculate_bed_slope(self):
+        """ 
+        Calculate the bed slope of each element and then interpolate the bed slope to each node. The slope of each element (e.g., triangle and quadrilateral) is calculated
+        by using the Gauss theorem. For each element, the bed slope is calculated by:
+        1. compute the outward normal vector of each edge of the element.
+        2. interpolate the bed elevation at the center of each edge of the element from the the two points of the edge.
+        3. use the Gauss theorem to calculate the bed slope of the element: S = -(1/A) * \int_{\partial A} z * n * ds, where A is the area of the element,
+           z is the bed elevation, n is the outward normal vector, and ds is the length of the edge.
+        4. interpolate the bed slope of the element to each node of the element.
+
+        Returns
+        -------
+        
+        """
+        import numpy as np
+        import sys
+
+        # Initialize array to store bed slopes [Sx, Sy] for each element
+        num_elements = self.numOfElements
+        element_bed_slopes = np.zeros((num_elements, 2))
+
+        for i in range(num_elements):
+            # Get nodes for this element
+            element_nodes = self.elementNodesList[i]
+            num_nodes = self.elementNodesCount[i]
+            
+            # Get coordinates of element nodes
+            node_coords = self.nodeCoordinates[element_nodes-1]  #-1 because node number is 1-based for SRH-2D
+            
+            # Calculate element area and determine node ordering
+            if num_nodes == 3:  # Triangle
+                # Area of triangle using cross product
+                v1 = node_coords[1] - node_coords[0]
+                v2 = node_coords[2] - node_coords[0]
+                area = 0.5 * np.cross(v1[:2], v2[:2])  # Remove abs() to preserve sign
+            elif num_nodes == 4:  # Quadrilateral
+                # Area of quadrilateral using shoelace formula
+                x = node_coords[:, 0]
+                y = node_coords[:, 1]
+                area = 0.5 * np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y)  # Remove abs() to preserve sign
+            else:
+                print("Element %d is not a triangle or quadrilateral. Other shapes are not supported yet. Exiting..." % i)
+                sys.exit()
+
+            # Take absolute value of area for size, but keep sign for orientation
+            area_abs = np.abs(area)
+            is_clockwise = area < 0
+
+            # Initialize slope components
+            Sx = 0.0
+            Sy = 0.0
+
+            # Process each edge of the element (number of edges = number of nodes)
+            for j in range(num_nodes):
+                # Get nodes of current edge
+                node1 = element_nodes[j]
+                node2 = element_nodes[(j + 1) % num_nodes]
+                
+                # Get coordinates of edge nodes
+                p1 = self.nodeCoordinates[node1-1]   #-1 because node number is 1-based for SRH-2D
+                p2 = self.nodeCoordinates[node2-1]   #-1 because node number is 1-based for SRH-2D
+                
+                # Calculate edge length
+                edge_length = np.sqrt(np.sum((p2[:2] - p1[:2])**2))
+                
+                # Calculate outward normal vector (normalized)
+                dx = p2[0] - p1[0]
+                dy = p2[1] - p1[1]
+                # Flip normal direction if element is clockwise
+                normal = np.array([-dy, dx]) / edge_length
+                if is_clockwise:
+                    normal = -normal
+                
+                # Interpolate bed elevation at edge center
+                z_center = 0.5 * (p1[2] + p2[2])
+                
+                # Add contribution to slope components using Gauss theorem
+                Sx += z_center * normal[0] * edge_length
+                Sy += z_center * normal[1] * edge_length
+
+            # Final slope calculation (note the negative sign from the Gauss theorem)
+            element_bed_slopes[i] = [-Sx / area_abs, -Sy / area_abs]
+
+        self.elementBedSlope = element_bed_slopes
+        
+        # Interpolate bed slope to each node in the mesh
+        for i in range(self.numOfNodes):
+            # Get elements for this node
+            node_elements = self.nodeElementsList[i]
+            num_elements = self.nodeElementsCount[i]
+
+            # Get slopes of the elements that share this node
+            node_slopes = element_bed_slopes[node_elements]
+
+            # Interpolate the slope components separately
+            node_slope_x = np.sum(node_slopes[:, 0]) / num_elements
+            node_slope_y = np.sum(node_slopes[:, 1]) / num_elements
+
+            # Store the slope vector
+            self.nodeBedSlope[i] = [node_slope_x, node_slope_y]
 
     def save_as(self, newSrhgeomFileName, dir=''):
         """ Save as a srhgeom file.
