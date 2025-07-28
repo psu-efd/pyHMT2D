@@ -18,6 +18,7 @@ import shlex
 import vtk
 from vtk.util import numpy_support as VN
 import re
+import meshio
 
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
@@ -1800,6 +1801,13 @@ class SRH_2D_SRHGeom:
             area_abs = np.abs(area)
             is_clockwise = area < 0
 
+            #debug
+            print("element id = ", i)
+            print("element nodes = ", element_nodes)
+            print("num_nodes = ", num_nodes)
+            print("area = ", area)
+            print("is_clockwise = ", is_clockwise)
+
             # Initialize slope components
             Sx = 0.0
             Sy = 0.0
@@ -1820,10 +1828,17 @@ class SRH_2D_SRHGeom:
                 # Calculate outward normal vector (normalized)
                 dx = p2[0] - p1[0]
                 dy = p2[1] - p1[1]
-                # Flip normal direction if element is clockwise
-                normal = np.array([-dy, dx]) / edge_length
+                # For counterclockwise elements, normal = [dy, -dx]
+                # For clockwise elements, normal = [-dy, dx]
                 if is_clockwise:
-                    normal = -normal
+                    normal = np.array([-dy, dx]) / edge_length
+                else:
+                    normal = np.array([dy, -dx]) / edge_length
+
+                #debug
+                #print("edge id = ", j)
+                #print("normal = ", normal)
+                #print("edge center = ", (p1 + p2) / 2)
                 
                 # Interpolate bed elevation at edge center
                 z_center = 0.5 * (p1[2] + p2[2])
@@ -3507,6 +3522,293 @@ class SRH_2D_Data(HydraulicData):
 
         #vtkFileNameList
         return vtkFileNameList
+
+    
+    def outputXMDFDataToPINNData(self, bNodal, bBoundary=False, dir=''):
+        """Output XMDF result data to PINN data files
+        - data_points.npy: rows of (x, y) coordinates of the points for steady state data (currently only support one time step)
+        - data_values.npy: rows of (h, u, v) values of the solution variables at the points in data_points.npy
+        - data_flags.npy: rows of flags for the points in data_points.npy (h_flag, u_flag, v_flag)
+        - all_data_points_stats.pny: statistics of the data points (min, max, mean, std, etc.)
+
+        This has to be called after the XMDF data have been loaded by calling readSRHXMDFFile(...).
+
+        Parameters
+        ----------
+            bNodal : bool
+                whether export nodal data or cell center data. Currently, it can't output both.
+            bBoundary : bool
+                whether export boundary data            
+            dir : str, optional
+                directory to write to
+
+        Returns
+        -------
+            None
+
+        """
+        if gVerbose: print("Output all data in the XMDF file to PINN data ...")
+
+        if (bNodal and (not self.xmdfAllData_Nodal)) or ((not bNodal) and (not self.xmdfAllData_Cell)):
+            print("Empty XMDF data arrays. Call readSRHXMDFFile() function first. Exiting ...")
+            sys.exit()
+
+       
+        #build result variable names
+        resultVarNames = list(self.xmdfAllData_Nodal.keys()) if bNodal else list(self.xmdfAllData_Cell.keys())
+
+        if bNodal:
+            if gVerbose: print("All nodal solution variable names: ", resultVarNames[:-1])
+        else:
+            if gVerbose: print("All cell center solution variable names: ", resultVarNames)
+
+        #add bed elevation at nodes regardless whether bNodal is True or False. Nodal elevation is more accurate representation
+        #of the terrain because cell center elevation is averaged from nodal elevations.
+        #get the units of the results
+        if self.control_type == "SRHHydro":
+            units = self.srhhydro_obj.srhhydro_content['OutputUnit']
+        elif self.control_type == "SIF":
+            units = self.srhsif_obj.srhsif_content['OutputUnit']
+        else:
+            raise NotImplementedError("TODO: implement the outputXMDFDataToVTK for SIF file")        
+
+        if gVerbose: print("SRH-2D result units:", units)
+        
+        velocityVarName = ''
+        if units == "SI":            
+            velocityVarName = "Velocity_m_p_s"
+        else:
+            velocityVarName = "Velocity_ft_p_s"
+
+        if gVerbose: print("Nodal velocity name: ", velocityVarName)
+
+  
+        #loop through each time step
+        timeArray = self.xmdfTimeArray_Nodal if bNodal else self.xmdfTimeArray_Cell
+
+        #get the last time step
+        timeI = timeArray.shape[0] - 1
+
+        #get the last time step data
+        resultData =      np.zeros((self.srhgeom_obj.numOfNodes, len(resultVarNames)), dtype="float32") if bNodal \
+                         else np.zeros((self.srhgeom_obj.numOfElements, len(resultVarNames)), dtype="float32")
+  
+        if gVerbose: print("timeI and time = ", timeI, timeArray[timeI])
+
+        #numpy array for all solution variables at one time
+        resultData =      np.zeros((self.srhgeom_obj.numOfNodes, len(resultVarNames)), dtype="float32") if bNodal \
+                         else np.zeros((self.srhgeom_obj.numOfElements, len(resultVarNames)), dtype="float32")
+        
+        #loop through each solution variable 
+        for varName, varI in zip(resultVarNames, range(len(resultVarNames))):
+            if gVerbose: print("varName = ", varName)
+            #get the values of current solution varialbe at current time
+            resultData[:,varI] =      self.xmdfAllData_Nodal[varName][timeI,:] if bNodal \
+                                     else self.xmdfAllData_Cell[varName][timeI,:]
+        
+        # Get coordinates (x,y) for all points
+        if bNodal:
+            data_points = self.srhgeom_obj.nodeCoordinates[:, :2]  # Only x,y coordinates
+        else:
+            data_points = self.srhgeom_obj.elementCenters[:, :2]  # Only x,y coordinates
+
+        # Get solution variables (h, u, v)
+        # Find indices for water elevation and velocity components
+        water_depth_idx = -1
+        vel_x_idx = -1
+        vel_y_idx = -1
+        
+        for i, var_name in enumerate(resultVarNames):
+            if "Water_Depth" in var_name:
+                water_depth_idx = i
+            elif "Vel_X" in var_name:
+                vel_x_idx = i
+            elif "Vel_Y" in var_name:
+                vel_y_idx = i
+
+        if water_depth_idx == -1 or vel_x_idx == -1 or vel_y_idx == -1:
+            print("Error: Could not find all required variables (water depth and velocity components)")
+            sys.exit()
+
+        # Extract h, u, v values
+        h_values = resultData[:, water_depth_idx]
+        u_values = resultData[:, vel_x_idx]
+        v_values = resultData[:, vel_y_idx]
+
+        #number of points so far (before we add wall boundary points)
+        num_points_excluding_walls = len(data_points)
+
+        # if bBoundary is True, we include points on the boundary (currenlty only the wall boundaries are supported)
+        if bBoundary:
+            #for wall boundary points
+            wall_node_IDs = []
+            x_values_wall = []
+            y_values_wall = []
+            h_values_wall = []
+            u_values_wall = []
+            v_values_wall = []
+
+            #loop through all boundaries.
+            for nodeString in self.srhgeom_obj.nodeStringsDict:
+
+                #not all NodeStrings are boundaries. Could be monitoring lines. Need to exclude them.
+                if nodeString not in self.srhgeom_obj.bcDict.keys():
+                    continue
+
+                #we only include wall boundaries (for now)
+                if 'wall' in self.srhgeom_obj.bcDict[nodeString].lower():
+                    #list of nodes in current nodeString
+                    nodeString_nodeList = self.srhgeom_obj.nodeStringsDict[nodeString]                    
+
+                    #loop through all edges in current boundary
+                    for i in range(len(nodeString_nodeList)-1):
+                        nodeID_1 = nodeString_nodeList[i]
+                        nodeID_2 = nodeString_nodeList[i + 1]
+
+                        # Get coordinates of the two nodes
+                        node1_coords = self.srhgeom_obj.nodeCoordinates[nodeID_1-1]   #SRH-2D node IDs are 1-based
+                        node2_coords = self.srhgeom_obj.nodeCoordinates[nodeID_2-1]   #SRH-2D node IDs are 1-based
+
+                        if nodeID_1 not in wall_node_IDs:
+                            wall_node_IDs.append(nodeID_1)
+
+                            x_values_wall.append(node1_coords[0])
+                            y_values_wall.append(node1_coords[1])
+                            h_values_wall.append(0.0)   #h does not matter for wall boundary because it is not used in training 
+                            u_values_wall.append(0.0)   #no-slip condition
+                            v_values_wall.append(0.0)   #no-slip condition
+
+                        if nodeID_2 not in wall_node_IDs:
+                            wall_node_IDs.append(nodeID_2)
+
+                            x_values_wall.append(node2_coords[0])
+                            y_values_wall.append(node2_coords[1])
+                            h_values_wall.append(0.0)   #h does not matter for wall boundary because it is not used in training 
+                            u_values_wall.append(0.0)   #no-slip condition
+                            v_values_wall.append(0.0)   #no-slip condition
+
+            print("Found %d wall boundary points" % len(wall_node_IDs))
+
+            #number of wall points
+            num_wall_points = len(wall_node_IDs)
+
+            #append the wall boundary points to the data_points
+            if len(x_values_wall) > 0:  
+                # First stack x and y values into a 2D array
+                wall_points = np.column_stack((np.array(x_values_wall), np.array(y_values_wall)))
+                # Then concatenate with the original data_points
+                data_points = np.concatenate((data_points, wall_points))
+
+                h_values = np.concatenate((h_values, np.array(h_values_wall)))
+                u_values = np.concatenate((u_values, np.array(u_values_wall)))
+                v_values = np.concatenate((v_values, np.array(v_values_wall)))                
+                        
+            
+        # Compute U magnitude
+        Umag = np.sqrt(u_values**2 + v_values**2)
+
+        # Combine into data_values array
+        data_values = np.column_stack((h_values, u_values, v_values))
+
+        # Create flags array (1 for valid data, 0 for invalid)
+        # For now, we'll mark all points as valid (1)
+        data_flags = np.ones_like(data_values)
+
+        # the data_flags for h on walls should be set to 0. 
+        if bBoundary:
+            data_flags[num_points_excluding_walls:num_points_excluding_walls + num_wall_points, 0] = 0
+
+        #compute the statistics of the data points
+        #min, max, mean, std, median, etc.
+        x_min = np.min(data_points[:, 0])  #stats of x, y, and t are computed here, but not used in training. The normalization should use the statistics of the pde/boundary points from mesh_points.json.
+        x_max = np.max(data_points[:, 0])
+        x_mean = np.mean(data_points[:, 0])
+        x_std = np.std(data_points[:, 0])
+        y_min = np.min(data_points[:, 1])
+        y_max = np.max(data_points[:, 1])
+        y_mean = np.mean(data_points[:, 1])
+        y_std = np.std(data_points[:, 1])
+        t_min = 0.0
+        t_max = 0.0
+        t_mean = 0.0
+        t_std = 0.0
+        h_min = np.min(data_values[:, 0])
+        h_max = np.max(data_values[:, 0])
+        h_mean = np.mean(data_values[:, 0])
+        h_std = np.std(data_values[:, 0])
+        u_min = np.min(data_values[:, 1])
+        u_max = np.max(data_values[:, 1])
+        u_mean = np.mean(data_values[:, 1])
+        u_std = np.std(data_values[:, 1])
+        v_min = np.min(data_values[:, 2])
+        v_max = np.max(data_values[:, 2])
+        v_mean = np.mean(data_values[:, 2])
+        v_std = np.std(data_values[:, 2])
+        Umag_min = np.min(Umag)
+        Umag_max = np.max(Umag)
+        Umag_mean = np.mean(Umag)
+        Umag_std = np.std(Umag)
+
+        all_data_points_stats = np.array([x_min, x_max, x_mean, x_std, y_min, y_max, y_mean, y_std, t_min, t_max, t_mean, t_std, h_min, h_max, h_mean, h_std, u_min, u_max, u_mean, u_std, v_min, v_max, v_mean, v_std, Umag_min, Umag_max, Umag_mean, Umag_std])
+        print(f"x_min: {x_min}, x_max: {x_max}, x_mean: {x_mean}, x_std: {x_std}")
+        print(f"y_min: {y_min}, y_max: {y_max}, y_mean: {y_mean}, y_std: {y_std}")
+        print(f"t_min: {t_min}, t_max: {t_max}, t_mean: {t_mean}, t_std: {t_std}")
+        print(f"h_min: {h_min}, h_max: {h_max}, h_mean: {h_mean}, h_std: {h_std}")
+        print(f"u_min: {u_min}, u_max: {u_max}, u_mean: {u_mean}, u_std: {u_std}")
+        print(f"v_min: {v_min}, v_max: {v_max}, v_mean: {v_mean}, v_std: {v_std}")
+        print(f"Umag_min: {Umag_min}, Umag_max: {Umag_max}, Umag_mean: {Umag_mean}, Umag_std: {Umag_std}")    
+
+        # Save files
+        if dir:
+            os.makedirs(dir, exist_ok=True)
+            prefix = os.path.join(dir, '/')
+        else:
+            os.makedirs('pinn_points', exist_ok=True)
+            prefix = 'pinn_points/'
+
+        np.save(f'{prefix}data_points.npy', data_points)
+        np.save(f'{prefix}data_values.npy', data_values)
+        np.save(f'{prefix}data_flags.npy', data_flags)
+        np.save(f'{prefix}all_data_points_stats.npy', all_data_points_stats)
+
+        print(f"Saved data points shape: {data_points.shape}")
+        print(f"Saved data values shape: {data_values.shape}")
+        print(f"Saved data flags shape: {data_flags.shape}")
+        print(f"Files saved in: {dir}")
+
+        #print the last 10 data points
+        print(f"Last 10 data points: {data_points[-10:]}")
+        print(f"Last 10 data values: {data_values[-10:]}")
+        print(f"Last 10 data flags: {data_flags[-10:]}")
+
+        #save the data_points, data_values, and data_flags to a vtk file (for visualization)
+        vtkFileName = os.path.join(dir, 'data_points.vtk')
+        
+        # Create points array with z=0 for 2D points
+        points = np.column_stack((data_points, np.zeros(len(data_points))))
+        
+        # Create point data dictionary
+        point_data = {
+            'h': data_values[:, 0],
+            'u': data_values[:, 1],
+            'v': data_values[:, 2],
+            'h_flag': data_flags[:, 0],
+            'u_flag': data_flags[:, 1],
+            'v_flag': data_flags[:, 2]
+        }
+        
+        # Create meshio mesh object with point cloud
+        mesh = meshio.Mesh(
+            points=points,
+            cells=[("vertex", np.arange(len(points)).reshape(-1, 1))],  # Create vertex cells for each point
+            point_data=point_data
+        )
+        
+        # Write to VTK file
+        mesh.write(vtkFileName)
+        
+        if gVerbose:
+            print(f"Saved visualization data to: {vtkFileName}")
 
     def readSRHCFiles(self, case_name):
         """Read SRH-2D results from SRHC files (cell-centered data)

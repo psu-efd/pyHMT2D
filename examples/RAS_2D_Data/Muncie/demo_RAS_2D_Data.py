@@ -10,6 +10,7 @@ def demo_RAS_2D_Data():
 
     #create a RAS_2D_Data object
     my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data("Muncie2D.p01.hdf", "Terrain/TerrainMuncie_composite.tif")
+    #my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data("Muncie2D.p01.hdf")  #not working because this case uses a composite terrain file (not sure how to handle that yet)
 
     #save RAS 2D result to VTK (only last time step in this example; see more options in the documentation for
     #the saveHEC_RAS2D_results_to_VTK(...) function.

@@ -334,9 +334,10 @@ class vtkHandler:
 
         bounds = data.GetBounds()
 
-        print("Unstructured Grid VTK bounds = ", bounds)
-        print("Unstructured Grid number of cells: ", data.GetNumberOfCells())
-        print("Unstructured Grid number of points: ", data.GetNumberOfPoints())
+        
+        #print("Unstructured Grid VTK bounds = ", bounds)
+        #print("Unstructured Grid number of cells: ", data.GetNumberOfCells())
+        #print("Unstructured Grid number of points: ", data.GetNumberOfPoints())
 
         if radius is None:
             boundingArea = (bounds[1] - bounds[0]) * (bounds[3] - bounds[2])   #assume 2D Grid
@@ -365,9 +366,15 @@ class vtkHandler:
         ### transfer z elevation values to the source's point scalar data ###
         s_elev = vtk.vtkElevationFilter()
         s_elev.SetInputData(data)
-        s_elev.SetHighPoint(0, 0, bounds[5])
-        s_elev.SetLowPoint(0, 0, bounds[4])
-        s_elev.SetScalarRange(bounds[4], bounds[5])
+        #need to deal with the case that bounds[4] and bounds[5] are the same or very close
+        if abs(bounds[4] - bounds[5]) < 1e-6:             #if the bounds are the same or very close, add a small offset to the upper bound
+            s_elev.SetHighPoint(0, 0, bounds[5] + 0.001)
+            s_elev.SetLowPoint(0, 0, bounds[4])
+            s_elev.SetScalarRange(bounds[4], bounds[5] + 0.001)
+        else:
+            s_elev.SetHighPoint(0, 0, bounds[5])
+            s_elev.SetLowPoint(0, 0, bounds[4])
+            s_elev.SetScalarRange(bounds[4], bounds[5])
         s_elev.Update()
 
         #print("s_elev = ", s_elev.GetUnstructuredGridOutput())
