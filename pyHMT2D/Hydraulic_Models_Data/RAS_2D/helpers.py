@@ -8,13 +8,15 @@ import os
 import sys
 import fileinput
 
-from pyHMT2D.Misc import yes_or_no
+import h5py
 
+from pyHMT2D.Misc import yes_or_no
+from pyHMT2D.__common__ import gVerbose
 
 def get_supported_hec_ras_versions():
     """Return a list of supported HEC-RAS versions
     """
-    return ['5.0.7', '6.0.0', '6.1.0', '6.2.0', '6.3.0', '6.3.1', '6.4.1']
+    return ['5.0.7', '6.0.0', '6.1.0', '6.2.0', '6.3.0', '6.3.1', '6.4.1', '6.6']
 
 
 def kill_all_hec_ras():
@@ -59,7 +61,8 @@ def get_installed_hec_ras_versions():
     """ Get a list of installed HEC-RAS versions
     """
     #this list has to include as many possible HEC-RAS versions as possible
-    ver = {'HEC-RAS\\6.4.1\\Ras.exe': '6.4.1',
+    ver = {'HEC-RAS\\6.6\\Ras.exe': '6.6',
+           'HEC-RAS\\6.4.1\\Ras.exe': '6.4.1',
            'HEC-RAS\\6.3.1\\Ras.exe': '6.3.1',
            'HEC-RAS\\6.3\\Ras.exe': '6.3.0',
            'HEC-RAS\\6.2\\Ras.exe': '6.2.0',
@@ -278,6 +281,105 @@ def modify_HEC_RAS_file_with_key_two_lines(ras_file_name, key_name, value, value
 
             sys.stdout.write(line)
 
+def get_terrain_file_attribute(terrain_hdf_path):
+    """ 
+        Get the "File" attribute from the terrain hdf file. It is a helper function to get the tiff file name from the terrain hdf file.
+
+        For example, assuming the terrain hdf file name is Terrain_Exp_8.hdf, then "File" attribute is in the subgroup Terrain_Exp_8.xxx. A matching of text is used to find the correct subgroup.
+
+    """
+    # Extract just the filename without path or extension, e.g., "Terrain_Exp_8"
+    base_name = os.path.splitext(os.path.basename(terrain_hdf_path))[0]  
+  
+
+    #open the terrain hdf file
+    with h5py.File(terrain_hdf_path, "r") as f:
+        terrain_group = f.get("Terrain")
+        if terrain_group is None:
+            return "'Terrain' group not found"
+            
+        # Find matching subgroup (e.g., "Terrain_Exp_8.Exp8_modified_terrain_elevation")
+        match = None
+        for key in terrain_group:
+            # Convert both key and base_name to strings
+            if isinstance(key, bytes):
+                key_str = key.decode('utf-8')
+            else:
+                key_str = key
+
+            if isinstance(base_name, bytes):
+                base_name_str = base_name.decode('utf-8')
+            else:
+                base_name_str = base_name
+
+            if key_str.startswith(base_name_str):
+                match = key
+                break
+            
+        if match is None:
+            print(f"No subgroup starting with '{base_name}' found in 'Terrain'")
+            return None
+            
+        target_group = terrain_group[match]
+        file_attr = target_group.attrs.get("File", None)
+            
+        if file_attr is not None:
+            return file_attr.decode("utf-8") if isinstance(file_attr, bytes) else file_attr
+        else:
+            print("Attribute 'File' not found")
+            return None    
+
+def extract_terrain_file_names(geom_file_name):
+    """
+        Extract the terrain hdf file name and the tiff file name from the geometry hdf file. 
+        Assuming the geometry file name is case_01.g01, then the hdf file name is case_01.g01.hdf
+
+        Parameters
+        ----------
+        geom_file_name : str
+            name of the geometry file in full path, e.g., case_01.g01, case_02.g02, etc.
+
+    """
+
+    #set the geometry hdf file
+    geom_hdf_file_name = geom_file_name + '.hdf'
+
+    #open the geometry hdf file
+    geom_hdf_file = h5py.File(geom_hdf_file_name, 'r')
+
+    #get the terrain hdf file name
+    terrain_hdf_file_name = geom_hdf_file['Geometry'].attrs['Terrain Filename']       
+
+    #close the geometry hdf file
+    geom_hdf_file.close()
+
+    #extract the path of the terrain hdf file
+    terrain_hdf_path = os.path.dirname(terrain_hdf_file_name)
+
+    #open the terrain hdf file
+    terrain_tiff_file_name = get_terrain_file_attribute(terrain_hdf_file_name)
+
+    if terrain_tiff_file_name is None:
+        print("Error: terrain tiff file name not found")
+        sys.exit()
+
+    #convert the terrain hdf path from bytes to a string
+    terrain_hdf_path = terrain_hdf_path.decode('utf-8')
+
+    if gVerbose:
+        print("type(terrain_tiff_file_name) = ", type(terrain_tiff_file_name))
+        print("type(terrain_hdf_path) = ", type(terrain_hdf_path))     
+
+    #add the path of the terrain hdf file to the terrain tiff file name
+    terrain_tiff_file_name = os.path.join(terrain_hdf_path, terrain_tiff_file_name)
+
+    if gVerbose:
+        print("terrain_hdf_file_name = ", terrain_hdf_file_name)
+        print("terrain_tiff_file_name = ", terrain_tiff_file_name)
+
+    return terrain_hdf_file_name, terrain_tiff_file_name
+    
+
 if __name__ == "__main__":
     #print(get_installed_hec_ras_versions())
 
@@ -288,3 +390,4 @@ if __name__ == "__main__":
                                            value_second_line="950     930     930     930     930     930     930")
 
     print("Done!")
+

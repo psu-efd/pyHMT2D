@@ -12,7 +12,7 @@ import json
 from .tools import generate_random01_exclude_boundaries_with_center, point_on_triangle, point_on_line
 import pyHMT2D
 
-def srh_to_pinn_points(srhcontrol_file, refinement=1):
+def srh_to_pinn_points(srhcontrol_file, refinement_pde=1, refinement_bc=1):
     """Convert SRH-2D case's 2D mesh to points for PINN training. The saved "mesh_points.json" file can be used for PINN training. The json file contains "equation_points" and "boundary_points".
 
     The saved points only have spatial information. The time information is not included.
@@ -21,8 +21,10 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
     ----------
     srhcontrol_file : str
         Name of the SRH-2D case's control file, e.g. "case.srhhydro" or "case_SIF.dat". It can only be a srhhydro or SIF file.
-    refinement : int
-        Number of points to generate per cell (>= 1)
+    refinement_pde : int
+        Number of points to generate per cell (>= 1) for the PDE points
+    refinement_bc : int
+        Number of points to generate per edge (>= 1) for the boundary points
 
     Returns
     -------
@@ -70,7 +72,7 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
             # Generate sampling points using barycentric coordinates
             st_all = generate_random01_exclude_boundaries_with_center(
                 centers=[1.0/3.0, 2.0/3.0],
-                size=refinement
+                size=refinement_pde
             )
 
             for st in st_all:
@@ -94,7 +96,7 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
             # Generate sampling points using bilinear interpolation
             st_all = generate_random01_exclude_boundaries_with_center(
                 centers=[0.5, 0.5],
-                size=refinement
+                size=refinement_pde
             )
 
             for st in st_all:
@@ -151,7 +153,7 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
     # Calculate total number of boundary points
     total_boundary_points = 0
     for bc_id, edge_ids in my_srh_2d_mesh.boundaryEdges.items():
-        total_boundary_points += len(edge_ids) * refinement
+        total_boundary_points += len(edge_ids) * refinement_bc
 
     # Initialize arrays for boundary points
     bc_points = np.zeros((total_boundary_points, 3))
@@ -181,18 +183,18 @@ def srh_to_pinn_points(srhcontrol_file, refinement=1):
                 p2 = nodes[node1-1]  
             
             line_length = np.sqrt(np.sum((p2 - p1)**2))
-            represented_length = line_length / refinement
+            represented_length = line_length / refinement_bc
 
             # Get the Manning's n at the edge center
             edge_ManningN = (my_srh_2d_data.ManningN_node[node1-1] + my_srh_2d_data.ManningN_node[node2-1]) / 2
 
             # Generate sampling points
-            if refinement == 1:
+            if refinement_bc == 1:
                 s_all = np.array([0.5])
-            elif refinement == 2:
+            elif refinement_bc == 2:
                 s_all = np.array([0.333, 0.666])
             else:
-                s_all = np.linspace(0.05, 0.95, refinement)
+                s_all = np.linspace(0.05, 0.95, refinement_bc)
 
             for s in s_all:
                 point = point_on_line(p1, p2, s)

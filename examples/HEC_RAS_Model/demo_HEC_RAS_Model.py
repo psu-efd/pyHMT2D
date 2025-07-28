@@ -30,7 +30,8 @@ def run_HEC_RAS():
     print("Hydraulic model version: ", my_hec_ras_model.getVersion())
 
     #open a HEC-RAS project
-    my_hec_ras_model.open_project("Muncie2D.prj", "Terrain/TerrainMuncie_composite.tif")
+    #my_hec_ras_model.open_project("Muncie2D.prj", "Terrain/TerrainMuncie_composite.tif")
+    my_hec_ras_model.open_project("Muncie2D.prj")
 
     #run the HEC-RAS model's current project
     my_hec_ras_model.run_model()
@@ -57,9 +58,9 @@ def convert_HEC_RAS_to_VTK():
 
 if __name__ == "__main__":
 
-    run_HEC_RAS()
+    #run_HEC_RAS()
 
-    #convert_HEC_RAS_to_VTK()
+    convert_HEC_RAS_to_VTK()
 
     print("All done!")
 

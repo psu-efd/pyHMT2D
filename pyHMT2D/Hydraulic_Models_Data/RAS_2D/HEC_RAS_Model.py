@@ -14,6 +14,8 @@ from pyHMT2D.Hydraulic_Models_Data.RAS_2D import RAS_2D_Data
 from .helpers import *
 import sys
 
+import h5py
+
 class HEC_RAS_Project(object):
     """ HEC-RAS project class (data from .prj file)
 
@@ -30,14 +32,16 @@ class HEC_RAS_Project(object):
             list of all plan files
     """
 
-    def __init__(self, title='', currentPlanName='', currentPlanFile='', geom_file_list=[],
-                 flow_file_list=[], plan_file_list=[], plans=[], terrainFileName=''):
+    def __init__(self, title='', current_plan_index=-1, currentPlanName='', currentPlanFile='', geom_file_list=[],
+                 flow_file_list=[], plan_file_list=[], plans=[], terrain_hdf_file_list=[], terrain_tiff_file_list=[]):
         """HEC_RAS_Project class constructor
 
         Parameters
         ----------
         title : str, optional
             title
+        current_plan_index : int, optional
+            index of the current plan in the plans list
         currentPlanName : str, optional
             current plan's name
         currentPlanFile : str, optional
@@ -50,45 +54,75 @@ class HEC_RAS_Project(object):
             list of plan file names
         plans : str
             list of HEC_RAS_Plan objects
-        terrainFileName : str
-            name of terrain file (not necessary the terrain used by HEC-RAS; it is used for interpolation)
+        terrain_hdf_file_list : str, optional
+            list of terrain hdf file names
+        terrain_tiff_file_list : str, optional
+            list of terrain tiff file names
         """
 
         self.title = title
+        self.current_plan_index = current_plan_index
         self.currentPlanName = currentPlanName
         self.currentPlanFile = currentPlanFile
+
+        self.terrain_hdf_file_list = terrain_hdf_file_list
+        self.terrain_tiff_file_list = terrain_tiff_file_list
+
+        #current terrain file names 
+        self.current_terrainHDF_file_name = terrain_hdf_file_list[current_plan_index]
+        self.current_terrainTIFF_file_name = terrain_tiff_file_list[current_plan_index]
+
         self.geom_file_list = geom_file_list
         self.flow_file_list = flow_file_list
         self.plan_file_list = plan_file_list
 
         #Plans in the opened HEC-RAS project: a list of HEC_RAS_Plan objects
+        #plans is a list of HEC_RAS_Plan objects: HEC_RAS_Plan(PlanNames[i], steady, geom_file, flow_file, plan_file)
         self.plans = plans
 
-        self.terrainFileName = terrainFileName
+        
+       
+    def find_plan_index(self, plan_name):
+        """
+        Find the index of the plan in the plans list
+        """
+        plan_index = -1
 
-    def set_current_plan_file_name(self, currentPlanName, currentPlanFile):
+        for i in range(len(self.plans)):
+            if self.plans[i].plan_name == plan_name:
+                plan_index = i
+                break
+
+        if plan_index == -1:
+            print("Error: plan, ", plan_name, ", not found in the plans list")
+            sys.exit()
+        
+        return plan_index
+
+    def set_current_plan_index(self, current_plan_index):
         """
 
         Parameters
         ----------
-        currentPlanName : str, optional
-            current plan's name
-        currentPlanFile : str, optional
-            current plan's file name
+        current_plan_index : int, optional
+            index of the current plan in the plans list
 
         Returns
         -------
 
         """
 
-        self.currentPlanName = currentPlanName
-        self.currentPlanFile = currentPlanFile
+        self.current_plan_index = current_plan_index
+        self.currentPlanName = self.plans[current_plan_index].plan_name
+        self.currentPlanFile = self.plans[current_plan_index].plan_file
+        self.current_terrainHDF_file_name = self.terrain_hdf_file_list[current_plan_index]
+        self.current_terrainTIFF_file_name = self.terrain_tiff_file_list[current_plan_index]
 
     def get_current_plan_file_name(self):
         return self.currentPlanName, self.currentPlanFile
 
-    def get_terrainFileName(self):
-        return self.terrainFileName
+    def get_current_terrainFileNames(self):
+        return self.current_terrainHDF_file_name, self.current_terrainTIFF_file_name
 
     def __del__(self):
         """ Destructor
@@ -105,6 +139,8 @@ class HEC_RAS_Project(object):
         self.flow_file_list.clear()
         self.plan_file_list.clear()
         self.plans.clear()
+        self.terrain_hdf_file_list.clear()
+        self.terrain_tiff_file_list.clear()
 
     def __str__(self):
         """Define the string representation of the object as HEC-RAS case's title
@@ -153,7 +189,7 @@ class HEC_RAS_Plan(object):
         Parameters
         ----------
         title : str, optional
-            title of the plan
+            title of the plan, also the plan's name
         steady : bool, optional
             whether the plan is steady or not (unsteady)
         geom_file : str, optional
@@ -165,6 +201,7 @@ class HEC_RAS_Plan(object):
         """
 
         self.title = title
+        self.plan_name = title
         self.steady = steady
         self.geom_file = geom_file
         self.flow_file = flow_file
@@ -258,7 +295,8 @@ class HEC_RAS_Model(HydraulicModel):
             print("No HEC-RAS installed on this computer. Install HEC-RAS first. Exitting.")
             sys.exit()
         else:
-            print("Available versions of HEC-RAS: ", self._installed_hec_ras_versions)
+            if gVerbose:
+                print("Available versions of HEC-RAS: ", self._installed_hec_ras_versions)
 
         #check whether the specified HEC-RAS version is available
         if not (version in get_installed_hec_ras_versions()):
@@ -292,7 +330,8 @@ class HEC_RAS_Model(HydraulicModel):
 
         """
 
-        print("Initializing HEC-RAS ...")
+        if gVerbose:
+            print("Initializing HEC-RAS ...")
 
         import platform
 
@@ -342,6 +381,8 @@ class HEC_RAS_Model(HydraulicModel):
             self._RASController = win32.gencache.EnsureDispatch('RAS631.HECRASController')
         elif (self.getVersion() == '6.4.1'):
             self._RASController = win32.gencache.EnsureDispatch('RAS641.HECRASController')
+        elif (self.getVersion() == '6.6'):
+            self._RASController = win32.gencache.EnsureDispatch('RAS66.HECRASController')
         else:
             raise Exception("The specified version of HEC-RAS is not currently supported.")
 
@@ -350,23 +391,27 @@ class HEC_RAS_Model(HydraulicModel):
             self._RASController.ShowRas()
 
         # print and confirm the HEC-RAS version
-        print('Successfully launched HEC-RAS version ', self._RASController.HECRASVersion())
+        if gVerbose:
+            print('Successfully launched HEC-RAS version ', self._RASController.HECRASVersion())
 
         #_ = input("Press ENTER to continue:")
 
 
-    def open_project(self,projectFileName, terrainFileName):
+    def open_project(self,projectFileName):
         """ open the specified HEC-RAS project
 
         Parameters
         ----------
         projectFileName : str
             project file name including the path
-        terrainFileName : str
+        terrainFileName : str, obsolete
             file name for the terrain (not necessarily the terrain used by HEC-RAS for the project). This
             terrain file (in GeoTiff format) is used to interpolate the elevation at face points (which HEC-RAS
             does not export to result HDF files). This GeoTiff terrain file can be converted from the terrain used
-            in the HEC-RAS project. (TODO: convert in this function internally without user input).
+            in the HEC-RAS project. 
+
+            7/25/2025: The mesh in a plan in HEC-RAS has the terrain information (in geometry hdf file). So, the terrain file is not
+            necessary.
 
         Returns
         -------
@@ -405,8 +450,9 @@ class HEC_RAS_Model(HydraulicModel):
 
         PlanCount, PlanNames = self.get_plan_names(IncludeOnlyPlansInBaseDirectory)
 
-        print("There are ", PlanCount, "plan(s) in current project.")
-        print('Plan names: ', PlanNames)  # returns plan names
+        if gVerbose:
+            print("There are ", PlanCount, "plan(s) in current project.")
+            print('Plan names: ', PlanNames)  # returns plan names
 
         #infer the current plan from current plan file
         #HEC-RAS does not provide a function to get current plan name
@@ -419,13 +465,16 @@ class HEC_RAS_Model(HydraulicModel):
                 currentPlanName = PlanNames[i]
                 break
 
-        print("Current plan name is ", currentPlanName)
+        #print("Current plan name is ", currentPlanName)
 
         #If plans are not empty, build these plans
 
-        print("Building all the plans in the project ...")
+        if gVerbose:
+            print("Building all the plans in the project ...")
 
         geom_file_list = []
+        terrain_hdf_file_list = []
+        terrain_tiff_file_list = []
         flow_file_list = []
         plan_file_list = []
 
@@ -433,7 +482,8 @@ class HEC_RAS_Model(HydraulicModel):
 
         if PlanCount > 0:
             for i in range(PlanCount):
-                print("Plan ", i, ",", PlanNames[i], ":")
+                if gVerbose:
+                    print("Plan ", i, ",", PlanNames[i], ":")
 
                 #temporarily set the current plan to be PlanNames[i]; will be restored.
                 self._RASController.Plan_SetCurrent(PlanNames[i])
@@ -446,27 +496,41 @@ class HEC_RAS_Model(HydraulicModel):
                 geom_file = self._RASController.CurrentGeomFile()
                 geom_file_list.append(geom_file)
 
+                #get the terrain hdf file name and the tiff file name for the current plan
+                terrain_hdf_file_name, terrain_tiff_file_name = extract_terrain_file_names(geom_file)
+                terrain_hdf_file_list.append(terrain_hdf_file_name)
+                terrain_tiff_file_list.append(terrain_tiff_file_name)
+
                 #get the flow file for the current plan
                 flow_file_steady = self._RASController.CurrentSteadyFile()
                 flow_file_unsteady = self._RASController.CurrentUnSteadyFile()
+
+                if gVerbose:
+                    print("    plan file = ", plan_file)
+                    print("    geom file = ", geom_file)
 
                 #print("flow_file_steady = ", flow_file_steady)
                 #print("flow_file_unsteady = ", flow_file_unsteady)
 
                 #check whether both steady and unsteady flow files are empty
                 if (not flow_file_steady) and (not flow_file_unsteady):
-                    print("Error: no flow file specified in the current plan. Exitting.")
+                    print("Error: no flow file specified in the current plan. Exiting.")
                     sys.exit()
 
                 steady = False
 
                 if (flow_file_unsteady):
-                    print("    It is an unsteady flow plan.")
+                    if gVerbose:
+                        print("    It is an unsteady flow plan.")
                     flow_file = flow_file_unsteady
                 else:
-                    print("    It is a steady flow plan.")
+                    if gVerbose:
+                        print("    It is a steady flow plan.")
                     steady = True
                     flow_file = flow_file_steady
+
+                if gVerbose:
+                    print("    flow file = ", flow_file)
 
                 flow_file_list.append(flow_file)
 
@@ -474,15 +538,29 @@ class HEC_RAS_Model(HydraulicModel):
 
         #print(plans)
 
+        #find the index of the current plan in the plans list
+        current_plan_index = -1
+        for i in range(len(plans)):
+            if plans[i].plan_name == currentPlanName:
+                current_plan_index = i
+                break
+
+        if current_plan_index == -1:
+            print("Error: current plan, ", currentPlanName, ", not found in the plans list")
+            sys.exit()
+
+        #set the current plan to the current plan index
+        self._RASController.Plan_SetCurrent(plans[current_plan_index].plan_name)
+
         #set the current plan back to its original value
-        self._RASController.Plan_SetCurrent(currentPlanName)
+        #self._RASController.Plan_SetCurrent(currentPlanName)
 
         #create the HEC_RAS_Project object
         if self._project is not None:
             self._project = None
 
-        self._project = HEC_RAS_Project(title, currentPlanName, currentPlanFile, geom_file_list,
-                                        flow_file_list, plan_file_list, plans, terrainFileName)
+        self._project = HEC_RAS_Project(title, current_plan_index, currentPlanName, currentPlanFile, geom_file_list, 
+                                        flow_file_list, plan_file_list, plans, terrain_hdf_file_list, terrain_tiff_file_list)
 
         #dump _project content to screen
         #print(self._project)
@@ -490,7 +568,8 @@ class HEC_RAS_Model(HydraulicModel):
         #create RAS_2D_Data object (can't be here because the plan.hdf file exists only after the plan has been run)
         #self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
 
-        print("Finished building all the plans in the project.")
+        if gVerbose: 
+            print("Finished building all the plans in the project.")
 
         return currentPlanName, currentPlanFile
 
@@ -513,7 +592,12 @@ class HEC_RAS_Model(HydraulicModel):
         ret = self._RASController.Plan_SetCurrent(planName)
 
         if ret[0]:
-            print("Call to set_current_plan(...) is successful. Current plan is ", planName)
+            if gVerbose:
+                print("Call to set_current_plan(...) is successful. Current plan is ", planName, " with plan file ", self._RASController.CurrentPlanFile())
+
+            #set the current plan name and file name (this is to update the variables in the _project object)
+            plan_index = self._project.find_plan_index(planName)
+            self._project.set_current_plan_index(plan_index)
         else:
             print("Call to set_current_plan(...) failed. Current plan not changed. Check the validity of the plan name: ", planName)
 
@@ -530,6 +614,8 @@ class HEC_RAS_Model(HydraulicModel):
 
         return plan_file
 
+    
+
     def load_current_plan_results(self):
         """
         Load the current plan results to ras_2d_data
@@ -539,15 +625,18 @@ class HEC_RAS_Model(HydraulicModel):
         """
 
         currentPlanName, currentPlanFile = self._project.get_current_plan_file_name()
-        terrainFileName = self._project.get_terrainFileName()
+        current_terrainHDF_file_name, current_terrainTIFF_file_name = self._project.get_current_terrainFileNames()
 
         #check whether the hdf file exists
         if not os.path.isfile(currentPlanFile):
             raise Exception("The result HDF file for current plan does not exist. Make sure to run HEC-RAS before calling this function.")
-        elif not os.path.isfile(terrainFileName):
-            raise Exception("The specified terrain file does not exist.")
+        elif not os.path.isfile(current_terrainTIFF_file_name):
+            raise Exception("The specified terrain TIFF file " + current_terrainTIFF_file_name + " does not exist.")
         else:
-            self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
+            try:
+                self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
+            except Exception as e:                
+                raise Exception("Error in loading the results for current plan. " + str(e))
 
 
     def get_simulation_case(self, bReload=False):
@@ -593,7 +682,8 @@ class HEC_RAS_Model(HydraulicModel):
         """
 
         if (self._RASController is not None)  and (self._project is not None):
-            print("Saving project: ", self._RASController.CurrentProjectTitle())
+            if gVerbose:
+                print("Saving project: ", self._RASController.CurrentProjectTitle())
             self._RASController.Project_Save()
 
     def close_project(self):
@@ -605,7 +695,8 @@ class HEC_RAS_Model(HydraulicModel):
         """
 
         if (self._RASController is not None) and (self._project is not None):
-            print("Closing project: ", self._RASController.CurrentProjectTitle())
+            if gVerbose:
+                print("Closing project: ", self._RASController.CurrentProjectTitle())
             self._RASController.Project_Close()
 
             self._project = None
@@ -629,7 +720,8 @@ class HEC_RAS_Model(HydraulicModel):
         if not (self._RASController.Project_Current()):
             print("No HEC-RAS project has been opened yet. Call open_project(...) first.")
 
-        print("HEC-RAS is computing the current plan ...")
+        if gVerbose:
+            print("HEC-RAS is computing the current plan ...")
 
         if self._faceless:
             self._RASController.Compute_HideComputationWindow()
@@ -643,18 +735,21 @@ class HEC_RAS_Model(HydraulicModel):
         #print computing message
         bRunSucessful = True
         if res[0]:
-            print("HEC-RAS computed successfully.")
+            if gVerbose:
+                print("HEC-RAS computed successfully.")
         else:
-            print("HEC-RAS computed unsuccessfully. The HEC-RAS Controller's Compute_CurrentPlan() function returned "
-                  "False.")
+            if gVerbose:
+                print("HEC-RAS computed unsuccessfully. The HEC-RAS Controller's Compute_CurrentPlan() function returned "
+                      "False.")
             bRunSucessful = False
 
-        print("The returned messages are:")
-        print("res = ", res)
-        print("nmsg = ", nmsg)
-        print("msg = ", msg)
-        for i in range(res[1]):
-            print("    ", res[2][i])
+        if gVerbose:
+            print("The returned messages are:")
+            print("res = ", res)
+            print("nmsg = ", nmsg)
+            print("msg = ", msg)
+            for i in range(res[1]):
+                print("    ", res[2][i])
 
         return bRunSucessful
 
@@ -670,12 +765,14 @@ class HEC_RAS_Model(HydraulicModel):
             self._project = None
 
         if self._RASController is not None:
-            print("Quitting HEC-RAS ...")
+            if gVerbose:
+                print("Quitting HEC-RAS ...")
             self._RASController.QuitRas()
 
             del self._RASController
 
-            print("Finished quitting HEC-RAS.")
+            if gVerbose:
+                print("Finished quitting HEC-RAS.")
 
     def get_plan_names(self, IncludeOnlyPlansInBaseDirectory):
         """Get the list of plan names in the current project
