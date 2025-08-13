@@ -15,3 +15,12 @@ pyHMT2D_SCALAR = 1
 pyHMT2D_VECTOR = 2
 """vector type in pyHMT2D (with x and y components)"""
 
+def setVerbose(bVerbose):
+    """
+    set the verbose level
+    bVerbose: bool to define verbose or not
+    """
+
+    global gVerbose
+    gVerbose = bVerbose
+
