@@ -136,8 +136,10 @@ class SRH_2D_SIF:
                                     #read the next n_initial_condition_zones lines (one line per zone)
                                     for j in range(self.srhsif_content['n_initial_condition_zones']):
                                         i += 1
-                                        value = lines[i].strip()
-                                        res_IC_zonal[j] = value.split()
+                                        values = lines[i].strip().split()   #values is a list of strings; the first three are floats, the rest are strings 
+                                        values_float = [float(x) for x in values[:3]]
+                                        values_str = values[3:]
+                                        res_IC_zonal[j] = values_float + values_str
                                 else:
                                     raise ValueError("The next line after the initial flow condition is not 'Constant-Value Initial Condition'.")
 
@@ -329,8 +331,11 @@ class SRH_2D_SIF:
                 if self.srhsif_content.get('monitor_point_npoints') > 0:
                     f.write("// Monitor Point Coordinates: x1 y1 x2 y2 ...\n")
 
-                    #join the list of monitor points into a string
-                    f.write(" ".join(map(str, self.srhsif_content['monitor_points'])) + "\n")
+                    #loop over the monitor points and write them to the file
+                    for pointI in range(self.srhsif_content['monitor_point_npoints']):
+                        point_x = self.srhsif_content['monitor_points'][pointI*2]
+                        point_y = self.srhsif_content['monitor_points'][pointI*2+1]
+                        f.write(f"{point_x} {point_y}\n")                 
                 
                 # Time Type
                 f.write("// Steady-or-Unsteady (STEADY/UNS)\n")
@@ -366,7 +371,8 @@ class SRH_2D_SIF:
                     f.write(f"{self.srhsif_content.get('n_initial_condition_zones', '0')}\n")
                     f.write("// Constant-Value Initial Condition for Mesh Zone: U V WSE [TK] [ED] [T]\n")
                     for j in range(self.srhsif_content['n_initial_condition_zones']):
-                        f.write(f"{self.srhsif_content['IC_zonal'][j]}\n")
+                        #f.write(f"{self.srhsif_content['IC_zonal'][j]}\n")
+                        f.write(f"{' '.join(map(str, self.srhsif_content['IC_zonal'][j]))}\n")
                 
                 # Manning Coefficients
                 f.write("// Manning Coefficient n Input Options: SPATIAL or SPATIAL VEG GRAIN for 2D Model; SPATIAL for 3D model\n")
@@ -597,15 +603,22 @@ class SRH_2D_SIF:
             if not lines[i].strip().startswith('//'):
                 raise ValueError("Expected comment line for monitoring point coordinates")
                 
-            # Get coordinates
-            i += 1
-            coords = lines[i].strip().split()
+            # Get coordinates (x, y) and one point per line
+            coords = []   #list of x1, y1, x2, y2, ...
+            for j in range(n_points):
+                i += 1
+                #print("lines[i].strip().split(): ", lines[i].strip().split())
+                #print("type(lines[i].strip().split()): ", type(lines[i].strip().split()))
+                for item in lines[i].strip().split():
+                    coords.append(float(item))
+
+            #print(f"coords: {coords}")
             
             # Convert coordinates to float and pair them
             if len(coords) != 2 * n_points:
-                raise ValueError(f"Expected {2*n_points} coordinates for {n_points} points")
+                raise ValueError(f"Expected {2*n_points} coordinates for {n_points} points: length of coords is {len(coords)}")
                 
-            coords = [float(x) for x in coords]
+            #coords = [float(x) for x in coords]
                             
             # Store in data dictionary            
             self.srhsif_content['monitor_points'] = coords
@@ -3906,7 +3919,7 @@ class SRH_2D_Data(HydraulicData):
         pattern = os.path.join(directory, f"{case_name}_SRHC*.dat")
         srhc_files = sorted(glob.glob(pattern), key=self.natural_sort_key)
 
-        print("srhc_files = ", srhc_files)
+        #print("srhc_files = ", srhc_files)
 
         if gVerbose:
             print(f"Found {len(srhc_files)} SRHC files matching pattern: {pattern}")
