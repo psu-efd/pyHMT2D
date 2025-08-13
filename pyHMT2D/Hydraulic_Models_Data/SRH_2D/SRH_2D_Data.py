@@ -116,6 +116,37 @@ class SRH_2D_SIF:
                     elif "Initial Flow Condition Setup Option" in comment:
                         self._validate_init_condition(value.upper())
                         self.srhsif_content['initial_flow_condition'] = value
+
+                        #if the initial flow condition is ZONAL, then the next lines are for the number of initial condition zones and the zone data
+                        if value.upper() == 'ZONAL':
+                            #dict for zonal IC data
+                            res_IC_zonal = {}
+                            
+                            i += 1  #comment line
+                            #check the current comment line contains "Constant Setup for Initial Condition"
+                            if "Constant Setup for Initial Condition" in lines[i]:
+                                #read the next line
+                                i += 1
+                                value = lines[i].strip()
+                                self.srhsif_content['n_initial_condition_zones'] = int(value)
+
+                                #read the next comment line and make sure it contains "Constant-Value Initial Condition"
+                                i += 1
+                                if "Constant-Value Initial Condition" in lines[i]:
+                                    #read the next n_initial_condition_zones lines (one line per zone)
+                                    for j in range(self.srhsif_content['n_initial_condition_zones']):
+                                        i += 1
+                                        value = lines[i].strip()
+                                        res_IC_zonal[j] = value.split()
+                                else:
+                                    raise ValueError("The next line after the initial flow condition is not 'Constant-Value Initial Condition'.")
+
+                            else:
+                                raise ValueError("The next line after the initial flow condition is not 'Constant Setup for Initial Condition'.")
+                            
+                            self.srhsif_content['IC_zonal'] = res_IC_zonal
+                            
+
                     elif "Manning Coefficient" in comment:
                         i = self._parse_manning_coefficients(lines, i, value)
                     elif "Any-Special-Modeling-Options" in comment:
@@ -328,6 +359,14 @@ class SRH_2D_SIF:
                 # Initial Flow Condition
                 f.write("// Initial Flow Condition Setup Option (DRY RST AUTO ZONAL Vary_WSE/Vary_WD)\n")
                 f.write(f"{self.srhsif_content.get('initial_flow_condition', '')}\n")
+
+                # If the initial flow condition is ZONAL, then the next lines are for the number of initial condition zones and the zone data
+                if self.srhsif_content.get('initial_flow_condition', '').upper() == 'ZONAL':
+                    f.write("// Constant Setup for Initial Condition: n_zone [MESH or 2DM_filename]\n")
+                    f.write(f"{self.srhsif_content.get('n_initial_condition_zones', '0')}\n")
+                    f.write("// Constant-Value Initial Condition for Mesh Zone: U V WSE [TK] [ED] [T]\n")
+                    for j in range(self.srhsif_content['n_initial_condition_zones']):
+                        f.write(f"{self.srhsif_content['IC_zonal'][j]}\n")
                 
                 # Manning Coefficients
                 f.write("// Manning Coefficient n Input Options: SPATIAL or SPATIAL VEG GRAIN for 2D Model; SPATIAL for 3D model\n")
@@ -823,6 +862,7 @@ class SRH_2D_SRHHydro:
         
         res_all = {}
         res_ManningsN = {}
+        res_InitZoneParams = {}
         
         res_BC = {}
         res_MONITORING = {}
@@ -874,10 +914,21 @@ class SRH_2D_SRHHydro:
                     res_all['ParabolicTurbulence'] = float(parts[1])
                 elif line.startswith('InitCondOption'):
                     res_all['InitCondOption'] = parts[1]
+                elif line.startswith('NumInitZones'):
+                    res_all['NumInitZones'] = int(parts[1])
+                elif line.startswith('InitZoneParams'):
+                    zone_id = int(parts[1])
+                    p1_value = int(parts[2])
+                    p2_value = int(parts[3])
+                    p3_value = float(parts[4])
+                    unit = parts[5]
+                    res_InitZoneParams[zone_id] = {'p1': p1_value, 'p2': p2_value, 'p3': p3_value, 'unit': unit}
                 elif line.startswith('Grid'):
                     res_all['Grid'] = parts[1].strip('"')
                 elif line.startswith('HydroMat'):
                     res_all['HydroMat'] = parts[1].strip('"')
+                elif line.startswith('MonitorPtFile'):
+                    res_all['MonitorPtFile'] = parts[1].strip('"')
                 elif line.startswith('OutputFormat'):
                     res_all['OutputFormat'] = parts[1]
                     res_all['OutputUnit'] = parts[2]
@@ -909,6 +960,13 @@ class SRH_2D_SRHHydro:
                     bc_id = int(parts[1])
                     res_IQParams[bc_id] = {
                         'discharge': float(parts[2]),
+                        'unit': parts[3],
+                        'type': parts[4]
+                    }
+                elif line.startswith('EWSParamsC'):
+                    bc_id = int(parts[1])
+                    res_EWSParamsC[bc_id] = {
+                        'wse': float(parts[2]),
                         'unit': parts[3],
                         'type': parts[4]
                     }
@@ -969,6 +1027,7 @@ class SRH_2D_SRHHydro:
             self.srhhydro_content = {
                 **res_all,
                 'ManningsN': res_ManningsN,
+                'InitZoneParams': res_InitZoneParams,
                 'BC': res_BC,
                 'MONITORING': res_MONITORING,
                 'PRESSURE': res_PRESSURE,
@@ -1115,9 +1174,13 @@ class SRH_2D_SRHHydro:
                 if bcID not in IQParams_Dict:
                     raise Exception("The specified bcID ", bcID, "is not in the IQParams dictionary.")
 
-                if gVerbose: print("    Old InletQ value =", IQParams_Dict[bcID][0], "for boundary ID = ", bcID)
-                IQParams_Dict[bcID][0] = newInletQValues[i]
-                if gVerbose: print("    New InletQ value =", IQParams_Dict[bcID][0], "for boundary ID = ", bcID)
+                #print("bcID = ", bcID)
+                #print("IQParams_Dict[bcID] = ", IQParams_Dict[bcID])
+                #print("newInletQValues[i] = ", newInletQValues[i])
+                
+                if gVerbose: print("    Old InletQ value =", IQParams_Dict[bcID]['discharge'], "for boundary ID = ", bcID)
+                IQParams_Dict[bcID]['discharge'] = newInletQValues[i]
+                if gVerbose: print("    New InletQ value =", IQParams_Dict[bcID]['discharge'], "for boundary ID = ", bcID)
             else:
                 print("The specified bcID", bcID, "is not in the boundary list. Please check.")
 
@@ -1183,8 +1246,12 @@ class SRH_2D_SRHHydro:
                 if bcID not in EWSParamsC_Dict:
                     raise Exception("The specified bcID ", bcID, "is not in the EWSParamsC dictionary.")
 
-                if gVerbose: print("    Old EXIT-H value =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
-                EWSParamsC_Dict[bcID][0] = newExitHValues[i]
+                print("bcID = ", bcID)
+                print("EWSParamsC_Dict[bcID] = ", EWSParamsC_Dict[bcID])
+                print("newExitHValues[i] = ", newExitHValues[i])
+
+                if gVerbose: print("    Old EXIT-H value =", EWSParamsC_Dict[bcID]['discharge'], "for boundary ID = ", bcID)
+                EWSParamsC_Dict[bcID]['discharge'] = newExitHValues[i]
                 if gVerbose: print("    New EXIT-H value =", EWSParamsC_Dict[bcID][0], "for boundary ID = ", bcID)
             else:
                 print("The specified bcID", bcID, "is not in the boundary list. Please check.")
@@ -1270,7 +1337,7 @@ class SRH_2D_SRHHydro:
             sys.exit()
 
         # Write header and basic parameters in order
-        fid.write(f"SRHHYDRO {self.srhhydro_content.get('SRHHYDRO', '')}\n")
+        fid.write(f"SRHHYDRO {self.srhhydro_content.get('Version', '')}\n")
         
         # Write quoted string parameters
         for param in ['Case', 'Description']:
@@ -1297,11 +1364,20 @@ class SRH_2D_SRHHydro:
         for param in ['TurbulenceModel', 'ParabolicTurbulence', 'InitCondOption']:
             if param in self.srhhydro_content:
                 fid.write(f'{param} {self.srhhydro_content[param]}\n')
+
+                #if the initial condition option is WSE, need to write the InitZoneParams
+                if param == 'InitCondOption' and self.srhhydro_content['InitCondOption'] == 'WSE':
+                    fid.write(f'NumInitZones {self.srhhydro_content["NumInitZones"]}\n')
+                    if 'InitZoneParams' in self.srhhydro_content:
+                        for zone_id, params in sorted(self.srhhydro_content['InitZoneParams'].items()):
+                            fid.write(f'InitZoneParams {zone_id} {params["p1"]} {params["p2"]} {params["p3"]} {params["unit"]}\n')
+                    else:
+                        raise ValueError("Parameter InitZoneParams not found in the SRHHydro content.")
             else:
                 raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
 
         # Write grid and material files
-        for param in ['Grid', 'HydroMat']:
+        for param in ['Grid', 'HydroMat', 'MonitorPtFile']:
             if param in self.srhhydro_content:
                 fid.write(f'{param} "{self.srhhydro_content[param]}"\n')
             else:
@@ -1334,14 +1410,21 @@ class SRH_2D_SRHHydro:
             raise ValueError("Parameter BC not found in the SRHHydro content.")
 
         # Write inlet and exit parameters
-        if 'IQParams' in self.srhhydro_content:
-            for bc_id, params in sorted(self.srhhydro_content['IQParams'].items()):
-                fid.write(f'IQParams {bc_id} {params[0]} {params[1]} {params[2]}\n')
+        if 'EWSParamsC' in self.srhhydro_content:
+            #print("EWSParamsC = ", self.srhhydro_content['EWSParamsC'])
+            for bc_id, params in sorted(self.srhhydro_content['EWSParamsC'].items()):
+                fid.write(f'EWSParamsC {bc_id} {params["wse"]} {params["unit"]} {params["type"]}\n')
 
         if 'EWSParamsRC' in self.srhhydro_content:
+            #print("EWSParamsRC = ", self.srhhydro_content['EWSParamsRC'])
             for bc_id, params in sorted(self.srhhydro_content['EWSParamsRC'].items()):
                 fid.write(f'EWSParamsRC {bc_id} "{params[0]}" {params[1]} {params[2]}\n')
 
+        if 'IQParams' in self.srhhydro_content:
+            #print("IQParams = ", self.srhhydro_content['IQParams'])
+            for bc_id, params in sorted(self.srhhydro_content['IQParams'].items()):
+                fid.write(f'IQParams {bc_id} {params["discharge"]} {params["unit"]} {params["type"]}\n')
+                
         # Write pressure nodestrings
         if 'PressureNodestrings' in self.srhhydro_content:
             for group_id, nodestrings in sorted(self.srhhydro_content['PressureNodestrings'].items()):
@@ -1802,11 +1885,11 @@ class SRH_2D_SRHGeom:
             is_clockwise = area < 0
 
             #debug
-            print("element id = ", i)
-            print("element nodes = ", element_nodes)
-            print("num_nodes = ", num_nodes)
-            print("area = ", area)
-            print("is_clockwise = ", is_clockwise)
+            #print("element id = ", i)
+            #print("element nodes = ", element_nodes)
+            #print("num_nodes = ", num_nodes)
+            #print("area = ", area)
+            #print("is_clockwise = ", is_clockwise)
 
             # Initialize slope components
             Sx = 0.0
