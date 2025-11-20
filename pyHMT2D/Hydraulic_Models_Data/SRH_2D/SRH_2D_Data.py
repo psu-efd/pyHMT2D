@@ -402,13 +402,17 @@ class SRH_2D_SIF:
                 # loop over all the boundaries
                 for index_BC, boundary_type in bcDict.items():
                     f.write("// Boundary Type (INLET-Q EXIT-H etc)\n")
-                    f.write(f"{boundary_type}\n")                    
-                    f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
+                    f.write(f"{boundary_type}\n")                                        
 
                     if boundary_type == 'inlet-q':
+                        f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
                         f.write(" ".join(str(x) for x in IQParams[index_BC]) + "\n")
                     elif boundary_type == 'exit-h':
+                        f.write("// Boundary Values (Q W QS TEM H_rough etc)\n")
                         f.write(" ".join(str(x) for x in EWSParamsC[index_BC]) + "\n")
+                    elif boundary_type == 'wall':
+                        #do nothing
+                        pass
                     elif boundary_type == 'monitoring' or boundary_type == 'monitor' or boundary_type == 'symmetry':
                         #do nothing  
                         pass
