@@ -141,7 +141,7 @@ def build_nodeStrings(mesh,bAddMonitoringLines,monitoringLines,monitoringlineTol
             xML_end = monitoringLine[1, 0]
             yML_end = monitoringLine[1, 1]
 
-            #loop over all internal edges and check whether they are close the monitoring lines
+            #loop over all internal edges and check whether they are close to the monitoring lines
             for edge in internal_edges:
                 nodeIDStart = edge[0]
                 nodeIDEnd = edge[1]
