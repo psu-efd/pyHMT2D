@@ -12,25 +12,63 @@ import json
 from .tools import generate_random01_exclude_boundaries_with_center, point_on_triangle, point_on_line
 import pyHMT2D
 
-def srh_to_pinn_points(srhcontrol_file, refinement_pde=1, refinement_bc=1):
-    """Convert SRH-2D case's 2D mesh to points for PINN training. The saved "mesh_points.json" file can be used for PINN training. The json file contains "equation_points" and "boundary_points".
-
-    The saved points only have spatial information. The time information is not included.
+def srh_to_pinn_points(srhcontrol_file: str, refinement_pde: int=1, refinement_bc: int=1) -> None:
+    """Convert SRH-2D mesh to collocation points for Physics-Informed Neural Network (PINN) training.
+    
+    This function extracts spatial points from an SRH-2D mesh for use in PINN training. It generates
+    two types of points: (1) equation points (PDE collocation points) from mesh cells, and (2) boundary
+    points from mesh edges. Each point includes spatial coordinates (x, y, z) and associated physical
+    properties (bed slope Sx/Sy, Manning's n). Boundary points also include normal vectors and boundary IDs.
+    
+    Note: The generated points contain only spatial information. Time information must be added separately
+    during PINN training setup.
 
     Parameters
     ----------
     srhcontrol_file : str
-        Name of the SRH-2D case's control file, e.g. "case.srhhydro" or "case_SIF.dat". It can only be a srhhydro or SIF file.
-    refinement_pde : int
-        Number of points to generate per cell (>= 1) for the PDE points
-    refinement_bc : int
-        Number of points to generate per edge (>= 1) for the boundary points
+        Path to the SRH-2D control file. Must be either:
+        - A .srhhydro file (e.g., "case.srhhydro")
+        - A _SIF.dat file (e.g., "case_SIF.dat")
+        Raises ValueError if file extension is not supported.
+    refinement_pde : int, optional
+        Number of collocation points to generate per mesh cell. Must be >= 1.
+        Default is 1. Higher values provide more PDE enforcement points but increase training data size.
+    refinement_bc : int, optional
+        Number of points to generate per boundary edge. Must be >= 1.
+        Default is 1. Higher values provide more boundary condition enforcement points.
 
     Returns
     -------
     None
-        Saves points to mesh_points.json
-        Saves domain and boundary meshes to domain_{filename}.xdmf and boundaries_{filename}.xdmf
+        This function does not return a value. It writes files to the current working directory.
+
+    Side Effects
+    ------------
+    Creates the following files in the current working directory:
+        - mesh_points.json : Main output file containing all training points in JSON format.
+          Structure: {
+              "training_points": {
+                  "equation_points": {point_id: {x, y, z, Sx, Sy, ManningN, spatial_dimensionality}},
+                  "boundary_points": {boundary_{id}: {point_id: {x, y, z, normal_x, normal_y, normal_z, 
+                                                               Sx, Sy, S, ManningN, represented_length, 
+                                                               spatial_dimensionality}}}
+              }
+          }
+        - boundary_points.vtk : Visualization file for boundary points (optional, for debugging)
+        - domain_{filename}.xdmf : Domain mesh visualization file (if XDMF export is implemented)
+        - boundaries_{filename}.xdmf : Boundary mesh visualization file (if XDMF export is implemented)
+
+    Raises
+    ------
+    ValueError
+        If srhcontrol_file does not have a .srhhydro or _SIF.dat extension.
+    FileNotFoundError
+        If srhcontrol_file does not exist or cannot be read.
+
+    Examples
+    --------
+    >>> srh_to_pinn_points("my_case.srhhydro", refinement_pde=2, refinement_bc=3)
+    # Generates 2 points per cell and 3 points per boundary edge, saves to mesh_points.json
     """
 
     #check the file extension

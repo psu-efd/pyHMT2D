@@ -11,6 +11,7 @@ from scipy import interpolate
 import xml.etree.cElementTree as ET
 
 import h5py
+import os
 
 #from osgeo import gdal
 
@@ -429,7 +430,7 @@ def yes_or_no(question):
             print('You must answer y, yes, n, or no.')
 
 
-def dumpXMDFFileItems(xmdfFileName):
+def dumpXMDFFileItems(hdf_file):
     """Print the items in the XMDF file.
 
     Parameters
@@ -445,11 +446,23 @@ def dumpXMDFFileItems(xmdfFileName):
 
     print("The content in the XMDF result file: ")
 
-    xmdfFile = h5py.File(xmdfFileName, "r")
+    if os.path.exists(hdf_file):
+        print(f"Examining file: {hdf_file}")
+        
+        with h5py.File(hdf_file, 'r') as hf:                
+            print("\nAll available groups and datasets:")
 
-    xmdfFile.visititems(h5py_visitor_func)
-
-    xmdfFile.close()
+            def print_structure(name, obj):
+                if isinstance(obj, h5py.Group):
+                    print(f"Group: {name}")
+                    for key in obj.keys():
+                        print(f"  - {key}")
+                elif isinstance(obj, h5py.Dataset):
+                    print(f"Dataset: {name} (shape: {obj.shape}, dtype: {obj.dtype})")
+            
+            hf.visititems(print_structure)
+    else:
+        print(f"File not found: {hdf_file}")
 
 
 def h5py_visitor_func(name, node):
@@ -471,6 +484,10 @@ def h5py_visitor_func(name, node):
     """
     if isinstance(node, h5py.Group):
         print(node.name, 'is a Group')
+
+        for key in node.keys():
+            print(key)
+
     elif isinstance(node, h5py.Dataset):
         if (node.dtype == 'object'):
             print(node.name, 'is an object Dataset')

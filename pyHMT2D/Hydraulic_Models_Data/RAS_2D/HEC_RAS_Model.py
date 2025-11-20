@@ -627,16 +627,23 @@ class HEC_RAS_Model(HydraulicModel):
         currentPlanName, currentPlanFile = self._project.get_current_plan_file_name()
         current_terrainHDF_file_name, current_terrainTIFF_file_name = self._project.get_current_terrainFileNames()
 
+        if gVerbose:
+            print("Loading results for current plan: ", currentPlanName)
+            print("Current plan file: ", currentPlanFile)
+            print("Current terrain TIFF file: ", current_terrainTIFF_file_name)
+
         #check whether the hdf file exists
         if not os.path.isfile(currentPlanFile):
             raise Exception("The result HDF file for current plan does not exist. Make sure to run HEC-RAS before calling this function.")
         elif not os.path.isfile(current_terrainTIFF_file_name):
             raise Exception("The specified terrain TIFF file " + current_terrainTIFF_file_name + " does not exist.")
         else:
-            try:
-                self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
-            except Exception as e:                
-                raise Exception("Error in loading the results for current plan. " + str(e))
+            self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
+                
+            #try:
+            #    self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
+            #except Exception as e:                
+            #    raise Exception("Error in loading the results for current plan. " + str(e))
 
 
     def get_simulation_case(self, bReload=False):

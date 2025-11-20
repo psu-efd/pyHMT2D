@@ -1390,11 +1390,18 @@ class SRH_2D_SRHHydro:
                 raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
 
         # Write grid and material files
-        for param in ['Grid', 'HydroMat', 'MonitorPtFile']:
+        for param in ['Grid', 'HydroMat']:
             if param in self.srhhydro_content:
                 fid.write(f'{param} "{self.srhhydro_content[param]}"\n')
             else:
                 raise ValueError(f"Parameter {param} not found in the SRHHydro content.")
+
+        # Write monitor point file (monitoring points are optional)
+        for param in ['MonitorPtFile']:
+            if param in self.srhhydro_content:
+                fid.write(f'{param} "{self.srhhydro_content[param]}"\n')
+            else:
+                print(f"Parameter {param} not found in the SRHHydro content.")
 
         # Write output parameters
         if 'OutputFormat' in self.srhhydro_content:
@@ -1431,7 +1438,9 @@ class SRH_2D_SRHHydro:
         if 'EWSParamsRC' in self.srhhydro_content:
             #print("EWSParamsRC = ", self.srhhydro_content['EWSParamsRC'])
             for bc_id, params in sorted(self.srhhydro_content['EWSParamsRC'].items()):
-                fid.write(f'EWSParamsRC {bc_id} "{params[0]}" {params[1]} {params[2]}\n')
+                print("EWSParamsRC = ", bc_id, params)
+                #fid.write(f'EWSParamsRC {bc_id} "{params[0]}" {params[1]} {params[2]}\n')
+                fid.write(f'EWSParamsRC {bc_id} "{params["curve_file"]}" {params["unit"]} {params["type"]}\n')
 
         if 'IQParams' in self.srhhydro_content:
             #print("IQParams = ", self.srhhydro_content['IQParams'])
@@ -1870,6 +1879,8 @@ class SRH_2D_SRHGeom:
         num_elements = self.numOfElements
         element_bed_slopes = np.zeros((num_elements, 2))
 
+        #print("self.elementNodesCount = ", self.elementNodesCount)
+
         for i in range(num_elements):
             # Get nodes for this element
             element_nodes = self.elementNodesList[i]
@@ -1886,16 +1897,41 @@ class SRH_2D_SRHGeom:
                 area = 0.5 * np.cross(v1[:2], v2[:2])  # Remove abs() to preserve sign
             elif num_nodes == 4:  # Quadrilateral
                 # Area of quadrilateral using shoelace formula
-                x = node_coords[:, 0]
-                y = node_coords[:, 1]
+                x = node_coords[:num_nodes, 0]
+                y = node_coords[:num_nodes, 1]
                 area = 0.5 * np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y)  # Remove abs() to preserve sign
-            else:
-                print("Element %d is not a triangle or quadrilateral. Other shapes are not supported yet. Exiting..." % i)
-                sys.exit()
+
+                # Check for degenerate quads
+                #if np.any(np.diff(x) == 0) and np.any(np.diff(y) == 0):
+                #    print(f"Warning: Element {i} may be degenerate")
+
+            else:  # General polygon (pentagon, hexagon, etc.)
+                # Area of general polygon using shoelace formula
+                x = node_coords[:num_nodes, 0]
+                y = node_coords[:num_nodes, 1]
+                area = 0.5 * np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y)  # Remove abs() to preserve sign
+            #else:
+            #    print("Element %d is not a triangle or quadrilateral. Other shapes are not supported yet. Exiting..." % i)
+            #    sys.exit()
 
             # Take absolute value of area for size, but keep sign for orientation
             area_abs = np.abs(area)
             is_clockwise = area < 0
+
+            # Check for degenerate elements (zero or very small area)            
+            # if area_abs < 1e-12:  # Very small threshold for numerical precision
+            #     print(f"ERROR: Element {i} has zero area ({area})")
+            #     print(f"Element nodes: {element_nodes}")
+            #     print(f"Node coordinates:")
+            #     for j, coord in enumerate(node_coords):
+            #         print(f"  Node {j}: {coord}")
+            #     print(f"Number of nodes: {num_nodes}")
+                
+            #     # For now, assign a very small area to avoid division by zero
+            #     # This is a temporary fix - the real issue should be investigated
+            #     area_abs = 1e-12
+            #     area = 1e-12 if area >= 0 else -1e-12
+            #     print(f"Assigned temporary area: {area}")
 
             #debug
             #print("element id = ", i)

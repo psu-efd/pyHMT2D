@@ -17,15 +17,12 @@ class RAS_to_SRH_Converter:
     ---------
     RASPlanResultFileName : str
         HEC-RAS result from a plan, such as caseName.p01.hdf
-    RASTerrainGeoTiffFileName : str
-        HEC-RAS Terrain's GeoTiff file name
     SRHCaseName : str
         Case name for SRH-2D; the resulted files will be SRHCaseName.srhgeom, SRHCaseName.srhmat
     """
 
-    def __init__(self, RASPlanResultFileName, RASTerrainGeoTiffFileName, SRHCaseName):
+    def __init__(self, RASPlanResultFileName, SRHCaseName):
         self.RASPlanResultFileName = RASPlanResultFileName  # HEC-RAS result from a plan, such as caseName.p01.hdf
-        self.RASTerrainGeoTiffFileName = RASTerrainGeoTiffFileName #HEC-RAS Terrain's GeoTiff file name
         self.SRHCaseName = SRHCaseName
 
     def convert_to_SRH(self):
@@ -37,7 +34,7 @@ class RAS_to_SRH_Converter:
 
         """
         #create the RAS_2D_Data object
-        ras_2d_data_obj = pyHMT2D.RAS_2D.RAS_2D_Data(self.RASPlanResultFileName, self.RASTerrainGeoTiffFileName)
+        ras_2d_data_obj = pyHMT2D.RAS_2D.RAS_2D_Data(self.RASPlanResultFileName)
 
         ras_2d_data_obj.exportSRHGEOMFile(self.SRHCaseName)
 
