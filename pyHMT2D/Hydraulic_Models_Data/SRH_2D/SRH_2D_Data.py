@@ -19,6 +19,7 @@ import vtk
 from vtk.util import numpy_support as VN
 import re
 import meshio
+import json
 
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicData
@@ -3660,7 +3661,7 @@ class SRH_2D_Data(HydraulicData):
         return vtkFileNameList
 
     
-    def outputXMDFDataToPINNData(self, bNodal, bBoundary=False, dir=''):
+    def outputXMDFDataToPINNData(self, bNodal, PINN_normalization_specs, bBoundary=False, dir=''):
         """Output XMDF result data to PINN data files
         - data_points.npy: rows of (x, y) coordinates of the points for steady state data (currently only support one time step)
         - data_values.npy: rows of (h, u, v) values of the solution variables at the points in data_points.npy
@@ -3673,6 +3674,7 @@ class SRH_2D_Data(HydraulicData):
         ----------
             bNodal : bool
                 whether export nodal data or cell center data. Currently, it can't output both.
+            PINN_normalization_specs (dict): The normalization specifications for the PINN data
             bBoundary : bool
                 whether export boundary data            
             dir : str, optional
@@ -3850,7 +3852,7 @@ class SRH_2D_Data(HydraulicData):
         # For now, we'll mark all points as valid (1)
         data_flags = np.ones_like(data_values)
 
-        # the data_flags for h on walls should be set to 0. 
+        # the data_flags for h on walls should be set to 0 (we only need the no-slip condition on the walls) 
         if bBoundary:
             data_flags[num_points_excluding_walls:num_points_excluding_walls + num_wall_points, 0] = 0
 
@@ -3865,9 +3867,9 @@ class SRH_2D_Data(HydraulicData):
         y_mean = np.mean(data_points[:, 1])
         y_std = np.std(data_points[:, 1])
         t_min = 0.0
-        t_max = 0.0
-        t_mean = 0.0
-        t_std = 0.0
+        t_max = 1.0
+        t_mean = 0.5
+        t_std = 1.0
         h_min = np.min(data_values[:, 0])
         h_max = np.max(data_values[:, 0])
         h_mean = np.mean(data_values[:, 0])
@@ -3885,7 +3887,44 @@ class SRH_2D_Data(HydraulicData):
         Umag_mean = np.mean(Umag)
         Umag_std = np.std(Umag)
 
-        all_data_points_stats = np.array([x_min, x_max, x_mean, x_std, y_min, y_max, y_mean, y_std, t_min, t_max, t_mean, t_std, h_min, h_max, h_mean, h_std, u_min, u_max, u_mean, u_std, v_min, v_max, v_mean, v_std, Umag_min, Umag_max, Umag_mean, Umag_std])
+        all_PINN_stats = np.array([x_min, x_max, x_mean, x_std, y_min, y_max, y_mean, y_std, t_min, t_max, t_mean, t_std, h_min, h_max, h_mean, h_std, u_min, u_max, u_mean, u_std, v_min, v_max, v_mean, v_std, Umag_min, Umag_max, Umag_mean, Umag_std])
+
+        all_PINN_data_stats_dict = {
+            #'x_min': x_min,
+            #'x_max': x_max,
+            #'x_mean': x_mean,
+            #'x_std': x_std,
+            #'y_min': y_min,
+            #'y_max': y_max,
+            #'y_mean': y_mean,
+            #'y_std': y_std,
+            #'t_min': t_min,
+            #'t_max': t_max,
+            #'t_mean': t_mean,
+            #'t_std': t_std,
+            'h_min': h_min,
+            'h_max': h_max,
+            'h_mean': h_mean,
+            'h_std': h_std,
+            'u_min': u_min,
+            'u_max': u_max,
+            'u_mean': u_mean,
+            'u_std': u_std,
+            'v_min': v_min,
+            'v_max': v_max,
+            'v_mean': v_mean,
+            'v_std': v_std,
+            'Umag_min': Umag_min,
+            'Umag_max': Umag_max,
+            'Umag_mean': Umag_mean,
+            'Umag_std': Umag_std
+        }
+
+        all_PINN_data_stats_dict_serializable = {
+            k: float(v) if isinstance(v, (np.floating, np.integer)) else v
+            for k, v in all_PINN_data_stats_dict.items()
+        }
+
         print(f"x_min: {x_min}, x_max: {x_max}, x_mean: {x_mean}, x_std: {x_std}")
         print(f"y_min: {y_min}, y_max: {y_max}, y_mean: {y_mean}, y_std: {y_std}")
         print(f"t_min: {t_min}, t_max: {t_max}, t_mean: {t_mean}, t_std: {t_std}")
@@ -3894,18 +3933,45 @@ class SRH_2D_Data(HydraulicData):
         print(f"v_min: {v_min}, v_max: {v_max}, v_mean: {v_mean}, v_std: {v_std}")
         print(f"Umag_min: {Umag_min}, Umag_max: {Umag_max}, Umag_mean: {Umag_mean}, Umag_std: {Umag_std}")    
 
+        #normalize data_points and data_values using the PINN_normalization_specs
+        #currently only supports min-max normalization for x, y, and t and z-score normalization for h, u, v, and Umag
+        #check the normalization method to be min-max for x, y, and t and z-score for h, u, v, and Umag; if not report error and exit
+        if PINN_normalization_specs['x'] != 'min-max' or PINN_normalization_specs['y'] != 'min-max' or PINN_normalization_specs['t'] != 'min-max' or PINN_normalization_specs['h'] != 'z-score' or PINN_normalization_specs['u'] != 'z-score' or PINN_normalization_specs['v'] != 'z-score' or PINN_normalization_specs['Umag'] != 'z-score':
+            print("Error: Currently only supports min-max normalization for x, y, and t and z-score normalization for h, u, v, and Umag")
+            sys.exit()
+
+        #normalize data_points and data_values using the PINN_normalization_specs
+        #make a copy of data_points and data_values
+        data_points_normalized = data_points.copy()
+        data_values_normalized = data_values.copy()
+
+        #normalize x, y, and t (min-max normalization)
+        data_points_normalized[:, 0] = (data_points[:, 0] - x_min) / (x_max - x_min)
+        data_points_normalized[:, 1] = (data_points[:, 1] - y_min) / (y_max - y_min)
+        #currenlty only steady state is supported, so t is not used in training
+        #data_points_normalized[:, 2] = (data_points[:, 2] - t_min) / (t_max - t_min)
+
+        #normalize h, u, and v
+        data_values_normalized[:, 0] = (data_values[:, 0] - h_mean) / h_std
+        data_values_normalized[:, 1] = (data_values[:, 1] - u_mean) / u_std
+        data_values_normalized[:, 2] = (data_values[:, 2] - v_mean) / v_std
+        
         # Save files
         if dir:
             os.makedirs(dir, exist_ok=True)
             prefix = os.path.join(dir, '/')
         else:
-            os.makedirs('pinn_points', exist_ok=True)
-            prefix = 'pinn_points/'
+            os.makedirs('data/PINN', exist_ok=True)
+            prefix = 'data/PINN/'
 
-        np.save(f'{prefix}data_points.npy', data_points)
-        np.save(f'{prefix}data_values.npy', data_values)
+        #save the normalized data_points and data_values
+        np.save(f'{prefix}data_points.npy', data_points_normalized)
+        np.save(f'{prefix}data_values.npy', data_values_normalized)
         np.save(f'{prefix}data_flags.npy', data_flags)
-        np.save(f'{prefix}all_data_points_stats.npy', all_data_points_stats)
+        np.save(f'{prefix}all_PINN_stats.npy', all_PINN_stats)
+
+        #with open(f'{prefix}all_PINN_data_stats.json', 'w') as f:
+        #    json.dump(all_PINN_data_stats_dict_serializable, f, indent=4)
 
         print(f"Saved data points shape: {data_points.shape}")
         print(f"Saved data values shape: {data_values.shape}")
@@ -3945,6 +4011,8 @@ class SRH_2D_Data(HydraulicData):
         
         if gVerbose:
             print(f"Saved visualization data to: {vtkFileName}")
+
+        return all_PINN_data_stats_dict_serializable
 
     def readSRHCFiles(self, case_name):
         """Read SRH-2D results from SRHC files (cell-centered data)
