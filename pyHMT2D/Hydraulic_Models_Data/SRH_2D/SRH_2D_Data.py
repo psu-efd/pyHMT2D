@@ -3889,6 +3889,21 @@ class SRH_2D_Data(HydraulicData):
 
         all_PINN_stats = np.array([x_min, x_max, x_mean, x_std, y_min, y_max, y_mean, y_std, t_min, t_max, t_mean, t_std, h_min, h_max, h_mean, h_std, u_min, u_max, u_mean, u_std, v_min, v_max, v_mean, v_std, Umag_min, Umag_max, Umag_mean, Umag_std])
 
+        all_PINN_points_stats_dict = {
+            'x_min': x_min,
+            'x_max': x_max,
+            'x_mean': x_mean,
+            'x_std': x_std,
+            'y_min': y_min,
+            'y_max': y_max,
+            'y_mean': y_mean,
+            'y_std': y_std,
+            't_min': t_min,
+            't_max': t_max,
+            't_mean': t_mean,
+            't_std': t_std
+        }
+
         all_PINN_data_stats_dict = {
             #'x_min': x_min,
             #'x_max': x_max,
@@ -3976,7 +3991,11 @@ class SRH_2D_Data(HydraulicData):
         print(f"Saved data points shape: {data_points.shape}")
         print(f"Saved data values shape: {data_values.shape}")
         print(f"Saved data flags shape: {data_flags.shape}")
-        print(f"Files saved in: {dir}")
+
+        if dir:
+            print(f"Files saved in: {dir}")
+        else:
+            print(f"Files saved in: data/PINN")
 
         #print the last 10 data points
         print(f"Last 10 data points: {data_points[-10:]}")
@@ -4012,7 +4031,7 @@ class SRH_2D_Data(HydraulicData):
         if gVerbose:
             print(f"Saved visualization data to: {vtkFileName}")
 
-        return all_PINN_data_stats_dict_serializable
+        return all_PINN_points_stats_dict, all_PINN_data_stats_dict_serializable
 
     def readSRHCFiles(self, case_name):
         """Read SRH-2D results from SRHC files (cell-centered data)
