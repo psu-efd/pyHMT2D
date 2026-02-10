@@ -251,6 +251,39 @@ There are at least two ways to use *pyHMT2D*:
 
   More examples can be found in the "examples" directory.
 
+Agent-facing experimental interface
+-----------------------------------
+
+An experimental typed interface is available for LLM/agent workflows through
+the ``hmt-agentic`` command and ``pyHMT2D.Agentic`` module. The first tool set
+includes:
+
+- validate request payloads without execution
+- run calibration with structured response and run manifest
+- convert RAS to SRH with structured response and run manifest
+- summarize generated artifacts in a directory
+- modify SRH-2D Manning's n values and inlet discharges
+- run Monte Carlo generation for Manning's n and inlet discharges (optional SRH-2D run)
+
+Example validation run:
+
+.. code-block:: bash
+
+   $ hmt-agentic validate request.json
+
+
+Example: modify SRH-2D parameters with a request JSON:
+
+.. code-block:: bash
+
+   $ hmt-agentic modify-srh modify_request.json
+
+Example: Monte Carlo parameter sampling and case generation:
+
+.. code-block:: bash
+
+   $ hmt-agentic monte-carlo-srh mc_request.json
+
 
 Limitations
 -----------

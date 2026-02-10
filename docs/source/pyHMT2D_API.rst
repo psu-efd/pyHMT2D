@@ -43,3 +43,11 @@ Package summary for Misc
 
 .. automodule:: pyHMT2D.Misc
    :members:   
+
+Agentic integration classes and tools
+------------------------------------
+
+Package summary for Agentic
+
+.. automodule:: pyHMT2D.Agentic
+   :members:

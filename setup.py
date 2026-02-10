@@ -116,6 +116,7 @@ setup(
                             'hmt-calibrate=pyHMT2D.cli:hmt_calibrate',
                             'hmt-srh-mesh-to-vtk=pyHMT2D.cli:hmt_srh_mesh_to_vtk',
                             'hmt-srh-to-vtk=pyHMT2D.cli:hmt_srh_to_vtk',
+                            'hmt-agentic=pyHMT2D.cli:hmt_agentic',
                             ],
     },
     install_requires=REQUIRED,
