@@ -1,4 +1,4 @@
-pyHMT2D logo
+![pyHMT2D logo](logo/pyhmt2d_logo_vel_color_vector.png)
 
 ## *pyHMT2D* - Python-based Hydraulic Modeling Tools - 2D
 
@@ -126,6 +126,7 @@ These steps install *pyHMT2D* into a **virtual environment** so it does not inte
     .venv\Scripts\Activate.ps1
     ```
    After activation, your prompt should show `(.venv)` at the beginning.
+   
 2. **Install *pyHMT2D* from PyPI**
   ```bash
    pip install pyHMT2D
@@ -187,23 +188,7 @@ sys.path.append(r"C:\Users\YourName\path\to\pyHMT2D")
 
 ## Example Usage
 
-There are at least two ways to use *pyHMT2D*:
-
-### Command line interface (CLI)
-
-Only limited functions of *pyHMT2D* can be used in this way. You only need to type commands in a Windows terminal, e.g.,
-
-```bash
-hmt-calibrate calibration.json
-```
-
-which runs a calibration job. Or:
-
-```bash
-hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
-```
-
-which converts a RAS 2D case to SRH-2D. See `examples/command_line_interface` for more details.
+There are at least two ways to use *pyHMT2D*: (1) use in your own Python code (more flexibility) and (2) command line interface (CLI) (only limited functionalities).
 
 ### Use in your own Python code (more flexibility)
 
@@ -278,22 +263,33 @@ my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
 my_calibrator.calibrate()
 ```
 
+### Command line interface (CLI)
+
+Only limited functions of *pyHMT2D* can be used in this way. You only need to type commands in a Windows terminal, e.g.,
+
+```bash
+hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+```
+
+which converts a RAS 2D case to SRH-2D. See `examples/command_line_interface` for more details.
+
 More examples can be found in the `examples` directory.
 
 ## Limitations
 
 **For SRH-2D:**
 
-- This package is developed and tested with SRH-2D v3.3; other versions may work but has not been tested.
+- This package is developed and tested with SRH-2D v3.3 and v3.6; other versions may work but has not been tested.
 - Currently, only flow data is processed; others such as sediment and water quality are ignored.
-- Currently *pyHMT2D* cannot manipulate other things such as hydraulic structures in the case configuration files. More functionalities will be added in the future.
+- Currently *pyHMT2D* cannot manipulate other things such as hydraulic structures in the case configuration files. More functionalities can be added in the future.
 
 **For HEC-RAS 2D:**
 
-- Only one 2D flow area is supported.
+- Only **one** 2D flow area is supported.
 - Only 2D flow area information is processed; others such as 1D channels and structures are ignored.
 - Currently, only flow data is processes; others such as sediment and water quality are ignored.
-- This package is developed and tested with HEC-RAS v5.0.7 and v6.0.0; other versions may work but have not been tested.
+- This package is currently developed using HEC-RAS v6.6; other versions may work but have not been tested.
+- RAS 2025 is currently not supported due to its development status.
 
 ## User Manual and API Documentation
 

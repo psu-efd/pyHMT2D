@@ -2692,6 +2692,8 @@ class RAS_2D_Data(HydraulicData):
 
         fid.close()
 
+        print("SRHMAT file exported successfully: ", fname)
+
 
     def exportBoundariesToVTK(self, boundaryVTKFileName, dir='', twoDAreaNumber = 0):
         """Export boundaries of 2D area to VTK (for visual inspection in Paraview and check the ID of NodeString)

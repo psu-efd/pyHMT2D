@@ -1,7 +1,7 @@
 Flow Title=Muncie_Peak_Flow
-Program Version=5.07
+Program Version=6.60
 Use Restart= 0 
-Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,outlet                          
+Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,outlet                          ,                                
 Interval=1HOUR
 Stage Hydrograph= 7 
      930     930     930     930     930     930     930
@@ -13,7 +13,7 @@ Use Fixed Start Time=False
 Fixed Start Date/Time=,
 Is Critical Boundary=False
 Critical Boundary Flow=
-Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,inlet                           
+Boundary Location=                ,                ,        ,        ,                ,Muncie_Geom     ,                ,inlet                           ,                                
 Interval=1HOUR
 Flow Hydrograph= 7 
    20000   20000   20000   20000   20000   20000   20000
@@ -25,3 +25,89 @@ Use Fixed Start Time=False
 Fixed Start Date/Time=,
 Is Critical Boundary=False
 Critical Boundary Flow=
+Met Point Raster Parameters=,,,,
+Precipitation Mode=Disable
+Wind Mode=No Wind Forces
+Air Density Mode=
+Wave Mode=No Wave Forcing
+Met BC=Precipitation|Expanded View=0
+Met BC=Precipitation|Point Interpolation=Nearest
+Met BC=Precipitation|Gridded Source=DSS
+Met BC=Precipitation|Gridded Interpolation=
+Met BC=Evapotranspiration|Expanded View=0
+Met BC=Evapotranspiration|Point Interpolation=Nearest
+Met BC=Evapotranspiration|Gridded Source=DSS
+Met BC=Evapotranspiration|Gridded Interpolation=
+Met BC=Wind Speed|Expanded View=0
+Met BC=Wind Speed|Point Interpolation=Nearest
+Met BC=Wind Speed|Gridded Source=DSS
+Met BC=Wind Speed|Gridded Interpolation=
+Met BC=Wind Direction|Expanded View=0
+Met BC=Wind Direction|Point Interpolation=Nearest
+Met BC=Wind Direction|Gridded Source=DSS
+Met BC=Wind Direction|Gridded Interpolation=
+Met BC=Wind Velocity X|Expanded View=0
+Met BC=Wind Velocity X|Point Interpolation=Nearest
+Met BC=Wind Velocity X|Gridded Source=DSS
+Met BC=Wind Velocity X|Gridded Interpolation=
+Met BC=Wind Velocity Y|Expanded View=0
+Met BC=Wind Velocity Y|Point Interpolation=Nearest
+Met BC=Wind Velocity Y|Gridded Source=DSS
+Met BC=Wind Velocity Y|Gridded Interpolation=
+Met BC=Wave Forcing X|Expanded View=0
+Met BC=Wave Forcing X|Point Interpolation=Nearest
+Met BC=Wave Forcing X|Gridded Source=DSS
+Met BC=Wave Forcing X|Gridded Interpolation=
+Met BC=Wave Forcing Y|Expanded View=0
+Met BC=Wave Forcing Y|Point Interpolation=Nearest
+Met BC=Wave Forcing Y|Gridded Source=DSS
+Met BC=Wave Forcing Y|Gridded Interpolation=
+Met BC=Air Density|Mode=Constant
+Met BC=Air Density|Expanded View=0
+Met BC=Air Density|Constant Value=1.225
+Met BC=Air Density|Constant Units=kg/m3
+Met BC=Air Density|Point Interpolation=Nearest
+Met BC=Air Density|Gridded Source=DSS
+Met BC=Air Density|Gridded Interpolation=
+Met BC=Air Temperature|Expanded View=0
+Met BC=Air Temperature|Point Interpolation=Nearest
+Met BC=Air Temperature|Gridded Source=DSS
+Met BC=Air Temperature|Gridded Interpolation=
+Met BC=Humidity|Expanded View=0
+Met BC=Humidity|Point Interpolation=Nearest
+Met BC=Humidity|Gridded Source=DSS
+Met BC=Humidity|Gridded Interpolation=
+Met BC=Air Pressure|Mode=Constant
+Met BC=Air Pressure|Expanded View=0
+Met BC=Air Pressure|Constant Value=1013.2
+Met BC=Air Pressure|Constant Units=mb
+Met BC=Air Pressure|Point Interpolation=Inv Distance
+Met BC=Air Pressure|Gridded Source=DSS
+Met BC=Air Pressure|Gridded Interpolation=
+Non-Newtonian Method= 0 , 
+Non-Newtonian Constant Vol Conc=0
+Non-Newtonian Yield Method= 0 , 
+Non-Newtonian Yield Coef=0, 0
+User Yeild=   0
+Non-Newtonian Sed Visc= 0 , 
+Non-Newtonian Obrian B=0
+User Viscosity=0
+User Viscosity Ratio=0
+Herschel-Bulkley Coef=0, 0
+Clastic Method= 0 , 
+Coulomb Phi=0
+Voellmy X=0
+Non-Newtonian Hindered FV= 0 
+Non-Newtonian FV K=0
+Non-Newtonian ds=0
+Non-Newtonian Max Cv=0
+Non-Newtonian Bulking Method= 0 , 
+Non-Newtonian High C Transport= 0 , 
+Lava Activation= 0 
+Temperature=1300,15,,15,14,980
+Heat Ballance=1,1200,0.5,1,70,0.95
+Viscosity=1000,,,
+Yield Strength=,,,
+Consistency Factor=,,,
+Profile Coefficient=4,1.3,
+Lava Param=,2500,
