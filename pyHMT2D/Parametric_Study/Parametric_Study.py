@@ -173,10 +173,9 @@ class Parametric_Study(object):
             print("Hydraulic model version: ", self.hydraulic_model.getVersion())
 
             # open the simulation case
-            #self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
-            #                                  self.configuration["HEC-RAS"]["terrainFileName"])
+            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"])
 
-            #self.hydraulic_data = self.hydraulic_model.get_simulation_case()
+            self.hydraulic_data = self.hydraulic_model.get_simulation_case()
 
 
         else:

@@ -10,7 +10,11 @@ examples/sandbox
 
 examples/SRH_2D_to_OpenFOAM
 
-examples/parametric_study/SRH-2D/Muncie2D/cases
+examples/parametric_study
+
+examples/calibration
+
+examples/compare_SRH_2D_RAS_2D/backwater_curves
 
 #examples/RAS_2D_Monte_Carlo
 examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/cases

@@ -56,7 +56,7 @@ def run_one_HEC_RAS_case(case_ID, ManningN_MaterialID, ManningN, ManningN_Materi
 
     #create a HEC-RAS model instance
     #my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7",faceless=False)
-    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.1.0", faceless=False)
+    my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.6", faceless=False)
 
     #initialize the HEC-RAS model
     my_hec_ras_model.init_model()
@@ -65,7 +65,7 @@ def run_one_HEC_RAS_case(case_ID, ManningN_MaterialID, ManningN, ManningN_Materi
     print("Hydraulic model version: ", my_hec_ras_model.getVersion())
 
     #open a HEC-RAS project (This is hard-code; needs to be changed for a specific case)
-    my_hec_ras_model.open_project("Muncie2D.prj", "Terrain/TerrainMuncie_composite.tif")
+    my_hec_ras_model.open_project("Muncie2D.prj")
 
     #get the HEC-RAS case data
     my_hec_ras_data = my_hec_ras_model.get_simulation_case()

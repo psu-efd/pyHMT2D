@@ -1,0 +1,9 @@
+# Core dependencies for pyHMT2D (matches setup.py REQUIRED)
+numpy
+vtk>=9.0.2
+h5py
+scipy
+affine
+meshio
+scikit-optimize
+rasterio

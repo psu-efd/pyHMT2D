@@ -22,7 +22,7 @@ def calculate_2D_difference():
     vtk_handler = pyHMT2D.Misc.vtkHandler()
 
     vtkFileName1 = "SRH-2D/SRH2D_Muncie_C_0006.vtk"
-    vtkFileName2 = "HEC-RAS/RAS2D_Muncie_Geom_0024.vtk"
+    vtkFileName2 = "HEC-RAS/RAS2D_Peak_flow_plan_Muncie_Geom_0024.vtk"
 
     #water depth
     varName1 = "Water_Depth_ft"
@@ -56,7 +56,7 @@ def calculate_2D_difference():
 
     #velocity
     varName1 = "Velocity_ft_p_s"
-    varName2 = "Velocity_ft_p_s"
+    varName2 = "Velocity_cell_ft_p_s"
     varNameDiff = "velocity_diff_cell"
 
     vtkFileNameDiff = "diff_velocity_cell.vtk"

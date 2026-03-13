@@ -21,8 +21,9 @@ class RAS_to_SRH_Converter:
         Case name for SRH-2D; the resulted files will be SRHCaseName.srhgeom, SRHCaseName.srhmat
     """
 
-    def __init__(self, RASPlanResultFileName, SRHCaseName):
+    def __init__(self, RASPlanResultFileName, TerrainFileName, SRHCaseName):
         self.RASPlanResultFileName = RASPlanResultFileName  # HEC-RAS result from a plan, such as caseName.p01.hdf
+        self.TerrainFileName = TerrainFileName  # Terrain file in GeoTiff format, e.g., Terrain/terrain.tif
         self.SRHCaseName = SRHCaseName
 
     def convert_to_SRH(self):
@@ -34,7 +35,7 @@ class RAS_to_SRH_Converter:
 
         """
         #create the RAS_2D_Data object
-        ras_2d_data_obj = pyHMT2D.RAS_2D.RAS_2D_Data(self.RASPlanResultFileName)
+        ras_2d_data_obj = pyHMT2D.RAS_2D.RAS_2D_Data(self.RASPlanResultFileName, self.TerrainFileName)
 
         ras_2d_data_obj.exportSRHGEOMFile(self.SRHCaseName)
 

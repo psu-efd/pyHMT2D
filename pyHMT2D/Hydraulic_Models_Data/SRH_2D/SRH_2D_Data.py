@@ -1864,7 +1864,7 @@ class SRH_2D_SRHGeom:
             print("nodeStrings = ", self.nodeStringsDict)
 
     def calculate_bed_slope(self):
-        """ 
+        r""" 
         Calculate the bed slope of each element and then interpolate the bed slope to each node. The slope of each element (e.g., triangle and quadrilateral) is calculated
         by using the Gauss theorem. For each element, the bed slope is calculated by:
         1. compute the outward normal vector of each edge of the element.
