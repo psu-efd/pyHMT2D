@@ -21,6 +21,9 @@ examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/cases
 examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/full_case
 examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/try_isolines.py
 
+#cli
+examples/command_line_interface/hmt_calibrate
+
 examples/SRH_2D_to_PINN
 
 GUI
