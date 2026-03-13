@@ -405,8 +405,7 @@ class Calibrator(object):
 
         elif self.model_name == "HEC-RAS":
             # open the simulation case
-            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"],
-                                              self.configuration["HEC-RAS"]["terrainFileName"])
+            self.hydraulic_model.open_project(self.configuration["HEC-RAS"]["case"])
 
             self.hydraulic_data = self.hydraulic_model.get_simulation_case()
 

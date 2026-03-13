@@ -313,8 +313,28 @@ class RAS_2D_Data(HydraulicData):
         self.plan_shortID = hf['Plan Data']['Plan Information'].attrs["Plan ShortID"].decode()
         self.project_filename = hf['Plan Data']['Plan Information'].attrs["Project Filename"].decode()
         
-
         hf.close()    
+
+        # HEC-RAS stores the project file as an absolute path. If the case folder was moved
+        # after the run, that path is wrong. Check whether the project file exists in the
+        # same directory as the HDF file; if yes, point project_filename there; otherwise error.
+        self.project_file_name = os.path.basename(self.project_filename)
+        hdf_dir = os.path.dirname(os.path.abspath(self.hdf_filename))
+        if not hdf_dir:
+            hdf_dir = os.curdir
+        project_path_next_to_hdf = os.path.join(hdf_dir, self.project_file_name)
+
+        if gVerbose:
+            print("project_filename (from HDF) = ", self.project_filename)
+
+        if not os.path.isfile(project_path_next_to_hdf):
+            print("The project file " + self.project_file_name + " does not exist in the directory of the HDF file ("
+                  + hdf_dir + "). Move the case folder or run HEC-RAS in this location. Exiting ...")
+            sys.exit()
+
+        self.project_filename = os.path.abspath(project_path_next_to_hdf)
+        if gVerbose:
+            print("project_filename (adjusted) = ", self.project_filename)
 
     def extract_version(self):
         """Get the version of HEC-RAS that produced this file
@@ -827,7 +847,7 @@ class RAS_2D_Data(HydraulicData):
         hf.close()
 
     def change_ManningsN(self, materialIDs, newManningsNValues, materialNames):
-        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v5 and v6.1.0)
+        """ Change materialID's Mannings n values to new values and save to file (for HEC-RAS v5, v6.1.0, and v6.6)
 
         Parameters
         ----------
@@ -1171,12 +1191,12 @@ class RAS_2D_Data(HydraulicData):
             print("Manning's n has to be a float. The type of newManningsNValue passed in is ", type(newManningsNValues[0]),
                   ". Exit.\n")
 
-        if self.version == '5.0.7' or self.version == '6.1.0':
+        if self.version == '5.0.7' or self.version == '6.1.0' or self.version == '6.6':
             self.change_ManningsN(materialIDs, newManningsNValues, materialNames)
         elif self.version == '6.0.0':  #v6.0.0 is special
             self.change_ManningsN_v60(materialIDs, newManningsNValues, materialNames)
-        elif self.version == '6.6':  #v6.6 is special
-            self.change_ManningsN_v66(materialIDs, newManningsNValues, materialNames)
+        #elif self.version == '6.6':  #v6.6 is special
+        #    self.change_ManningsN_v66(materialIDs, newManningsNValues, materialNames)
 
         if gVerbose: print("Finished modifying Manning's n value ...")
 
@@ -1381,6 +1401,93 @@ class RAS_2D_Data(HydraulicData):
         source = None
     
         return bilinterp
+
+    def interpolatorFromGeoTiff_rasterio(self, geoTiffFileName, pointList, dataType=np.float64):
+        """Interpolate from a GeoTIFF file using rasterio (preferred on Windows).
+
+        Falls back to :meth:`interpolatorFromGeoTiff` (GDAL-based) if rasterio
+        is not available or if opening the file fails.
+
+        Parameters
+        ----------
+        geoTiffFileName: str
+            name of the GeoTiff file
+        pointList: list
+            list of points (x,y)
+        dataType : int, optional
+            data type in the GeoTiff (default is numpy.float)
+
+        Returns
+        -------
+
+        """
+
+        try:
+            import rasterio
+        except ImportError:
+            # rasterio not available; use the existing GDAL-based implementation
+            return self.interpolatorFromGeoTiff(geoTiffFileName, pointList, dataType=dataType)
+
+        # rasterio expects a string path, but some HEC-RAS metadata
+        # are stored as bytes (e.g., b'.\\ManningNFromZonePolygons.tif').
+        if isinstance(geoTiffFileName, bytes):
+            geoTiffFileName = geoTiffFileName.decode('utf-8')
+
+        # check whether the geoTiff file exists
+        if not os.path.isfile(geoTiffFileName):
+            print("The geoTiff file", geoTiffFileName, "does not exists. Exiting ...")
+            sys.exit()
+
+        try:
+            with rasterio.open(geoTiffFileName) as src:
+                data_array = src.read(1)
+                forward_transform = src.transform
+                nodata = src.nodata
+        except Exception:
+            # Any issue with rasterio, fall back to the GDAL-based implementation
+            return self.interpolatorFromGeoTiff(geoTiffFileName, pointList, dataType=dataType)
+
+        # Replace nodata with a fill value so sampled points don't get -9999 (or similar).
+        # Use the minimum valid value in the band so elevation stays plausible; if all nodata, use 0.
+        if nodata is not None:
+            valid = data_array[data_array != nodata]
+            fill_value = float(np.min(valid)) if valid.size else 0.0
+        else:
+            fill_value = None
+
+        reverse_transform = ~forward_transform
+
+        interpolatedValues = []
+
+        # loop through all points in the list
+        for pointI in range(pointList.shape[0]):
+            x = pointList[pointI,0]
+            y = pointList[pointI,1]
+
+            px, py = reverse_transform * (x, y)
+            px, py = int(px + 0.5), int(py + 0.5)
+
+            # make sure px and py are within the data_array bounds
+            if px < 0 or px >= data_array.shape[1] or py < 0 or py >= data_array.shape[0]:
+                if px < 0:
+                    px = 0
+                elif px >= data_array.shape[1]:
+                    px = data_array.shape[1] - 1
+                if py < 0:
+                    py = 0
+                elif py >= data_array.shape[0]:
+                    py = data_array.shape[0] - 1
+
+            # Sample with the pixel coordinates. Note that py should be first because
+            # the index is [rows, columns] in a 2D grid in python
+            # Return a scalar (like the original GDAL-based implementation), not a 0-D array.
+            val = data_array[py, px]
+            if fill_value is not None and (val == nodata or (np.isnan(nodata) and np.isnan(val))):
+                val = fill_value
+            interpolatedValues.append(val)
+
+        return interpolatedValues
+
 
     def interpolatorFromGeoTiff(self, geoTiffFileName, pointList, dataType=np.float64):
         """Interpolate from a GeoTiff file given a point list.
@@ -1587,7 +1694,10 @@ class RAS_2D_Data(HydraulicData):
             allFacePointsCoordiantes[k,0] = x1
             allFacePointsCoordiantes[k,1] = y1
 
-        allFacePointZ = self.interpolatorFromGeoTiff(self.terrain_tiff_filename, allFacePointsCoordiantes)
+        # Prefer rasterio-based interpolation when available; fall back to the GDAL-based version.
+        allFacePointZ = self.interpolatorFromGeoTiff_rasterio(
+            self.terrain_tiff_filename, allFacePointsCoordiantes
+        )
         
         for k in range(facePointsCoordinates3D.shape[0]):
             facePointsCoordinates3D[k,2] = allFacePointZ[k]
@@ -2124,7 +2234,10 @@ class RAS_2D_Data(HydraulicData):
             ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]
 
         else:
-            ManningN_IDs = self.interpolatorFromGeoTiff(full_landcover_filename, cell_center_coordinates)
+            # Prefer rasterio-based interpolation when available; fall back to the GDAL-based version.
+            ManningN_IDs = self.interpolatorFromGeoTiff_rasterio(
+                full_landcover_filename, cell_center_coordinates
+            )
 
         #set the Manning's n values for each cells
         for cellI in range(self.TwoDAreaCellCounts[0]):
@@ -2520,6 +2633,8 @@ class RAS_2D_Data(HydraulicData):
             fid.write("\n")
         
         fid.close()
+
+        print("SRHGEOM file exported successfully: ", fname)
         
 
     def exportSRHMATFile(self, srhmatFileName):
