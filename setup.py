@@ -115,7 +115,6 @@ setup(
     entry_points={
         'console_scripts': ['hmt-ras-to-srh=pyHMT2D.cli:ras_to_srh',
                             'hmt-calibrate=pyHMT2D.cli:hmt_calibrate',
-                            'hmt-srh-mesh-to-vtk=pyHMT2D.cli:hmt_srh_mesh_to_vtk',
                             'hmt-srh-to-vtk=pyHMT2D.cli:hmt_srh_to_vtk',
                             ],
     },

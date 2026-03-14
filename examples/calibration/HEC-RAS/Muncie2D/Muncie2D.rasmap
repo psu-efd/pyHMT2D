@@ -1,0 +1,108 @@
+<RASMapper>
+  <Version>2.0.0</Version>
+  <Features>
+    <Layer Name="Profile Lines" Type="PolylineFeatureLayer" Filename=".\Features\Profile Lines.shp">
+      <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="Name" Position="3" Color="-16777216" />
+    </Layer>
+  </Features>
+  <Geometries Checked="True" Expanded="True">
+    <Layer Name="Muncie_base2D" Type="RASGeometry" Checked="True" Expanded="True" Filename=".\Muncie2D.g01.hdf">
+      <Layer Name="Manning's N" Type="ManningsGroupLayer" Checked="True" Expanded="True" />
+      <Layer Type="RasLandCoverRegions">
+        <Symbology>
+          <Brush Type="SolidBrush" B="205" G="235" R="255" A="150" Name="PolygonFill" />
+        </Symbology>
+        <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="Name" Position="3" Color="-16777216" />
+      </Layer>
+      <Layer Type="RASLandCoverManningsN" Checked="True">
+        <Symbology>
+          <SurfaceFill Colors="-8388864,-13395712,-9472,-48640,-25950,-65281" Values="0.03,0.04,0.04,0.05,0.05,0.06" Stretched="True" RegenerateForScreen="False" />
+        </Symbology>
+      </Layer>
+      <Layer Type="RASBoundaryConditionLines" Checked="True" />
+    </Layer>
+  </Geometries>
+  <Results Expanded="True">
+    <Layer Name="Peak flow" Type="RASResults" Expanded="True" Filename=".\Muncie2D.p01.hdf">
+      <Layer Type="RASGeometry" Filename=".\Muncie2D.p01.hdf" />
+      <Layer Name="depth" Type="RASResultsMap">
+        <LabelFeatures Checked="True" Center="False" rows="1" cols="1" r0c0="FID" Position="5" Color="-16777216" />
+        <MapParameters MapType="depth" LayerName="Depth" Terrain="TerrainWithChannel" ProfileIndex="4" ProfileName="30DEC1899 01:00:00" ArrivalDepth="0" />
+      </Layer>
+      <Layer Name="velocity" Type="RASResultsMap">
+        <MapParameters MapType="velocity" ProfileIndex="0" ProfileName="30DEC1899 00:00:00" />
+      </Layer>
+      <Layer Name="elevation" Type="RASResultsMap">
+        <MapParameters MapType="elevation" ProfileIndex="0" ProfileName="30DEC1899 00:00:00" />
+      </Layer>
+      <Layer Name="velocity" Type="RASResultsMap">
+        <MapParameters MapType="velocity" LayerName="Velocity" Terrain="TerrainWithChannel" ProfileIndex="4" ProfileName="30DEC1899 01:00:00" ArrivalDepth="0" />
+      </Layer>
+      <Layer Name="depth" Type="RASResultsMap" Filename=".\Peak flow\Inundation Boundary (30DEC1899 01 00 00 Value_0).shp">
+        <MapParameters MapType="depth" LayerName="Inundation Boundary" OutputMode="Stored Polygon Specified Depth" StoredFilename=".\Peak flow\Inundation Boundary (30DEC1899 01 00 00 Value_0).shp" Terrain="TerrainWithChannel" ProfileIndex="4" ProfileName="30DEC1899 01:00:00" ArrivalDepth="0" />
+      </Layer>
+    </Layer>
+  </Results>
+  <MapLayers Checked="True" Expanded="True">
+    <Layer Name="TerrainWithChannel" Type="InterpolatedLayer" Filename=".\Terrain\TerrainWithChannel.vrt">
+      <Symbology>
+        <SurfaceFill Colors="-10039894,-2231258,-9324544,-11170816,-879872,-6811136,-6546404,-6991792,-6513765,-1286" Values="898.91,911.6,924.3,936.99,949.69,962.38,975.08,987.77,1000.47,1013.16" Stretched="True" RegenerateForScreen="False" />
+      </Symbology>
+      <Alpha>255</Alpha>
+      <ResampleMethod>near</ResampleMethod>
+      <Surface On="True" />
+    </Layer>
+    <Layer Name="ManningNFromZonePolygons" Type="LandCover" Checked="True" Filename=".\ManningNFromZonePolygons.tif">
+      <Alpha>128</Alpha>
+      <ResampleMethod>near</ResampleMethod>
+      <ColorByteMap Alpha="128" Values="0,8,7,1,5,6,2,3,4" Colors="-2147483648,-2135305788,-2138164081,-2132315654,-2142877065,-2136901381,-2146968322,-2136125231,-2133197560" />
+    </Layer>
+  </MapLayers>
+  <Terrains Checked="True" Expanded="True">
+    <Layer Name="TerrainWithChannel" Type="TerrainLayer" Filename=".\Terrain\TerrainWithChannel.hdf">
+      <Symbology>
+        <SurfaceFill Colors="-10039894,-256,-16744448,-23296,-7667712,-5952982,-8355712,-1286" Values="898.90625,936.141887557381,941.343888858253,946.068418619567,952.664521555456,961.044864926947,968.808922712454,1013.15625" Stretched="True" RegenerateForScreen="False" />
+      </Symbology>
+      <Alpha>255</Alpha>
+      <ResampleMethod>near</ResampleMethod>
+      <Surface On="True" />
+    </Layer>
+  </Terrains>
+  <CurrentView>
+    <MaxX>415395.028323602</MaxX>
+    <MinX>401912.799535475</MinX>
+    <MaxY>1808226.61931544</MaxY>
+    <MinY>1798748.57727574</MinY>
+  </CurrentView>
+  <VelocitySettings>
+    <Density>1.5</Density>
+    <Lifetime>100</Lifetime>
+    <Radius>0.75</Radius>
+    <Method>2</Method>
+    <Timestep>1</Timestep>
+    <StaticColor>Black</StaticColor>
+  </VelocitySettings>
+  <AnimationSettings>
+    <DelayTimer>901</DelayTimer>
+  </AnimationSettings>
+  <Units>US Customary</Units>
+  <RenderMode>hybrid</RenderMode>
+  <MarksWarpMethod>False</MarksWarpMethod>
+  <CurrentSettings>
+    <ProjectSettings>
+      <RiverStationUnits>Feet</RiverStationUnits>
+      <RiverStationDecimalPlaces>0</RiverStationDecimalPlaces>
+      <HorizontalDecimalPlaces>1</HorizontalDecimalPlaces>
+      <VerticalDecimalPlaces>2</VerticalDecimalPlaces>
+      <XSMaxPoints>450</XSMaxPoints>
+      <LSMaxPoints>1000</LSMaxPoints>
+      <MeshTolerance_MinFaceLength>0.05</MeshTolerance_MinFaceLength>
+      <MeshTolerance_EnsureCellPoint>False</MeshTolerance_EnsureCellPoint>
+    </ProjectSettings>
+    <Folders>
+      <AddDataFolder>..\Muncie</AddDataFolder>
+      <TerrainDestinationFolder>.\Terrain</TerrainDestinationFolder>
+      <LandCoverDestinationFolder>..\HEC-RAS</LandCoverDestinationFolder>
+    </Folders>
+  </CurrentSettings>
+</RASMapper>

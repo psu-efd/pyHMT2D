@@ -12,7 +12,7 @@ examples/SRH_2D_to_OpenFOAM
 
 examples/parametric_study
 
-examples/calibration
+examples/calibration/Backwater-1D
 
 examples/compare_SRH_2D_RAS_2D/backwater_curves
 
@@ -37,6 +37,7 @@ CHIC
 *_XMDF.h5
 *_XMDFC.h5
 
+paper
 
 # HEC-RAS
 # .hdf

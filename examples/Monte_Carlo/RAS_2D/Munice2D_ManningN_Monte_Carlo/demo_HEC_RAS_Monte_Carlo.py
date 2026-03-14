@@ -27,95 +27,8 @@ import json
 
 from HEC_RAS_solver_module import run_one_HEC_RAS_case
 
-plt.rc('text', usetex=True)  #allow the use of Latex for math expressions and equations
+plt.rc('text', usetex=False)  #allow the use of Latex for math expressions and equations
 plt.rc('font', family='serif') #specify the default font family to be "serif"
-
-def generate_ManningN_from_distribution(n_min, n_max, n_mean, n_std, nSamples):
-    """
-    Generate Manning's n values from a distribution. Currently the distribution is a truncated normal distribution.
-
-    Parameters
-    ----------
-    n_min : float
-        minimum value of Manning's n
-    n_max : float
-        maximum value of Manning's n
-    n_mean : float
-        mean value of Manning's n
-    n_std : float
-        std of Manning's n
-    nSamples : int
-        number of samples to generate
-
-    Returns
-    -------
-
-    """
-
-    #convert the user specified min, mean, max, and std to [a, b] on standard normal distribution
-    a, b = (n_min - n_mean) / n_std, (n_max - n_mean) / n_std
-    #print("a,b =", a, b)
-
-    #call scipy's truncnorm to generate the samples (on the standard normal distribution
-    samples = truncnorm(a=a, b=b, scale=1.0).rvs(size=nSamples)
-
-    #convert the random values back to the normal distribution scale
-    samples = samples * n_std + n_mean
-
-    #print("samples = ", samples)
-    print("min, max, and mean of samples = ", np.min(samples), np.max(samples), np.mean(samples))
-
-    #make a plot to show the sample distribution
-    plt.hist(samples, 11, facecolor='gray', alpha=0.75)
-
-    # set the limit for the x and y axes
-    plt.xlim([n_min, n_max])
-    #plt.ylim([0, 45])
-
-    # set x and y axes label and font size
-    plt.xlabel('Manning\'s n', fontsize=16)
-    plt.ylabel('Count', fontsize=16)
-
-    # show the ticks on both axes and set the font size
-    plt.tick_params(axis='both', which='major', labelsize=12)
-
-    # set axis label format
-    plt.gca().xaxis.set_major_formatter(StrMethodFormatter('{x:,.3f}'))
-    plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
-
-    # show title and set font size
-    plt.title('Histogram of sampled Manning\'s n values', fontsize=16)
-
-    # show legend, set its location, font size, and turn off the frame
-    #plt.legend(loc='lower left', fontsize=14, frameon=False)
-    plt.show()
-
-    return samples
-
-def sample_ManningN():
-    """
-
-    Returns
-    -------
-
-    """
-
-    #define parameters
-    n_min = 0.03
-    n_mean = 0.04
-    n_max = 0.05
-    n_std = 0.005
-    nSamples = 100
-
-    #generate random samples for Manning's n
-    samples = generate_ManningN_from_distribution(n_min, n_max, n_mean, n_std, nSamples)
-
-    #save the sampled Manning's n values for record
-    date_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")    #take the current date and time
-    fileName_ManningN = "sampledManningN_"+date_time+".dat"
-    np.savetxt(fileName_ManningN, samples, delimiter=',')
-
-    return samples
 
 def Monte_Carlo_simulations_parallel(samples, ManningN_MaterialID, ManningN_MaterialName, nProcess, bDeleteCaseDir=True):
     """
@@ -285,7 +198,9 @@ def postprocess_results(nSamples):
         #probe WSE at the probing point
         points, WSE, elev = vtk_handler.probeUnstructuredGridVTKOnPoints(pointVTK, reader, 'Water_Elev_ft')
 
-        probed_WSE[i] = WSE
+        print("WSE = ", WSE)
+
+        probed_WSE[i] = WSE[0]
 
         #get the water depth at cell centers from the VTK
         water_depth = vtk_handler.get_uGRid_cell_field_with_name(reader, 'Water_Depth_ft')
@@ -371,7 +286,7 @@ def plot_WSE_exceedance_probability(exceedance_probabilities, probe_WSE_sorted):
     plt.ylim([min(probe_WSE_sorted), max(probe_WSE_sorted)])
 
     # set x and y axes label and font size
-    plt.xlabel(r'Probability of Exceedence (%)', fontsize=16)
+    plt.xlabel(r'Probability of Exceedence (\%)', fontsize=16)
     plt.ylabel(r'WSE (ft)', fontsize=16)
 
     # show the ticks on both axes and set the font size
@@ -384,14 +299,15 @@ def plot_WSE_exceedance_probability(exceedance_probabilities, probe_WSE_sorted):
     # show title and set font size
     plt.title('WSE exceedance of probability at monitoring point', fontsize=16)
 
+    #save the plot to a file
+    plt.savefig("WSE_exceedance_of_probability.png", dpi=300, bbox_inches='tight')
+
     # show legend, set its location, font size, and turn off the frame
     # plt.legend(loc='lower left', fontsize=14, frameon=False)
-    plt.show()
+    #plt.show()
 
 
-if __name__ == "__main__":
-    #sample Manning's n values
-    #samples = sample_ManningN()
+if __name__ == "__main__":   
 
     #or load saved Manning's n values from file
     samples = np.loadtxt("sampledManningN_2022_03_10-10_24_34_PM.dat", delimiter=',')
@@ -406,7 +322,7 @@ if __name__ == "__main__":
 
     #run Monte Carlo simulations in parallel: nProcess is the number of cores to use.
     nProcess = 4   #number of cores to use
-    Monte_Carlo_simulations_parallel(samples, ManningN_MaterialID, ManningN_MaterialName, nProcess=nProcess, bDeleteCaseDir=True)
+    #Monte_Carlo_simulations_parallel(samples, ManningN_MaterialID, ManningN_MaterialName, nProcess=nProcess, bDeleteCaseDir=True)
 
     #or run Monte Carlo simulations in serial
     #Monte_Carlo_simulations_serial(samples, ManningN_MaterialID, ManningN_MaterialName, bDeleteCaseDir=True)
