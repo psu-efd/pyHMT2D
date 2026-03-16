@@ -24,6 +24,7 @@ from vtk.numpy_interface import dataset_adapter as dsa
 import multiprocessing
 import os
 import json
+import sys
 
 from HEC_RAS_solver_module import run_one_HEC_RAS_case
 
@@ -309,8 +310,21 @@ def plot_WSE_exceedance_probability(exceedance_probabilities, probe_WSE_sorted):
 
 if __name__ == "__main__":   
 
-    #or load saved Manning's n values from file
-    samples = np.loadtxt("sampledManningN_2022_03_10-10_24_34_PM.dat", delimiter=',')
+    #Get the parameter file name from the command line
+    if len(sys.argv) != 2:
+        print("Usage: python demo_HEC_RAS_Monte_Carlo.py <parameter_file>")
+        sys.exit(1)
+    parameter_file = sys.argv[1]
+
+    print("Loading Manning's n samples from ", parameter_file)
+
+    #check if the parameter file exists
+    if not os.path.exists(parameter_file):
+        print("Error: the parameter file ", parameter_file, " does not exist.")
+        sys.exit(1)
+
+    #load saved Manning's n values from file
+    samples = np.loadtxt(parameter_file, delimiter=',')
 
     # number of samples
     nSamples = samples.shape[0]
@@ -320,12 +334,14 @@ if __name__ == "__main__":
     ManningN_MaterialID = 2           #Note: In HEC-RAS, the ID is 1-based.
     ManningN_MaterialName = 'channel'
 
-    #run Monte Carlo simulations in parallel: nProcess is the number of cores to use.
-    nProcess = 4   #number of cores to use
-    #Monte_Carlo_simulations_parallel(samples, ManningN_MaterialID, ManningN_MaterialName, nProcess=nProcess, bDeleteCaseDir=True)
+    #The Monte Carlo simulations can be run in parallel or in serial.    
+    bParallel = True
 
-    #or run Monte Carlo simulations in serial
-    #Monte_Carlo_simulations_serial(samples, ManningN_MaterialID, ManningN_MaterialName, bDeleteCaseDir=True)
+    if bParallel:
+        nProcess = 4   #number of cores to use for parallel simulation
+        Monte_Carlo_simulations_parallel(samples, ManningN_MaterialID, ManningN_MaterialName, nProcess=nProcess, bDeleteCaseDir=True)
+    else:
+        Monte_Carlo_simulations_serial(samples, ManningN_MaterialID, ManningN_MaterialName, bDeleteCaseDir=True)
 
     #postprocessing the results
     postprocess_results(nSamples)

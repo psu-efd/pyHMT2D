@@ -1,4 +1,4 @@
-![pyHMT2D logo](logo/pyhmt2d_logo_vel_color_vector.png)
+** pyHMT2D logo
 
 ## *pyHMT2D* - Python-based Hydraulic Modeling Tools - 2D
 
@@ -79,20 +79,35 @@ This section describes how to install *pyHMT2D* on Windows. If you are not very 
 Before installing *pyHMT2D*, make sure that:
 
 - **Operating system**: You are using Windows (10 or newer is recommended).
+- **Git**: Installed and available on your `PATH`.
+  - You can check this in a **Command Prompt** or **PowerShell** window:
+    ```bash
+    git --version
+    ```
+  - If Git is **not** installed:
+    - Go to the official Git website: [https://git-scm.com/download/win](https://git-scm.com/download/win)
+    - Download the **64-bit Git for Windows** installer.
+    - Run the installer and accept the defaults, making sure the option *“Git from the command line and also from 3rd-party software”* (or similar) is selected so `git` is added to your `PATH`.
+    - After installation, open a new Command Prompt or PowerShell window and run `git --version` again to verify.
 - **Python**: Python 3.8 or newer is installed and available on your `PATH`.
   - You can check this in a **Command Prompt** or **PowerShell** window:
     ```bash
     python --version
     pip --version
     ```
+  - If Python is **not** installed:
+    - Go to the official Python website: [https://www.python.org/downloads/windows/](https://www.python.org/downloads/windows/)
+    - Download the **Windows installer** for Python 3.8 or newer. The current **pyHMT2D** is developed and tested with Python 3.12.10.
+    - Run the installer and accept the defaults, making sure the option *“Add Python to PATH”* is selected.
+    - After installation, open a new Command Prompt or PowerShell window and run `python --version` and `pip --version` again to verify.
 - **Hydraulic models**: SRH-2D (via Aquaveo's SMS software) and/or HEC-RAS are installed separately if you plan to control them with *pyHMT2D*. See their official websites for installers and documentation.
 
 ### Clone and install in a development environment (recommended)
 
 These steps install *pyHMT2D* from a **local clone** into a **virtual environment** so it does not interfere with other Python projects on your machine and you can easily run/modify the examples.
 
-1. **Create and activate a virtual environment**  
-  In Windows Command Prompt (cmd.exe) or PowerShell, navigate to a folder of your choice (e.g., `C:\Users\YourName\pyHMT2D`), and create a virtual environment:
+1. **Create and activate a virtual environment**
+  In Windows Command Prompt (cmd.exe) or PowerShell, navigate to a folder of your choice (e.g., `C:\Users\YourName\test`), and create a virtual environment:
   ```bash
   python -m venv .venv
   ```
@@ -106,37 +121,32 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
     .venv\Scripts\Activate.ps1
     ```
   After activation, your prompt should show `(.venv)` at the beginning.
-
-2. **Clone the *pyHMT2D* repository**  
+2. **Clone the *pyHMT2D* repository**
   From the same terminal (with the virtual environment activated), clone the GitHub repository:
   ```bash
   git clone https://github.com/psu-efd/pyHMT2D.git
   cd pyHMT2D
   ```
-
-3. **Install *pyHMT2D* in development mode**  
+3. **Install *pyHMT2D* in development mode**
   Install the package in editable (development) mode, so changes in the source code and examples are picked up immediately:
   ```bash
   pip install -e .
   ```
-
   If you want to update *pyHMT2D* to the latest version, you can pull the latest changes from the GitHub repository:
   ```bash
   git pull
   ```
-
   Because *pyHMT2D* is installed in development (editable) mode (-e), Python immediately sees the updated source—no need to rerun `pip install -e .` unless dependencies in `setup.py` changed.
-
-1. **Verify the installation (optional)**  
+4. **Verify the installation (optional)**
   ```bash
   python -c "import pyHMT2D; print(pyHMT2D.__version__)"
   ```
   If this command prints a version number without errors, *pyHMT2D* is installed correctly and you can start exploring the examples under the `examples` directory.
 
-
 ## Example Usage (see the "examples" directory for more details)
 
 There are at least two ways to use *pyHMT2D*: 
+
 1. use in your own Python code (more flexibility)
 2. command line interface (CLI) (only limited functionalities)
 

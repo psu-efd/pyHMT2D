@@ -377,7 +377,20 @@ if __name__ == "__main__":
     #record the start time
     start_time = time.time()
 
-    samples = np.loadtxt("sampledManningN_2022_03_10-10_24_34_PM.dat", delimiter=',')
+    #Get the parameter file name from the command line
+    if len(sys.argv) != 2:
+        print("Usage: python demo_SRH_2D_Monte_Carlo.py <parameter_file>")
+        sys.exit(1)
+    parameter_file = sys.argv[1]
+
+    print("Loading Manning's n samples from ", parameter_file)
+
+    #check if the parameter file exists
+    if not os.path.exists(parameter_file):
+        print("Error: the parameter file ", parameter_file, " does not exist.")
+        sys.exit(1)
+
+    samples = np.loadtxt(parameter_file, delimiter=',')
 
     # number of samples
     nSamples = samples.shape[0]
