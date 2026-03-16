@@ -2,6 +2,9 @@
 
 This example demonstrates how to use **pyHMT2D**'s for Monte Carlo (MC) simulation. MC simulation is a powerful tool for uncertainty analysis. In this example, we show how to use **pyHMT2D**'s to perform MC simulation for the Manning's $n$ of the main channel in the "Muncie" case. MC simulations with both SRH-2D and HEC-RAS 2D are performed.
 
+**Figure 1**: Scheme of the MC simulation. The main channel is the one with the Manning's $n$ that is changed in the MC simulation. A monitoring point is located upstream of the main channel. Water surface elevation (WSE) at the monitoring point is recorded and used to calculate the exceedance probability of the WSE.
+![Scheme of the MC simulation](scheme.png)
+
 ## Generate the Manning's $n$ samples
 
 The Manning's n parameter samples are generated in "`generate_parameters`": 
@@ -25,6 +28,15 @@ or
 cd HEC_RAS_2D
 python demo_HEC_RAS_Monte_Carlo.py <parameter_file>
 ```
+
+## Postprocess the results
+
+The MC simulations save each result in a separate directory. The result is in VTK format and can be processed for statistics. The WSE at the monitoring point is analyzed to calculate the exceedance probability of the WSE.
+
+**Figure 2**: Exceedance probability of the WSE at the monitoring point.
+![Exceedance probability of the WSE at the monitoring point with HEC-RAS 2D](RAS_2D/WSE_exceedance_of_probability.png)
+![Exceedance probability of the WSE at the monitoring point with SRH-2D](SRH_2D/WSE_exceedance_of_probability.png)
+
 
 ## Parallel or serial simulation
 
