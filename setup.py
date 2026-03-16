@@ -19,21 +19,17 @@ DESCRIPTION = 'Two-dimensional hydraulic modeling tools in Python'
 URL = 'https://github.com/psu-efd/pyHMT2D'
 EMAIL = 'xiaofengliu19@gmail.com'
 AUTHOR = 'Xiaofeng Liu'
-#REQUIRES_PYTHON = '>=3.6.0, <3.9.9'
 REQUIRES_PYTHON = '>=3.8.0, <3.14.0'
 VERSION = '1.0.6'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     'numpy', 'vtk>=9.0.2', 'h5py', 'scipy', 'affine', 'meshio', 'scikit-optimize',
-    'rasterio',
+    'rasterio', 'pywin32'
 ]
 
 # What packages are optional?
-EXTRAS = {
-     'HEC-RAS Control': ['pywin32'],
-     'Georeferencing': ['osgeo'],
-}
+EXTRAS = {}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -45,7 +41,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.md' is present in your MANIFEST.in file!
 try:
-    with io.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
         long_description = '\n' + f.read()
 except FileNotFoundError:
     long_description = DESCRIPTION
@@ -114,7 +110,6 @@ setup(
 
     entry_points={
         'console_scripts': ['hmt-ras-to-srh=pyHMT2D.cli:ras_to_srh',
-                            'hmt-calibrate=pyHMT2D.cli:hmt_calibrate',
                             'hmt-srh-to-vtk=pyHMT2D.cli:hmt_srh_to_vtk',
                             ],
     },

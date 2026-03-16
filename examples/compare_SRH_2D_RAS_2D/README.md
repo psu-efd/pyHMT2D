@@ -42,5 +42,4 @@ The workflow is typically as follows:
 
 ## Example cases
 
-- Backwater curve
 - Muncie2D

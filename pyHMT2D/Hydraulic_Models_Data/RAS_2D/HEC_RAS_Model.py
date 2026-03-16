@@ -246,8 +246,7 @@ class HEC_RAS_Model(HydraulicModel):
 
     HEC-RAS Model controls the run of HEC-RAS. A plan can be loaded and executed.
     Currently HEC_RAS_Model has very limited capability to modify HEC-RAS project,
-    plan, geometry, and flow data. It is mainly used for calibration and Monte
-    Carlo simulations.
+    plan, geometry, and flow data.     It is mainly used for Monte Carlo or batch simulations.
 
     Attributes:
         _faceless : bool

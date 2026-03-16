@@ -21,8 +21,8 @@ examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/cases
 examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/full_case
 examples/RAS_2D_Monte_Carlo/Munice2D_ManningN_Monte_Carlo/try_isolines.py
 
-#cli
-examples/command_line_interface/hmt_calibrate
+examples/RAS_2D_Data
+examples/SRH_2D_Data
 
 examples/SRH_2D_to_PINN
 
@@ -204,6 +204,21 @@ crashlytics-build.properties
 fabric.properties
 
 
+# include regardless other ignore rules 
+# Always include the assets/RAS_Models directory
+!examples/assets/RAS_Models/
+!examples/assets/RAS_Models/Muncie2D/
+!examples/assets/RAS_Models/Muncie2D/PeakFlow/
+!examples/assets/RAS_Models/Muncie2D/Terrain/
+
+!examples/calibration/RAS-2D/Munice2D_ManningN_calibration/base_case/
+!examples/calibration/RAS-2D/Munice2D_ManningN_calibration/HWMs.dat
+
+!examples/calibration/SRH-2D/Munice2D_ManningN_calibration/HWMs.dat
+
+!examples/command_line_interface/ras_to_srh/
+
+!examples/compare_SRH_2D_RAS_2D/Muncie2D/
 
 
 

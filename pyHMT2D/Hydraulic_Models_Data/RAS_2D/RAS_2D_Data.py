@@ -45,7 +45,7 @@ class RAS_2D_Data(HydraulicData):
     This class is designed to read HEC-RAS results in HDF format. It can 
     save RAS2D results into VTK format for visualization in Paraview, parse
     RAS2D mesh information and convert/save to SRH-2D format, query RAS2D
-    results (e.g., for calibration), etc.
+    results (e.g., for post-processing or analysis), etc.
 
     In HEC-RAS, one plan corresponds to one HDF file. So essentially, this class is designed to read one HDF file (one plan results).
     
@@ -1169,11 +1169,11 @@ class RAS_2D_Data(HydraulicData):
         Parameters
         ----------
         materialIDs : list
-            material ID list
+            material ID list (0-based)
         newManningsNValues : list
             new Manning's n values in a list
         materialNames : list
-            names of the material in a list
+            names of the material in a list (0-based)
 
 
         Returns
