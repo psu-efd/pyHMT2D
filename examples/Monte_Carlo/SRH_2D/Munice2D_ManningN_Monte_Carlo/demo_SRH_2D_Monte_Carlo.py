@@ -407,7 +407,7 @@ if __name__ == "__main__":
     bParallel = True
     if bParallel:
         nProcess = 4   #number of cores to use
-        #Monte_Carlo_simulations_parallel(srhcontrol_file, samples, ManningN_MaterialIDs, ManningN_MaterialNames, nProcess=nProcess, bDeleteCaseDir=True)
+        Monte_Carlo_simulations_parallel(srhcontrol_file, samples, ManningN_MaterialIDs, ManningN_MaterialNames, nProcess=nProcess, bDeleteCaseDir=True)
     else:
         Monte_Carlo_simulations_serial(srhcontrol_file, samples, ManningN_MaterialIDs, ManningN_MaterialNames, bDeleteCaseDir=True)
         #pass
