@@ -1,0 +1,70 @@
+ 
+                                              HEC-RAS - River Analysis System
+ 
+ 
+Project File:  C:\Users\xzl123\Dropbox\PycharmProjects\pyHMT2D\examples\RAS_2D_Monte_Carlo\Munice2D_ManningN_Monte_Carlo\full_case\Muncie2D.prj
+ 
+Project Name:  Muncie2D
+ 
+ 
+Plan Name:     Peak_flow_plan
+ 
+Short ID:      Peak flow
+ 
+
+Starting Time:   31Dec1899 2400
+
+Ending Time:     01Jan1900 0200
+
+
+                ################################################
+                #                                              #
+                #                                              #
+                #       1D and 2D Unsteady Flow Module         #
+                #                                              #
+                #                                              #
+                #          HEC-RAS 6.1 September               #
+                #                                              #
+                #             10MAR22 at 21:32:35              #
+                #                                              #
+                ################################################
+                
+ 
+ 
+ 
+
+         US Inflow      DS Outflow       Lat Hydro        SA Hydro     Groundwater      Diversions   Precip Excess
+         *********      **********       *********        ********     ***********      **********   *************
+                                                                                                                                  
+
+    Start 1D Reach  Final 1D Reach   Starting SA's      Final SA's
+    **************  **************   *************      **********
+                                                                  
+
+
+
+                 ***   Volume Accounting for 2D Flow Area in Acre Feet   ***
+
+           2D Area    Starting Vol      Ending Vol      Cum Inflow     Cum Outflow           Error   Percent Error
+           *******    ************      **********      **********     ***********           *****   *************
+ 
+ 
+       Muncie_Geom           2476.           2105.           3669.           3069.     -970.724507           24.03
+
+
+
+                 ***   Total Volume Accounting (for the entire model) in Acre Feet   ***
+
+Total Boundary Flux of Water In            3669.
+Total Boundary Flux of Water Out           3069.
+
+Starting Volume                            2476.
+Ending Volume                              2105.
+
+
+                             Error   Percent Error
+                             *****   *************
+                       -970.724507           15.80
+
+
+
