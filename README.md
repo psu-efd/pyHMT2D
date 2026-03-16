@@ -47,7 +47,6 @@ Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling
 
 With the control and automation capability above, it is much easier to do the following:
 
-- automatic calibration of models with available optimization and calibration Python packages. Currently, *scipy*'s *optimize* module is supported, which includes many local and global optimization methods.
 - Monte-Carlo simulations with scripting and Python’s statistic libraries
 - ...
 
@@ -64,31 +63,12 @@ This package uses the following libraries:
 - [h5py](https://www.h5py.org/)
 - [vtk](https://github.com/Kitware/VTK)
 - [rasterio](https://rasterio.readthedocs.io/) (used for reading/interpolating terrain GeoTIFFs; preferred on Windows)
-- [GDAL](https://pypi.org/project/GDAL/) (optional; legacy/alternative backend for georeferencing; see [Installing GDAL (Windows)](#installing-gdal-windows) below)
-- [pywin32](https://pypi.org/project/pywin32/) (optional; only if you want to use *pyHMT2D* to control HEC-RAS)
-- [affine](https://pypi.org/project/affine/) (optional; only if you want to use *pyHMT2D* to read HEC-RAS 2D results)
+- [pywin32](https://pypi.org/project/pywin32/) (used by *pyHMT2D* to control HEC-RAS)
+- [affine](https://pypi.org/project/affine/) (used by *pyHMT2D* to read HEC-RAS 2D results)
+- [meshio](https://pypi.org/project/meshio/) (used by *pyHMT2D* to read and write mesh files)
+- [scikit-optimize](https://scikit-optimize.github.io/) (used by *pyHMT2D* to calibrate hydraulic model parameters)
 
 See *pyHMT2D*'s User Manual for how to install these libraries.
-
-#### Installing GDAL (Windows)
-
-GDAL is needed only for georeferencing features. On Windows, `pip install GDAL` often fails; using a **pre-built wheel** is recommended.
-
-1. **Download a wheel** for your Python version and 64-bit Windows from [Christoph Gohlke's geospatial-wheels](https://github.com/cgohlke/geospatial-wheels/releases). Choose the `.whl` that matches your Python (e.g. `cp312` for Python 3.12) and `win_amd64`.
-
-2. **Install it with pip** (with your virtual environment activated):
-
-   ```bash
-   pip install path\to\GDAL-3.x.x-cp312-cp312-win_amd64.whl
-   ```
-
-   Replace the filename with the one you downloaded.
-
-3. **Verify:**
-
-   ```bash
-   python -c "from osgeo import gdal; print(gdal.__version__)"
-   ```
 
 ## Installation
 
@@ -107,79 +87,48 @@ Before installing *pyHMT2D*, make sure that:
     ```
 - **Hydraulic models**: SRH-2D (via Aquaveo's SMS software) and/or HEC-RAS are installed separately if you plan to control them with *pyHMT2D*. See their official websites for installers and documentation.
 
-### Quick start (recommended for most users)
+### Clone and install in a development environment (recommended)
 
-These steps install *pyHMT2D* into a **virtual environment** so it does not interfere with other Python projects on your machine.
+These steps install *pyHMT2D* from a **local clone** into a **virtual environment** so it does not interfere with other Python projects on your machine and you can easily run/modify the examples.
 
-1. **Create and activate a virtual environment**
-  In Windows Command Prompt (cmd.exe), navigate to a folder of your choice (e.g., `C:\Users\YourName\pyHMT2D`), and create a virtual environment:
+1. **Create and activate a virtual environment**  
+  In Windows Command Prompt (cmd.exe) or PowerShell, navigate to a folder of your choice (e.g., `C:\Users\YourName\pyHMT2D`), and create a virtual environment:
   ```bash
   python -m venv .venv
   ```
-   Then activate the virtual environment:
+  Then activate the virtual environment:
   - **Command Prompt (cmd.exe)**:
     ```bash
     .venv\Scripts\activate
     ```
-  - If you use **PowerShell**:
+  - **PowerShell**:
     ```bash
     .venv\Scripts\Activate.ps1
     ```
-   After activation, your prompt should show `(.venv)` at the beginning.
-   
-2. **Install *pyHMT2D* from PyPI**
+  After activation, your prompt should show `(.venv)` at the beginning.
+
+2. **Clone the *pyHMT2D* repository**  
+  From the same terminal (with the virtual environment activated), clone the GitHub repository:
   ```bash
-   pip install pyHMT2D
+  git clone https://github.com/psu-efd/pyHMT2D.git
+  cd pyHMT2D
   ```
-3. **Verify the installation (optional)**
+
+3. **Install *pyHMT2D* in development mode**  
+  Install the package in editable (development) mode, so changes in the source code and examples are picked up immediately:
   ```bash
-   python -c "import pyHMT2D; print(pyHMT2D.__version__)"
+  pip install -e .
   ```
-   If this command prints a version number without errors, *pyHMT2D* is installed correctly.
+  - Use `pip install -e ".[HEC-RAS Control]"` if you need HEC-RAS control (adds `pywin32`).
 
-### Alternative installation methods
+4. **Verify the installation (optional)**  
+  ```bash
+  python -c "import pyHMT2D; print(pyHMT2D.__version__)"
+  ```
+  If this command prints a version number without errors, *pyHMT2D* is installed correctly and you can start exploring the examples under the `examples` directory.
 
-#### Install directly from GitHub with `pip`
 
-Use this if you want the latest development version:
-
-```bash
-pip install git+https://github.com/psu-efd/pyHMT2D.git
-```
-
-#### Development setup (pip only)
-
-If you develop or run from a local clone and use **only pip** (no conda):
-
-**Python package dependencies**
-
-- **Required:** `numpy`, `vtk>=9.0.2`, `h5py`, `scipy`, `affine`, `meshio`, `scikit-optimize`
-- **Optional (HEC-RAS control):** `pywin32`
-- **Optional (georeferencing):** `GDAL` — on Windows, use a [pre-built wheel](#installing-gdal-windows) (recommended).
-
-**Create and use a virtual environment**
-
-From the project root (where `setup.py` and `requirements.txt` are):
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e .
-```
-
-- Use `pip install -e ".[HEC-RAS Control]"` if you need HEC-RAS control (adds `pywin32`).
-- To install the package from PyPI instead of the local clone: `pip install pyHMT2D` (and optionally `pip install pyHMT2D[HEC-RAS Control]`).
-
-#### Install from a local clone (advanced)
-
-If you prefer to work with a local copy of the source code (for development or debugging), clone the GitHub repository to your local machine:
-
-```bash
-git clone https://github.com/psu-efd/pyHMT2D.git
-```
-
-To make the Python interpreter aware of *pyHMT2D*, you need to add the path to the cloned directory to the `PYTHONPATH` environment variable (see the User Manual for details), or add it at runtime in your Python code. For example:
+To make the Python interpreter aware of *pyHMT2D*, you need to add the path to the cloned directory to the `PYTHONPATH` environment in your Python code. For example:
 
 ```python
 import sys
@@ -202,10 +151,10 @@ One example to use *pyHMT2D* to control the run of SRH-2D is as follows:
 
 ```python
 # the follow should be modified based on your installation of SRH-2D
-version = "3.3"
-srh_pre_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe\SRH_Pre_Console.exe"
-srh_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe\SRH-2D_V330_Console.exe"
-extra_dll_path = r"C:\Program Files\SMS 13.1 64-bit\Python36\Lib\site-packages\srh2d_exe"
+version = "3.7.1"
+srh_pre_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe\SRH_Pre_Console.exe"
+srh_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe\SRH-2D_Console.exe"
+extra_dll_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe"
 
 # create a SRH-2D model instance
 my_srh_2d_model = pyHMT2D.SRH_2D.SRH_2D_Model(
@@ -254,13 +203,6 @@ my_hec_ras_model.close_project()
 
 # quit HEC-RAS
 my_hec_ras_model.exit_model()
-```
-
-The last example is to use *pyHMT2D* to perform auto-calibration in two lines:
-
-```python
-my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
-my_calibrator.calibrate()
 ```
 
 ### Command line interface (CLI)

@@ -2952,7 +2952,7 @@ class SRH_2D_Data(HydraulicData):
     This class is designed to read SRH-2D results in format other than VTK. It can 
     save SRH-2D results into VTK format for visualization in Paraview, parse
     SRH-2D mesh information and convert/save to other formats, query SRH-2D
-    results (e.g., for calibration), etc.
+    results (e.g., for post-processing or analysis), etc.
 
     Between srhdryo and srhsif, only one of them is needed depending on the
     type of the input file.

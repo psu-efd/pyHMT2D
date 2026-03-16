@@ -19,7 +19,7 @@ class SRH_2D_Model(HydraulicModel):
 
     SRH_2D_Model controls the run of SRH-2D. A case can be loaded and executed. Currently
     SRH_2D_Model has very limited capability to modify geometry, mesh, and flow data. One
-    of the main use scenarios is for calibration or Monte Carlo simulations.
+    of the main use scenarios is for Monte Carlo or batch simulations.
 
     Attributes:
         _faceless : bool
@@ -211,6 +211,16 @@ class SRH_2D_Model(HydraulicModel):
         case_file_name = self._srh_2d_data.get_case_name() + ".DAT"           #e.g., Cimarron.DAT
         case_INF_file_name = self._srh_2d_data.get_case_name() + "_INF.DAT"   #e.g., Cimarron_INF.DAT
 
+        #validate sleepTime is a positive number between (1 and 100)
+        if sleepTime < 1.0 or sleepTime > 100.0:
+            print("sleepTime must be a positive number between (1 and 100) seconds. Exiting ...")
+            sys.exit()
+
+        #validate sleepTime is a float
+        if not isinstance(sleepTime, float):
+            print("sleepTime must be a float. Exiting ...")
+            sys.exit()
+
         print("Running SRH-2D case with input file:", case_file_name)
 
         #get the start and end time in hours
@@ -246,7 +256,7 @@ class SRH_2D_Model(HydraulicModel):
 
                 previous_checked_simulation_time = startTime  # this may not work if it is a restart simulation (?)
 
-                time.sleep(10)  # check the simulation progress every 5 s (this value needs to be updated for each case
+                time.sleep(sleepTime)  # check the simulation progress every 5 s (this value needs to be updated for each case
                 # depending on how long the simulation will be).
 
                 # get the latest simulation information from the INF file
