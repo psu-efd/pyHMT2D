@@ -41,13 +41,13 @@ paper
 
 # HEC-RAS
 # .hdf
-*.IC.*
-Backup.*
-*.b*
-*.c*
-*.dss
-*.rasmap.backup
-*.x*
+#*.IC.*
+#Backup.*
+#*.b*
+#*.c*
+#*.dss
+#*.rasmap.backup
+#*.x*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

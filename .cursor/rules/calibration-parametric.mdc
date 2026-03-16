@@ -1,0 +1,105 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Calibration and Parametric Study
+
+This rule covers the calibration and parametric study capabilities of pyHMT2D.
+
+## Model Calibration
+
+Location: [pyHMT2D/Calibration/](mdc:pyHMT2D/Calibration)
+
+### Features
+- Automatic calibration using scipy's optimize module
+- Support for both local and global optimization methods
+- Configurable through JSON configuration files
+- Support for multiple calibration parameters
+- Objective function customization
+
+### Usage Example
+```python
+import pyHMT2D
+
+# Create calibrator instance
+my_calibrator = pyHMT2D.Calibration.Calibrator("calibration.json")
+
+# Run calibration
+my_calibrator.calibrate()
+```
+
+### Configuration File Format
+```json
+{
+    "model_type": "SRH-2D",
+    "parameters": {
+        "manning_n": {
+            "initial": 0.03,
+            "min": 0.01,
+            "max": 0.1
+        }
+    },
+    "objective_function": {
+        "type": "rmse",
+        "observed_data": "path/to/observed.csv"
+    }
+}
+```
+
+## Parametric Study
+
+Location: [pyHMT2D/Parametric_Study/](mdc:pyHMT2D/Parametric_Study)
+
+### Features
+- Systematic parameter variation
+- Batch simulation management
+- Result collection and analysis
+- Support for multiple parameters
+- Parallel execution support
+
+### Usage Example
+```python
+import pyHMT2D
+
+# Create parametric study instance
+my_study = pyHMT2D.Parametric_Study.ParametricStudy("study_config.json")
+
+# Run study
+my_study.run()
+```
+
+### Study Types
+1. Single Parameter Studies
+   - Vary one parameter while keeping others constant
+   - Useful for sensitivity analysis
+
+2. Multi-Parameter Studies
+   - Full factorial designs
+   - Latin Hypercube sampling
+   - Custom parameter combinations
+
+3. Monte Carlo Studies
+   - Random parameter sampling
+   - Statistical analysis of results
+   - Uncertainty quantification
+
+## Result Analysis
+
+Common analysis tools for both calibration and parametric studies:
+
+1. Statistical Analysis
+   - Mean, standard deviation
+   - Confidence intervals
+   - Sensitivity indices
+
+2. Visualization
+   - Parameter-response plots
+   - Contour plots
+   - Time series analysis
+
+3. Export Options
+   - CSV/Excel export
+   - VTK visualization
+   - Custom report generation
+

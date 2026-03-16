@@ -1,0 +1,109 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Command-Line Interface Usage
+
+This rule covers the command-line interface (CLI) tools available in pyHMT2D.
+
+## Available Commands
+
+Location: [pyHMT2D/cli/](mdc:pyHMT2D/cli)
+
+### Model Calibration
+```bash
+hmt-calibrate calibration.json
+```
+- Runs model calibration using the specified configuration file
+- Supports both SRH-2D and HEC-RAS models
+- Outputs calibration results and statistics
+
+### Model Conversion
+```bash
+hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+```
+- Converts HEC-RAS 2D case to SRH-2D format
+- Requires HDF file and terrain data
+- Outputs SRH-2D compatible files
+
+### Result Processing
+```bash
+hmt-process-results results.hdf --output vtk
+```
+- Processes model results
+- Converts to various formats (VTK, CSV, etc.)
+- Generates analysis reports
+
+## Configuration Files
+
+### Calibration Configuration
+```json
+{
+    "model_type": "SRH-2D",
+    "parameters": {
+        "manning_n": {
+            "initial": 0.03,
+            "min": 0.01,
+            "max": 0.1
+        }
+    },
+    "objective_function": {
+        "type": "rmse",
+        "observed_data": "observed.csv"
+    }
+}
+```
+
+### Parametric Study Configuration
+```json
+{
+    "study_type": "single_parameter",
+    "parameter": "manning_n",
+    "values": [0.01, 0.02, 0.03, 0.04, 0.05],
+    "output_format": "vtk"
+}
+```
+
+## Common Options
+
+Most commands support these options:
+- `--verbose`: Enable detailed output
+- `--output-dir`: Specify output directory
+- `--format`: Choose output format
+- `--parallel`: Enable parallel processing
+
+## Examples
+
+1. Basic Calibration:
+```bash
+hmt-calibrate config.json --output-dir results
+```
+
+2. Model Conversion with Custom Options:
+```bash
+hmt-ras-to-srh input.hdf terrain.tif output --format vtk --parallel
+```
+
+3. Result Processing with Multiple Formats:
+```bash
+hmt-process-results results.hdf --format vtk,csv,excel
+```
+
+## Error Handling
+
+Common error messages and solutions:
+1. File not found
+   - Check file paths in configuration
+   - Verify file permissions
+
+2. Model execution errors
+   - Check model installation
+   - Verify model paths
+   - Check input data validity
+
+3. Conversion errors
+   - Verify input file formats
+   - Check terrain data compatibility
+   - Ensure sufficient disk space
+

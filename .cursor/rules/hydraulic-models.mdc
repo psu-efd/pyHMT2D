@@ -1,0 +1,98 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Hydraulic Models Integration
+
+This rule covers the supported hydraulic models and how to work with them in pyHMT2D.
+
+## Supported Models
+
+### SRH-2D
+- Location: [pyHMT2D/SRH_2D/](mdc:pyHMT2D/SRH_2D)
+- Key Features:
+  - Read SRH-2D results into NumPy arrays
+  - Convert results to VTK format
+  - Control and modify simulations
+  - Sample and probe results
+
+Example usage:
+```python
+import pyHMT2D
+
+# Create SRH-2D model instance
+my_srh_2d_model = pyHMT2D.SRH_2D.SRH_2D_Model(
+    version="3.3",
+    srh_pre_path="path/to/SRH_Pre_Console.exe",
+    srh_path="path/to/SRH-2D_V330_Console.exe",
+    extra_dll_path="path/to/dlls"
+)
+
+# Initialize and run
+my_srh_2d_model.init_model()
+my_srh_2d_model.open_project("project.srhhydro")
+my_srh_2d_model.run_pre_model()
+my_srh_2d_model.run_model()
+```
+
+### HEC-RAS 2D
+- Location: [pyHMT2D/RAS_2D/](mdc:pyHMT2D/RAS_2D)
+- Key Features:
+  - Read RAS2D results (HDF files)
+  - Convert to VTK format
+  - Convert mesh and boundary conditions
+  - Control simulations
+
+Example usage:
+```python
+import pyHMT2D
+
+# Create HEC-RAS model instance
+my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(
+    version="5.0.7",
+    faceless=False
+)
+
+# Initialize and run
+my_hec_ras_model.init_model()
+my_hec_ras_model.open_project("project.prj", "terrain.tif")
+my_hec_ras_model.run_model()
+```
+
+### Backwater-1D
+- A simple demonstration model
+- Used for testing and educational purposes
+
+## Model Interoperability
+
+The package provides tools for converting between different model formats:
+
+1. RAS2D to SRH-2D conversion:
+   - Mesh conversion
+   - Boundary condition conversion
+   - Manning's n data conversion
+
+2. Result Comparison:
+   - Compare results between different models
+   - Support for different mesh types
+   - Statistical analysis tools
+
+## Model Control
+
+Common operations for all models:
+- Project opening/closing
+- Model initialization
+- Simulation running
+- Result reading
+- Model cleanup
+
+## Data Processing
+
+All models support:
+- Reading results into NumPy arrays
+- Converting to VTK format
+- Sampling and probing
+- Statistical analysis
+- Visualization
+

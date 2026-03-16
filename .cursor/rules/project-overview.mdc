@@ -1,0 +1,65 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# pyHMT2D Project Overview
+
+pyHMT2D is a Python package for controlling and automating 2D hydraulic modeling, with support for pre- and post-processing simulation results. The package currently supports:
+
+- SRH-2D (USBR)
+- HEC-RAS (USACE)
+- Backwater-1D (demonstration model)
+
+## Key Components
+
+The main package structure is organized as follows:
+
+- [pyHMT2D/](mdc:pyHMT2D) - Core package directory
+  - [__init__.py](mdc:pyHMT2D/__init__.py) - Package initialization
+  - [__about__.py](mdc:pyHMT2D/__about__.py) - Package metadata
+  - [__common__.py](mdc:pyHMT2D/__common__.py) - Common utilities
+  - [Calibration/](mdc:pyHMT2D/Calibration) - Model calibration tools
+  - [Parametric_Study/](mdc:pyHMT2D/Parametric_Study) - Parametric study tools
+  - [cli/](mdc:pyHMT2D/cli) - Command-line interface
+  - [Hydraulic_Models_Data/](mdc:pyHMT2D/Hydraulic_Models_Data) - Model data handling
+  - [Misc/](mdc:pyHMT2D/Misc) - Miscellaneous utilities
+
+## Key Features
+
+1. Model Control and Automation
+   - Batch simulations
+   - Model calibration
+   - Monte-Carlo simulations
+
+2. Data Processing
+   - Reading model results into NumPy arrays
+   - Converting results to VTK format
+   - Sampling and probing simulation results
+
+3. Model Interoperability
+   - Converting between SRH-2D and HEC-RAS formats
+   - Mesh and boundary condition conversion
+   - Result comparison tools
+
+4. Visualization and Analysis
+   - VTK-based visualization
+   - Result analysis tools
+   - Terrain data manipulation
+
+## Getting Started
+
+1. Installation:
+   ```bash
+   pip install pyHMT2D
+   ```
+
+2. Basic Usage:
+   ```python
+   import pyHMT2D
+   ```
+
+3. Documentation:
+   - See [docs/](mdc:docs) for detailed documentation
+   - Check [examples/](mdc:examples) for usage examples
+
