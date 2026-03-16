@@ -220,6 +220,9 @@ fabric.properties
 
 !examples/compare_SRH_2D_RAS_2D/Muncie2D/
 
+!examples/Monte_Carlo/RAS_2D/Munice2D_ManningN_Monte_Carlo/sampledManningN_2022_03_10-10_24_34_PM.dat
+!examples/Monte_Carlo/SRH_2D/Munice2D_ManningN_Monte_Carlo/sampledManningN_2022_03_10-10_24_34_PM.dat
+
 
 
 
