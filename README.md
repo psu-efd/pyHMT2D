@@ -119,25 +119,26 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
   ```bash
   pip install -e .
   ```
-  - Use `pip install -e ".[HEC-RAS Control]"` if you need HEC-RAS control (adds `pywin32`).
 
-4. **Verify the installation (optional)**  
+  If you want to update *pyHMT2D* to the latest version, you can pull the latest changes from the GitHub repository:
+  ```bash
+  git pull
+  ```
+
+  Because *pyHMT2D* is installed in development (editable) mode (-e), Python immediately sees the updated source—no need to rerun `pip install -e .` unless dependencies in `setup.py` changed.
+
+1. **Verify the installation (optional)**  
   ```bash
   python -c "import pyHMT2D; print(pyHMT2D.__version__)"
   ```
   If this command prints a version number without errors, *pyHMT2D* is installed correctly and you can start exploring the examples under the `examples` directory.
 
 
-To make the Python interpreter aware of *pyHMT2D*, you need to add the path to the cloned directory to the `PYTHONPATH` environment in your Python code. For example:
+## Example Usage (see the "examples" directory for more details)
 
-```python
-import sys
-sys.path.append(r"C:\Users\YourName\path\to\pyHMT2D")
-```
-
-## Example Usage
-
-There are at least two ways to use *pyHMT2D*: (1) use in your own Python code (more flexibility) and (2) command line interface (CLI) (only limited functionalities).
+There are at least two ways to use *pyHMT2D*: 
+1. use in your own Python code (more flexibility)
+2. command line interface (CLI) (only limited functionalities)
 
 ### Use in your own Python code (more flexibility)
 
@@ -187,13 +188,13 @@ Another example to use *pyHMT2D* to control the run of HEC-RAS is as follows:
 
 ```python
 # create a HEC-RAS model instance
-my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="5.0.7", faceless=False)
+my_hec_ras_model = pyHMT2D.RAS_2D.HEC_RAS_Model(version="6.6", faceless=False)   #assume HEC-RAS 6.6 is installed
 
 # initialize the HEC-RAS model
 my_hec_ras_model.init_model()
 
 # open a HEC-RAS project
-my_hec_ras_model.open_project("Muncie2D.prj", "Terrain/TerrainMuncie_composite.tif")
+my_hec_ras_model.open_project("Muncie2D.prj")
 
 # run the HEC-RAS model's current project
 my_hec_ras_model.run_model()
@@ -207,7 +208,7 @@ my_hec_ras_model.exit_model()
 
 ### Command line interface (CLI)
 
-Only limited functions of *pyHMT2D* can be used in this way. You only need to type commands in a Windows terminal, e.g.,
+Only limited functionalities of *pyHMT2D* can be used in this way. You only need to type commands in a Windows terminal (with the virtual Python environment activated), e.g.,
 
 ```bash
 hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
