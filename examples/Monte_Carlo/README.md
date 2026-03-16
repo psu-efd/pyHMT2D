@@ -33,9 +33,9 @@ python demo_HEC_RAS_Monte_Carlo.py <parameter_file>
 
 The MC simulations save each result in a separate directory. The result is in VTK format and can be processed for statistics. The WSE at the monitoring point is analyzed to calculate the exceedance probability of the WSE.
 
-**Figure 2**: Exceedance probability of the WSE at the monitoring point.
-![Exceedance probability of the WSE at the monitoring point with HEC-RAS 2D](RAS_2D/WSE_exceedance_of_probability.png)
-![Exceedance probability of the WSE at the monitoring point with SRH-2D](SRH_2D/WSE_exceedance_of_probability.png)
+**Figure 2**: Exceedance probability of the WSE at the monitoring point with HEC-RAS 2D and SRH-2D.
+![Exceedance probability of the WSE at the monitoring point with HEC-RAS 2D](RAS_2D/Muncie2D_ManningN_Monte_Carlo/WSE_exceedance_of_probability.png)
+![Exceedance probability of the WSE at the monitoring point with SRH-2D](SRH_2D/Muncie2D_ManningN_Monte_Carlo/WSE_exceedance_of_probability.png)
 
 
 ## Parallel or serial simulation

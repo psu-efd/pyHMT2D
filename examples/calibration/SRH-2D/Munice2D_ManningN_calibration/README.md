@@ -22,15 +22,13 @@ The calibration is performed using the gp_minimize function from the scikit-opti
 From this directory (where `base_case` and `HWMs.dat` are located):
 
 ```bash
-python demo_calibration_RAS_2D.py
+python demo_calibration_SRH_2D_gp.py
 ```
 
-Requires: `pyHMT2D` and `scikit-optimize` (`pip install scikit-optimize`). The script uses only pyHMT2D’s basic features: `HEC_RAS_Model`, `RAS_2D_Data`, and `vtkHandler` for running HEC-RAS, converting results to VTK, and probing WSE at the high water mark points. 
-
-
+The script uses only pyHMT2D’s basic features: `HEC_RAS_Model`, `RAS_2D_Data`, and `vtkHandler` for running HEC-RAS, converting results to VTK, and probing WSE at the high water mark points. 
 
 ## Note
-The calibration script was generated in Cursor with the following prompt:
+- The calibration script was generated in Cursor with the following prompt:
 ```
 I need to create a demonstration for the calibration of a HEC-RAS 2D case. The base case has already been prepared in "base_case". The steps and requirements are in @examples/calibration/RAS-2D/Munice2D_ManningN_calibration/README.md The Python script should use pyHMT2D package's basic funcationalities. In the "examples", I already have demonstration cases on how to control HEC-RAS 2D runs, process HEC-RAS 2D results to vtk, sampling at ponts on vtk, etc. 
 ```
