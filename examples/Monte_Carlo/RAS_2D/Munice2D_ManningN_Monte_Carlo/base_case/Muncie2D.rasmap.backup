@@ -107,13 +107,13 @@
       </Layer>
       <Layer Name="depth" Type="RASResultsMap">
         <LabelFeatures Checked="True" PercentPosition="0" rows="1" cols="1" r0c0="FID" Position="5" Color="-16777216" FontSize="8.25" />
-        <MapParameters MapType="depth" LayerName="Depth" Terrain="TerrainWithChannel" ProfileIndex="24" ProfileName="01JAN1900 06:00:00" ArrivalDepth="0" />
+        <MapParameters MapType="depth" LayerName="Depth" Terrain="TerrainWithChannel" ProfileIndex="4" ProfileName="01JAN1900 02:00:00" ArrivalDepth="0" />
       </Layer>
       <Layer Name="velocity" Type="RASResultsMap" Checked="True">
-        <MapParameters MapType="velocity" ProfileIndex="24" ProfileName="01JAN1900 06:00:00" />
+        <MapParameters MapType="velocity" ProfileIndex="4" ProfileName="01JAN1900 02:00:00" />
       </Layer>
       <Layer Name="elevation" Type="RASResultsMap">
-        <MapParameters MapType="elevation" ProfileIndex="24" ProfileName="01JAN1900 06:00:00" />
+        <MapParameters MapType="elevation" ProfileIndex="4" ProfileName="01JAN1900 02:00:00" />
       </Layer>
       <Layer Name="depth" Type="RASResultsMap" Checked="True" Filename=".\Peak flow\Inundation Boundary (01JAN1900 00 00 00 Value_0).shp">
         <MapParameters MapType="depth" LayerName="Inundation Boundary" OutputMode="Stored Polygon Specified Depth" StoredFilename=".\Peak flow\Inundation Boundary (01JAN1900 00 00 00 Value_0).shp" Terrain="TerrainWithChannel" ProfileIndex="0" ProfileName="01JAN1900 00:00:00" ArrivalDepth="0" />

@@ -399,7 +399,7 @@ def plot_calibration_trajectory(csv_path, bounds, save_path=None):
 
 if __name__ == "__main__":
     """Run the calibration."""
-    #calibrate_SRH_2D()
+    calibrate_SRH_2D()
     
     # Plot calibration trajectory on objective contour (read from CSV)
     plot_calibration_trajectory(

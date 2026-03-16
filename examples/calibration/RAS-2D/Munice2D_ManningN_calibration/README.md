@@ -25,9 +25,7 @@ From this directory (where `base_case` and `HWMs.dat` are located):
 python demo_calibration_RAS_2D.py
 ```
 
-Requires: `pyHMT2D` and `scikit-optimize` (`pip install scikit-optimize`). The script uses only pyHMT2D’s basic features: `HEC_RAS_Model`, `RAS_2D_Data`, and `vtkHandler` for running HEC-RAS, converting results to VTK, and probing WSE at the high water mark points. 
-
-
+The script uses only pyHMT2D’s basic features: `HEC_RAS_Model`, `RAS_2D_Data`, and `vtkHandler` for running HEC-RAS, converting results to VTK, and probing WSE at the high water mark points. 
 
 ## Note
 - The calibration script was generated in Cursor with the following prompt:
