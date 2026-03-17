@@ -2,6 +2,8 @@
 *.vtk
 *.dat
 
+docs/pyHMT2D_User_Manual.pdf
+README.rst
 
 sandbox
 

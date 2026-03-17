@@ -56,20 +56,6 @@ With the control and automation capability above, it is much easier to do the fo
 - create and manipulate georeferenced terrain data for 2D modeling
 - conversion of 2D model mesh and result to 3D through extrusion (one layer or multiple layers) and VTK interpolation. This feature is useful to use 2D simulation result in 3D applications, e.g., fish passage design or use 2D result as initial condition for 3D CFD simulations. Currently, conversion to [OpenFOAM](https://www.openfoam.com/) is supported through [Gmsh](https://gmsh.info/)'s MSH file format.
 
-## Requirements
-
-This package uses the following libraries:
-
-- [h5py](https://www.h5py.org/)
-- [vtk](https://github.com/Kitware/VTK)
-- [rasterio](https://rasterio.readthedocs.io/) (used for reading/interpolating terrain GeoTIFFs; preferred on Windows)
-- [pywin32](https://pypi.org/project/pywin32/) (used by *pyHMT2D* to control HEC-RAS)
-- [affine](https://pypi.org/project/affine/) (used by *pyHMT2D* to read HEC-RAS 2D results)
-- [meshio](https://pypi.org/project/meshio/) (used by *pyHMT2D* to read and write mesh files)
-- [scikit-optimize](https://scikit-optimize.github.io/) (used by *pyHMT2D* to calibrate hydraulic model parameters)
-
-See *pyHMT2D*'s User Manual for how to install these libraries.
-
 ## Installation
 
 This section describes how to install *pyHMT2D* on Windows. If you are not very familiar with Python, start with the **Quick start** instructions.
@@ -121,12 +107,14 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
     .venv\Scripts\Activate.ps1
     ```
   After activation, your prompt should show `(.venv)` at the beginning.
+
 2. **Clone the *pyHMT2D* repository**
   From the same terminal (with the virtual environment activated), clone the GitHub repository:
   ```bash
   git clone https://github.com/psu-efd/pyHMT2D.git
   cd pyHMT2D
   ```
+
 3. **Install *pyHMT2D* in development mode**
   Install the package in editable (development) mode, so changes in the source code and examples are picked up immediately:
   ```bash
@@ -137,6 +125,7 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
   git pull
   ```
   Because *pyHMT2D* is installed in development (editable) mode (-e), Python immediately sees the updated source—no need to rerun `pip install -e .` unless dependencies in `setup.py` changed.
+
 4. **Verify the installation (optional)**
   ```bash
   python -c "import pyHMT2D; print(pyHMT2D.__version__)"
@@ -232,7 +221,7 @@ More examples can be found in the `examples` directory.
 
 **For SRH-2D:**
 
-- This package is developed and tested with SRH-2D v3.3 and v3.6; other versions may work but has not been tested.
+- This package is developed and tested with SRH-2D v3.3, v3.6, and v3.7; other versions may work but has not been tested.
 - Currently, only flow data is processed; others such as sediment and water quality are ignored.
 - Currently *pyHMT2D* cannot manipulate other things such as hydraulic structures in the case configuration files. More functionalities can be added in the future.
 
@@ -244,10 +233,7 @@ More examples can be found in the `examples` directory.
 - This package is currently developed using HEC-RAS v6.6; other versions may work but have not been tested.
 - RAS 2025 is currently not supported due to its development status.
 
-## User Manual and API Documentation
-
-The *pyHMT2D* User Manual can be found in `docs`:  
-[pyHMT2D_User_Manual.pdf](https://github.com/psu-efd/pyHMT2D/raw/main/docs/pyHMT2D_User_Manual.pdf)
+## API Documentation
 
 The API documentation is hosted at  
 [https://psu-efd.github.io/pyHMT2D_API_Web/](https://psu-efd.github.io/pyHMT2D_API_Web/)
@@ -295,3 +281,17 @@ First of all, thanks for your interest in contributing to *pyHMT2D*. Collectivel
 Because of legal reasons and like many successful open source projects, contributors have to sign a "Contributor License Agreement" to grant their rights to "Us". See details of the agreement on GitHub. The signing of the agreement is automatic when a pull request is issued.
 
 If you are just a user of *pyHMT2D*, the contributor agreement is irrelevant.
+
+## How to cite *pyHMT2D*
+
+If you use *pyHMT2D* in your research, please reference the GitHub repository:
+
+```bibtex
+@misc{liu_pyhmt2d,
+  author       = {Xiaofeng Liu},
+  title        = {pyHMT2D: Python-based Hydraulic Modeling Tools - 2D},
+  year         = {2026},
+  howpublished = {\url{https://github.com/psu-efd/pyHMT2D}},
+  note         = {Accessed: YYYY-MM-DD}
+}
+```
