@@ -1,4 +1,4 @@
-** pyHMT2D logo
+![pyHMT2D logo](logo/pyhmt2d_logo_vel_color_vector.png)
 
 ## *pyHMT2D* - Python-based Hydraulic Modeling Tools - 2D
 
