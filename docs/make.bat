@@ -2,7 +2,7 @@
 
 pushd %~dp0
 
-REM Command file for Sphinx documentation
+REM Command file for building pyHMT2D Sphinx documentation (including API pages)
 
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
@@ -10,12 +10,8 @@ if "%SPHINXBUILD%" == "" (
 set SOURCEDIR=source
 set BUILDDIR=build
 
-REM Convert README.md to README.rst (no need; changed to rst)
-REM pandoc ../README.md --from markdown --to rst -o source/README.rst
-
-REM echo Conversion of ../README.md to source/README.rst Done!
-
-REM Make a copy of the project README.rst to docs/source/
+REM The top-level README.rst is already maintained in reStructuredText format.
+REM Copy it into docs/source/ and adjust the logo path so it works in the docs build.
 copy ..\README.rst .\source\README_temp.rst
 
 REM modify the location of the logo image
@@ -24,7 +20,7 @@ powershell -Command "(gc .\source\README_temp.rst) -replace 'logo/', '_static/im
 REM remove the temp file
 del .\source\README_temp.rst
 
-echo Copied project README.rst to source directory.
+echo Updated README.rst in source directory for Sphinx build.
 
 if "%1" == "" goto help
 

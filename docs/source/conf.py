@@ -42,7 +42,7 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',  #suppport for NumPy and Google stype docstrings
     #'sphinx_autodoc_typehints', # Automatically document param types (less noise in class signature)
-    'nbsphinx',  # Integrate Jupyter Notebooks and Sphinx
+    #'nbsphinx',  # Integrate Jupyter Notebooks and Sphinx
     'sphinx.ext.doctest',
     #'sphinx.ext.autosummary',
     #'sphinx_autopackagesummary',
