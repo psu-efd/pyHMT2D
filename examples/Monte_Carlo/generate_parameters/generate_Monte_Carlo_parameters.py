@@ -67,9 +67,12 @@ def generate_ManningN_from_distribution(n_min, n_max, n_mean, n_std, nSamples):
     # show title and set font size
     plt.title('Histogram of sampled Manning\'s n values', fontsize=16)
 
+    # save the plot to a file
+    plt.savefig('sampledManningN_histogram.png', dpi=300, bbox_inches='tight')
+
     # show legend, set its location, font size, and turn off the frame
     #plt.legend(loc='lower left', fontsize=14, frameon=False)
-    plt.show()
+    #plt.show()
 
     return samples
 
