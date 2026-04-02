@@ -1,0 +1,19 @@
+{
+  "_comment": "pyHMT2D session state \u2014 auto-managed by hmt-cli",
+  "model_type": null,
+  "project_file": null,
+  "result_file": null,
+  "result_loaded": false,
+  "result_time_steps": [],
+  "result_variables": [],
+  "vtk_file": null,
+  "config_file": null,
+  "_srh_pre_path": null,
+  "_srh_path": null,
+  "_extra_dll_path": null,
+  "_srh_version": null,
+  "_hecras_version": null,
+  "_base_case_dir": null,
+  "_work_dir": null,
+  "_hecras_prj_file": null
+}

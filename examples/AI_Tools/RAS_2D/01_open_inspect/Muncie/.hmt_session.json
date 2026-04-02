@@ -1,0 +1,19 @@
+{
+  "_comment": "pyHMT2D session state \u2014 auto-managed by hmt-cli",
+  "model_type": "HEC-RAS",
+  "project_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\RAS_2D\\01_open_inspect\\Muncie\\Muncie2D.prj",
+  "result_file": null,
+  "result_loaded": false,
+  "result_time_steps": [],
+  "result_variables": [],
+  "vtk_file": null,
+  "config_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\RAS_2D\\hmt_config.json",
+  "_srh_pre_path": null,
+  "_srh_path": null,
+  "_extra_dll_path": null,
+  "_srh_version": null,
+  "_hecras_version": "6.6",
+  "_base_case_dir": "./base_case",
+  "_work_dir": "./runs",
+  "_hecras_prj_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\RAS_2D\\01_open_inspect\\Muncie\\Muncie2D.prj"
+}

@@ -348,10 +348,21 @@ def extract_terrain_file_names(geom_file_name):
     geom_hdf_file = h5py.File(geom_hdf_file_name, 'r')
 
     #get the terrain hdf file name
-    terrain_hdf_file_name = geom_hdf_file['Geometry'].attrs['Terrain Filename']       
+    terrain_hdf_file_name = geom_hdf_file['Geometry'].attrs['Terrain Filename']
 
     #close the geometry hdf file
     geom_hdf_file.close()
+
+    # Decode bytes to str if necessary
+    if isinstance(terrain_hdf_file_name, bytes):
+        terrain_hdf_file_name = terrain_hdf_file_name.decode('utf-8')
+
+    # HEC-RAS stores the terrain path relative to the project directory.
+    # Resolve it relative to the geometry HDF's directory so the file can be
+    # opened regardless of the current working directory.
+    if not os.path.isabs(terrain_hdf_file_name):
+        geom_dir = os.path.dirname(os.path.abspath(geom_hdf_file_name))
+        terrain_hdf_file_name = os.path.normpath(os.path.join(geom_dir, terrain_hdf_file_name))
 
     #extract the path of the terrain hdf file
     terrain_hdf_path = os.path.dirname(terrain_hdf_file_name)
@@ -363,8 +374,7 @@ def extract_terrain_file_names(geom_file_name):
         print("Error: terrain tiff file name not found")
         sys.exit()
 
-    #convert the terrain hdf path from bytes to a string
-    terrain_hdf_path = terrain_hdf_path.decode('utf-8')
+    #terrain_hdf_path is already a str (resolved above)
 
     if gVerbose:
         print("type(terrain_tiff_file_name) = ", type(terrain_tiff_file_name))

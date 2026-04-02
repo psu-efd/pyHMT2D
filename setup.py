@@ -29,7 +29,11 @@ REQUIRED = [
 ]
 
 # What packages are optional?
-EXTRAS = {}
+EXTRAS = {
+    'ai': [
+        'mcp>=1.0.0',           # Model Context Protocol server (FastMCP)
+    ],
+}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -109,8 +113,8 @@ setup(
     # py_modules=['mypackage'],
 
     entry_points={
-        'console_scripts': ['hmt-ras-to-srh=pyHMT2D.cli:ras_to_srh',
-                            'hmt-srh-to-vtk=pyHMT2D.cli:hmt_srh_to_vtk',
+        'console_scripts': ['hmt-mcp-server=pyHMT2D.AI_Tools.mcp_server:main',
+                            'hmt-cli=pyHMT2D.AI_Tools.cli_runner:main',
                             ],
     },
     install_requires=REQUIRED,

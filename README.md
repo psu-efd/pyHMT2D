@@ -207,13 +207,17 @@ my_hec_ras_model.exit_model()
 
 ### Command line interface (CLI)
 
-Only limited functionalities of *pyHMT2D* can be used in this way. You only need to type commands in a Windows terminal (with the virtual Python environment activated), e.g.,
+All CLI functionality is available through the unified `hmt-cli` command. Type commands in a Windows terminal with the virtual Python environment activated, e.g.,
 
 ```bash
-hmt-ras-to-srh Muncie2D.p01.hdf Terrain/TerrainMuncie_composite.tif srh_Muncie
+# Convert a HEC-RAS 2D case to SRH-2D format
+hmt-cli ras_to_srh --args '{"ras_hdf_file": "Muncie2D.p01.hdf", "terrain_tif_file": "Terrain/TerrainMuncie_composite.tif", "srh_case_name": "srh_Muncie"}'
+
+# Convert SRH-2D results to VTK
+hmt-cli srh_to_vtk --args '{"srhhydro_file": "Muncie.srhhydro", "output_file": "Muncie_XMDFC.h5"}'
 ```
 
-which converts a RAS 2D case to SRH-2D. See `examples/command_line_interface` for more details.
+See `examples/cli` for more details.
 
 More examples can be found in the `examples` directory.
 

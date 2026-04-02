@@ -124,24 +124,6 @@ class HEC_RAS_Project(object):
     def get_current_terrainFileNames(self):
         return self.current_terrainHDF_file_name, self.current_terrainTIFF_file_name
 
-    def __del__(self):
-        """ Destructor
-
-        Clear out lists and objects (may not be necessary; but just to make sure
-        we don't cause memory leak)
-
-        Returns
-        -------
-
-        """
-
-        self.geom_file_list.clear()
-        self.flow_file_list.clear()
-        self.plan_file_list.clear()
-        self.plans.clear()
-        self.terrain_hdf_file_list.clear()
-        self.terrain_tiff_file_list.clear()
-
     def __str__(self):
         """Define the string representation of the object as HEC-RAS case's title
 

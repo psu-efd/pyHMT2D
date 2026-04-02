@@ -33,6 +33,12 @@ examples/SRH_2D_to_PINN
 GUI
 CHIC
 
+#AI part 
+#examples/AI_Tools/
+
+#dev notes 
+docs/dev_notes
+
 
 #exclude SRH-2D results and output files
 *RST*.dat

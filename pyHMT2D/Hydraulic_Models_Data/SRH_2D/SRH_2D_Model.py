@@ -338,9 +338,12 @@ class SRH_2D_Model(HydraulicModel):
             sys.exit()
 
         #depending on the control file type, call the corresponding preprocessing program
+        # Pass only the basename so that SRH-2D Pre's internal path buffers are
+        # not overflowed by long absolute paths.  The caller must ensure the
+        # current working directory is the directory containing the control file.
         if self._srh_2d_data.control_type == "SRHHydro":
-            p = subprocess.run([cmd, '3', case_srhcontrol_file_name], stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+            p = subprocess.run([cmd, '3', path.basename(case_srhcontrol_file_name)],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         elif self._srh_2d_data.control_type == "SIF":
             #get the base case name, e.g., Cimarron_SIF.dat -> Cimarron
             base_case_name = self._srh_2d_data.get_case_name()
@@ -349,13 +352,13 @@ class SRH_2D_Model(HydraulicModel):
 
         if str.encode("successfully executed") in p.stdout:
             print("SRH-2D Pre was successfully done!")
-            #p.stdout.close()
-            #p.kill()
             return True
         else:
             print("SRH-2D Pre was not successfully! Check the output files.")
-            #p.stdout.close()
-            #p.kill()
+            print("--- SRH-2D Pre stdout ---")
+            print(p.stdout.decode(errors="replace"))
+            print("--- SRH-2D Pre stderr ---")
+            print(p.stderr.decode(errors="replace"))
             return False
 
     def exit_model(self):

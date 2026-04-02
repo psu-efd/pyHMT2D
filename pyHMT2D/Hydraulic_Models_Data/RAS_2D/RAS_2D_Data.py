@@ -293,13 +293,34 @@ class RAS_2D_Data(HydraulicData):
     def extract_geometry_file_name_from_hdf_file(self):
         """Extract the geometry file name from the HDF file
 
+        The "Geometry Filename" attribute stored by HEC-RAS may be:
+          - an absolute path from the original machine (invalid after the
+            project folder is moved), or
+          - a bare filename with no directory component.
+        In either case, resolve it to the directory that contains the plan
+        result HDF file so that helper functions (e.g. extract_terrain_file_names)
+        can open the geometry HDF regardless of the current working directory.
         """
 
-        hf = h5py.File(self.hdf_filename,'r') 
-        
+        hf = h5py.File(self.hdf_filename,'r')
+
         self.geometry_file_name = hf['Plan Data']['Plan Information'].attrs["Geometry Filename"].decode()
 
         hf.close()
+
+        # Resolve to an absolute path relative to the HDF file's directory.
+        # Use the basename only, so that a stale absolute path from the
+        # original machine does not cause a "file not found" error.
+        geom_base = os.path.basename(self.geometry_file_name)
+        hdf_dir = os.path.dirname(os.path.abspath(self.hdf_filename))
+        candidate = os.path.join(hdf_dir, geom_base)
+        if os.path.isfile(candidate + '.hdf'):
+            # Geometry HDF found next to the plan HDF — use this path.
+            self.geometry_file_name = candidate
+        elif not os.path.isfile(self.geometry_file_name + '.hdf'):
+            # Stored path is also not valid; fall back to the candidate so
+            # that the subsequent error message includes the correct directory.
+            self.geometry_file_name = candidate
 
     def extract_plan_information_from_hdf_file(self):
         """Extract the plan information from the HDF file
@@ -313,15 +334,25 @@ class RAS_2D_Data(HydraulicData):
         self.plan_shortID = hf['Plan Data']['Plan Information'].attrs["Plan ShortID"].decode()
         self.project_filename = hf['Plan Data']['Plan Information'].attrs["Project Filename"].decode()
         
-        hf.close()    
+        hf.close()
 
-        # HEC-RAS stores the project file as an absolute path. If the case folder was moved
-        # after the run, that path is wrong. Check whether the project file exists in the
-        # same directory as the HDF file; if yes, point project_filename there; otherwise error.
-        self.project_file_name = os.path.basename(self.project_filename)
+        # HEC-RAS stores file paths that may be absolute paths from the original
+        # machine or bare filenames.  After the project folder is moved, stored
+        # absolute paths become invalid.  In all cases, resolve to the directory
+        # that contains the plan result HDF file.
         hdf_dir = os.path.dirname(os.path.abspath(self.hdf_filename))
         if not hdf_dir:
             hdf_dir = os.curdir
+
+        # Resolve plan_filename (e.g. "Muncie2D.p01" or stale absolute path)
+        plan_base = os.path.basename(self.plan_filename)
+        plan_path_next_to_hdf = os.path.join(hdf_dir, plan_base)
+        if os.path.isfile(plan_path_next_to_hdf):
+            self.plan_filename = os.path.abspath(plan_path_next_to_hdf)
+        # (if still not found, leave as-is and let the caller surface the error)
+
+        # Resolve project_filename
+        self.project_file_name = os.path.basename(self.project_filename)
         project_path_next_to_hdf = os.path.join(hdf_dir, self.project_file_name)
 
         if gVerbose:

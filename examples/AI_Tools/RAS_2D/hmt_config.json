@@ -1,0 +1,8 @@
+{
+  "_comment": "pyHMT2D AI Tools — machine-specific paths. Edit once per machine.",
+
+  "hecras_version": "6.6",
+
+  "base_case_dir":  "./base_case",
+  "work_dir":       "./runs"
+}
