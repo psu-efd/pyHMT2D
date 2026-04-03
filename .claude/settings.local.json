@@ -76,7 +76,8 @@
       "Bash(hmt-cli run_calibration --args '{\"\"param_specs\"\": [{\"\"type\"\": \"\"manning_n\"\", \"\"material_name\"\": \"\"channel\"\", \"\"min\"\": 0.02, \"\"max\"\": 0.08, \"\"material_id\"\": 1, \"\"initial\"\": 0.05}, {\"\"type\"\": \"\"manning_n\"\", \"\"material_name\"\": \"\"left_2\"\", \"\"min\"\": 0.02, \"\"max\"\": 0.08, \"\"material_id\"\": 3, \"\"initial\"\": 0.05}], \"\"observation_csv\"\": \"\"HWMs.dat\"\", \"\"n_iterations\"\": 11, \"\"method\"\": \"\"gp\"\", \"\"output_csv\"\": \"\"calibration_history.csv\"\"}')",
       "Bash(python3:*)",
       "Bash(hmt-cli:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls \"C:/Users/xzl123/Dropbox/PycharmProjects/pyHMT2D/examples/HEC_RAS_Model/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/\"*.hdf)"
     ]
   }
 }

@@ -242,21 +242,25 @@ def get_project_info(project_file: str) -> dict:
                 )
 
             try:
-                current_plan_name, current_plan_file = model.open_project(prj_file)
+                proj = model.open_project(prj_file)
             except Exception as exc:
                 return _err(f"Failed to open HEC-RAS project via COM: {exc}")
 
-            proj = model._project
+            # current_plan_name / current_plan_file from the parsed project
+            current_plan = proj.current_plan
+            current_plan_name = current_plan.plan_name if current_plan else ""
+            current_plan_file = current_plan.plan_file if current_plan else ""
 
             # Build plan summary list
             plans_info = []
-            for p in proj.plans:
-                plan_hdf = (p.plan_file + ".hdf") if p.plan_file else None
+            for p in proj.plans.values():
+                plan_hdf = p.hdf_file if p.hdf_file else None
                 plans_info.append({
                     "name": p.plan_name,
                     "plan_file": p.plan_file,
-                    "geom_file": p.geom_file,
-                    "flow_file": p.flow_file,
+                    "plan_id": p.plan_id,
+                    "geometry_id": p.geometry_id,
+                    "flow_id": p.flow_id,
                     "steady": p.steady,
                     "result_hdf": plan_hdf,
                     "result_hdf_exists": os.path.isfile(plan_hdf) if plan_hdf else False,
@@ -264,7 +268,6 @@ def get_project_info(project_file: str) -> dict:
 
             # Optionally load RAS_2D_Data for the current plan's result HDF
             # (only available after the simulation has been run at least once)
-            current_plan_hdf = (current_plan_file + ".hdf") if current_plan_file else None
             data = None
             n_zones = 0
             n_bcs = None
@@ -276,18 +279,17 @@ def get_project_info(project_file: str) -> dict:
             end_time = None
             plan_short_id = ""
 
-            if current_plan_hdf and os.path.isfile(current_plan_hdf):
-                hdf_abs = os.path.abspath(current_plan_hdf)
-                hdf_dir = os.path.dirname(hdf_abs)
-                _orig_dir = os.getcwd()
-                os.chdir(hdf_dir)
+            if current_plan and current_plan.hdf_exists():
+                from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
+                # Use the already-parsed project from COM session; load current plan results
+                matched_plan = current_plan
                 try:
-                    data = pyHMT2D.RAS_2D.RAS_2D_Data(os.path.basename(hdf_abs))
-                finally:
-                    os.chdir(_orig_dir)
-                # Pin hdf_filename to absolute path so h5py works from any CWD
-                data.hdf_filename = hdf_abs
+                    data = matched_plan.load_results()
+                    session.data = data
+                except Exception as exc:
+                    data = None
 
+            if data is not None:
                 hecras_version_str = data.version
                 units = data.units
                 start_time = data.start_time
@@ -326,8 +328,6 @@ def get_project_info(project_file: str) -> dict:
                 "n_material_zones": n_zones,
                 "n_boundary_conditions": n_bcs,
                 "plans": plans_info,
-                "terrain_hdf_files": proj.terrain_hdf_file_list,
-                "terrain_tiff_files": proj.terrain_tiff_file_list,
                 "result_hdf_available": data is not None,
             }
 

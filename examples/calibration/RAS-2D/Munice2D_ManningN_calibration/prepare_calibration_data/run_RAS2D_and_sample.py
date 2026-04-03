@@ -18,13 +18,13 @@ from pathlib import Path
 import numpy as np
 import pyHMT2D
 from pyHMT2D.Misc import vtkHandler
+from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
 import vtk
 
 # --- Configuration (modify for your case) ---
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_FILE = "Muncie2D.prj"
-TERRAIN_PATH = "Terrain/TerrainMuncie_composite.tif"
-PLAN_HDF = "Muncie2D.p01.hdf"
+PLAN_ID = "p01"
 OUTPUT_SAMPLED = SCRIPT_DIR / "HWMs.dat"
 
 # High water marks: x, y
@@ -53,8 +53,10 @@ def run_hec_ras_2d_and_export_vtk():
         print("HEC-RAS 2D run failed.")
         return False, None
 
-    # Convert to VTK
-    ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data(PLAN_HDF, TERRAIN_PATH)
+    # Convert to VTK using the new project-based API
+    project = HEC_RAS_Project(PROJECT_FILE)
+    plan = project.get_plan(PLAN_ID)
+    ras_2d_data = plan.load_results()
     vtk_list = ras_2d_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
     vtk_path = Path(vtk_list[-1]).resolve()
     return True, vtk_path

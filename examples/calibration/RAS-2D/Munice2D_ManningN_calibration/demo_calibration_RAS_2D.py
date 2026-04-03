@@ -108,11 +108,11 @@ def run_hec_ras_with_mannings_n(run_dir, n_channel, n_left2):
             os.chdir(cwd)
             return False, None
 
-        # Convert to VTK
-        ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data(
-            "Muncie2D.p01.hdf",
-            TERRAIN_PATH,
-        )
+        # Convert to VTK using the new project-based API
+        from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
+        _project = HEC_RAS_Project(PROJECT_FILE)
+        _plan = _project.get_plan("p01")
+        ras_2d_data = _plan.load_results()
         vtk_list = ras_2d_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
         vtk_path = Path(vtk_list[-1]).resolve()
 

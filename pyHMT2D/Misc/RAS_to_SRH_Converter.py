@@ -5,38 +5,55 @@ A Python class to convert HEC-RAS case, mainly mesh and material (Manning's n), 
 import pyHMT2D
 
 class RAS_to_SRH_Converter:
-    """A Python class to convert HEC-RAS case, mainly mesh and material (Manning's n), to SRH-2D case
+    """Converts a HEC-RAS 2D plan result to SRH-2D input format.
 
-    Typical work flow is as follows:
-    1. create 2D case in HEC-RAS
-    2. call RAS to SRH converter: create srhgeom and srhmat files
-    3. manually create and adjust srhhydro file
-    4. run SRH-2D
-
-    Attributes
-    ---------
-    RASPlanResultFileName : str
-        HEC-RAS result from a plan, such as caseName.p01.hdf
-    SRHCaseName : str
-        Case name for SRH-2D; the resulted files will be SRHCaseName.srhgeom, SRHCaseName.srhmat
+    For cases with multiple 2D areas, specify which area to convert via
+    twoDAreaNumber (default: 0, the first area).
     """
 
-    def __init__(self, RASPlanResultFileName, TerrainFileName, SRHCaseName):
-        self.RASPlanResultFileName = RASPlanResultFileName  # HEC-RAS result from a plan, such as caseName.p01.hdf
-        self.TerrainFileName = TerrainFileName  # Terrain file in GeoTiff format, e.g., Terrain/terrain.tif
-        self.SRHCaseName = SRHCaseName
+    def __init__(self, prj_file, plan_id_or_name, srh_case_name, twoDAreaNumber=0):
+        """
+        Parameters
+        ----------
+        prj_file : str
+            Path to the HEC-RAS project file (.prj).
+        plan_id_or_name : str
+            Plan short ID (e.g. 'p03') or plan title to convert.
+        srh_case_name : str
+            Base name for the output SRH-2D files (.srhgeom, .srhmat).
+        twoDAreaNumber : int, optional
+            Index of the 2D area to convert (default 0, i.e. first area).
+            For single-area cases this should always be 0.
+        """
+        self.prj_file = prj_file
+        self.plan_id_or_name = plan_id_or_name
+        self.srh_case_name = srh_case_name
+        self.twoDAreaNumber = twoDAreaNumber
 
     def convert_to_SRH(self):
-        """Convert the case to SRH
+        """Perform the conversion and write .srhgeom and .srhmat files."""
+        import pyHMT2D
+        from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
 
-        Returns
-        -------
+        project = HEC_RAS_Project(self.prj_file)
+        plan = project.get_plan(self.plan_id_or_name)
 
+        if not plan.hdf_exists():
+            raise FileNotFoundError(
+                f"Plan result HDF '{plan.hdf_file}' not found. "
+                "Run the HEC-RAS simulation first."
+            )
 
-        """
-        #create the RAS_2D_Data object
-        ras_2d_data_obj = pyHMT2D.RAS_2D.RAS_2D_Data(self.RASPlanResultFileName, self.TerrainFileName)
+        ras_2d_data = plan.load_results()
 
-        ras_2d_data_obj.exportSRHGEOMFile(self.SRHCaseName)
+        n_areas = len(ras_2d_data.TwoDAreaNames)
+        if self.twoDAreaNumber >= n_areas:
+            raise IndexError(
+                f"twoDAreaNumber={self.twoDAreaNumber} is out of range. "
+                f"This plan has {n_areas} 2D area(s) (indices 0..{n_areas-1})."
+            )
 
-        ras_2d_data_obj.exportSRHMATFile(self.SRHCaseName)
+        ras_2d_data.exportSRHGEOMFile(self.srh_case_name + ".srhgeom",
+                                       twoDAreaNumber=self.twoDAreaNumber)
+        ras_2d_data.exportSRHMATFile(self.srh_case_name + ".srhmat",
+                                     twoDAreaNumber=self.twoDAreaNumber)

@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 
 import pyHMT2D
+from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
 
 def run_one_HEC_RAS_case(case_ID, ManningN_MaterialID, ManningN, ManningN_MaterialName, bDeleteCaseDir=True):
     """
@@ -98,9 +99,10 @@ def run_one_HEC_RAS_case(case_ID, ManningN_MaterialID, ManningN, ManningN_Materi
     #quit HEC-RAS
     my_hec_ras_model.exit_model()
 
-    #convert HEC-RAS result to VTK (This is hard-coded; needs to be changes for a specific case)
-    my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data("Muncie2D.p01.hdf",
-                                                "Terrain/TerrainMuncie_composite.tif")
+    #convert HEC-RAS result to VTK using the new project-based API
+    project = HEC_RAS_Project("Muncie2D.prj")
+    plan = project.get_plan("p01")
+    my_ras_2d_data = plan.load_results()
 
     vtkFileNameList = my_ras_2d_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
 

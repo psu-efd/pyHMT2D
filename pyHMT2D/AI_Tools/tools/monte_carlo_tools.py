@@ -205,27 +205,26 @@ def _run_single_case(args: tuple) -> dict:
             if model_type == "SRH-2D":
                 run_data = pyHMT2D.SRH_2D.SRH_2D_Data(run_project_file)
             else:
-                # RAS_2D_Data expects the plan result HDF file (e.g. Muncie2D.p01.hdf),
-                # not the .prj project file.  The session's hdf_filename gives the basename.
+                # Use HEC_RAS_Project to load the plan results from the copied case_dir.
+                from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project as _HEC_RAS_Project
                 from pyHMT2D.AI_Tools.state import get_session as _get_session
                 _sess = _get_session()
-                if _sess.data is not None and hasattr(_sess.data, 'hdf_filename'):
-                    base_hdf = os.path.basename(_sess.data.hdf_filename)
-                else:
-                    import glob as _glob
-                    plan_hdfs = sorted(_glob.glob(os.path.join(case_dir, "*.p[0-9]*.hdf")))
-                    if not plan_hdfs:
-                        raise RuntimeError(
-                            "No plan result HDF file found in case directory. "
-                            "Open the project with get_project_info first."
-                        )
-                    base_hdf = os.path.basename(plan_hdfs[0])
-                plan_hdf_abs = os.path.abspath(os.path.join(case_dir, base_hdf))
-                if not os.path.isfile(plan_hdf_abs):
+                _prj_basename = (os.path.basename(_sess._hecras_prj_file)
+                                 if hasattr(_sess, '_hecras_prj_file') and _sess._hecras_prj_file
+                                 else os.path.basename(project_basename.replace('.hdf', '.prj').replace('.p01', '')))
+                _case_prj = os.path.join(case_dir, _prj_basename)
+                _case_project = _HEC_RAS_Project(_case_prj)
+                _case_plan = _case_project.current_plan
+                if _case_plan is None:
                     raise RuntimeError(
-                        f"Plan result HDF not found in case directory: {plan_hdf_abs}"
+                        "No current plan found in case directory project. "
+                        "Open the project with get_project_info first."
                     )
-                run_data = pyHMT2D.RAS_2D.RAS_2D_Data(plan_hdf_abs)
+                if not _case_plan.hdf_exists():
+                    raise RuntimeError(
+                        f"Plan result HDF not found in case directory: {_case_plan.hdf_file}"
+                    )
+                run_data = _case_plan.load_results()
 
             for spec, val in zip(param_specs, param_values):
                 ptype = spec["type"]

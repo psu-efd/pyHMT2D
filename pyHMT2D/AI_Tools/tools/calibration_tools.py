@@ -476,26 +476,23 @@ def evaluate_parameters(
             if session.model_type == "SRH-2D":
                 run_data = pyHMT2D.SRH_2D.SRH_2D_Data(run_project_file)
             else:
-                # RAS_2D_Data expects the plan result HDF file (e.g. Muncie2D.p01.hdf),
-                # not the .prj project file.  Derive its name from the session's known
-                # hdf_filename (set when get_project_info opened the base case).
-                if session.data is not None and hasattr(session.data, 'hdf_filename'):
-                    base_hdf = os.path.basename(session.data.hdf_filename)
-                else:
-                    import glob as _glob
-                    plan_hdfs = sorted(_glob.glob(os.path.join(run_dir, "*.p[0-9]*.hdf")))
-                    if not plan_hdfs:
-                        raise RuntimeError(
-                            "No plan result HDF file found in run directory. "
-                            "Open the project with get_project_info first."
-                        )
-                    base_hdf = os.path.basename(plan_hdfs[0])
-                plan_hdf_abs = os.path.abspath(os.path.join(run_dir, base_hdf))
-                if not os.path.isfile(plan_hdf_abs):
+                # Use HEC_RAS_Project to load the plan results from the copied run_dir.
+                from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project as _HEC_RAS_Project
+                run_prj_file = os.path.join(run_dir, os.path.basename(session._hecras_prj_file
+                                                                        if hasattr(session, '_hecras_prj_file')
+                                                                        else run_project_file))
+                _run_project = _HEC_RAS_Project(run_prj_file)
+                _run_plan = _run_project.current_plan
+                if _run_plan is None:
                     raise RuntimeError(
-                        f"Plan result HDF not found in run directory: {plan_hdf_abs}"
+                        "No current plan found in run directory project. "
+                        "Open the project with get_project_info first."
                     )
-                run_data = pyHMT2D.RAS_2D.RAS_2D_Data(plan_hdf_abs)
+                if not _run_plan.hdf_exists():
+                    raise RuntimeError(
+                        f"Plan result HDF not found in run directory: {_run_plan.hdf_file}"
+                    )
+                run_data = _run_plan.load_results()
 
             # Apply parameter values
             _apply_params(run_data, session.model_type, param_specs, values)

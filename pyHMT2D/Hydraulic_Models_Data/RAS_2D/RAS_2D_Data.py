@@ -71,23 +71,30 @@ class RAS_2D_Data(HydraulicData):
     
     """
     
-    def __init__(self, hdf_filename, terrain_tiff_filename=None):
+    def __init__(self, plan, terrain_file=None):
         """RAS_2D_Data class constructor
 
         Parameters
         ----------
-        hdf_filename : str
-            name of the HDF file that contains HEC-RAS results        
-        terrain_tiff_filename : str, optional
-            name of the terrain TIFF file that contains the terrain data. If not provided, the terrain TIFF file name will be extracted from the HDF file. 
-            Note: It is not very clear how HEC-RAS organizes the terrain data in the HDF file regarding the terrain TIFF file names.
+        plan : HEC_RAS_Plan
+            The HEC-RAS plan object. Must have:
+              - plan.hdf_file : str  (path to plan result HDF)
+              - plan.geometry : HEC_RAS_Geometry  (geometry object)
+              - plan.geometry.terrain_tiff_file : str or None
+        terrain_file : str, optional
+            Path to a GeoTIFF terrain file. Overrides auto-detection from the
+            geometry HDF. Pass this when auto-detection fails or to use a
+            different terrain than the one stored in the project.
         """
 
         HydraulicData.__init__(self, "HEC-RAS")
 
-        #check the existence of the HDF file
+        hdf_filename = plan.hdf_file
+
         if not os.path.isfile(hdf_filename):
-            print("The HDF file", hdf_filename, "does not exist. Make sure to run HEC-RAS simulation to generate the plan results HDF file before calling this function. Exiting ...")
+            print("The HDF file", hdf_filename, "does not exist. Make sure to run HEC-RAS "
+                  "simulation to generate the plan results HDF file before calling this "
+                  "function. Exiting ...")
             sys.exit()
 
         self.hdf_filename = hdf_filename
@@ -96,40 +103,45 @@ class RAS_2D_Data(HydraulicData):
         self.plan_shortID = None
         self.project_filename = None
 
-        #geometry file name
         self.geometry_file_name = None
 
-        #extract the plan information from the HDF file: plan_filename, plan_name, plan_shortID, project_filename
         self.extract_plan_information_from_hdf_file()
-
-        #extract the geometry file name from the HDF file: geometry_file_name
         self.extract_geometry_file_name_from_hdf_file()
 
         if gVerbose:
             print("geometry_file_name = ", self.geometry_file_name)
 
-        if terrain_tiff_filename is not None:
+        # Terrain resolution
+        if terrain_file is not None:
             if gVerbose:
-                print("Using the provided terrain TIFF file: ", terrain_tiff_filename)
-
-            self.terrain_hdf_filename = None #not used
-            self.terrain_tiff_filename = terrain_tiff_filename
-
-            #check the existence of the terrain TIFF file
+                print("Using the provided terrain TIFF file: ", terrain_file)
+            self.terrain_hdf_filename = None
+            self.terrain_tiff_filename = terrain_file
             if not os.path.isfile(self.terrain_tiff_filename):
                 print("The terrain TIFF file", self.terrain_tiff_filename, "does not exist. Exiting ...")
                 sys.exit()
         else:
-            if gVerbose:
-                print("Extracting the terrain TIFF file name from the HDF file")
+            # Try to get terrain from the plan's geometry object
+            geom = getattr(plan, 'geometry', None)
+            if geom is not None:
+                self.terrain_hdf_filename = geom.terrain_hdf_file
+                self.terrain_tiff_filename = geom.terrain_tiff_file
+            else:
+                # Fallback: try extract_terrain_file_names directly from geometry HDF
+                if gVerbose:
+                    print("Extracting the terrain TIFF file name from the geometry HDF file")
+                try:
+                    self.terrain_hdf_filename, self.terrain_tiff_filename = \
+                        extract_terrain_file_names(self.geometry_file_name)
+                except Exception as e:
+                    print(f"Warning: Could not extract terrain file names: {e}")
+                    self.terrain_hdf_filename = None
+                    self.terrain_tiff_filename = None
 
-            #extract the terrain TIFF file name from the HDF file
-            self.terrain_hdf_filename, self.terrain_tiff_filename = extract_terrain_file_names(self.geometry_file_name)
-
-            #check the existence of the terrain TIFF file
-            if not os.path.isfile(self.terrain_tiff_filename):
-                print("The terrain TIFF file", self.terrain_tiff_filename, "does not exist. Exiting ...")
-                sys.exit()
+            if self.terrain_tiff_filename and not os.path.isfile(self.terrain_tiff_filename):
+                print(f"Warning: Terrain TIFF file not found: {self.terrain_tiff_filename}. "
+                      f"Face-point elevations will be set to NaN.")
+                self.terrain_tiff_filename = None
 
         #number of points for each face's profile (subgrid terrain)
         #HEC-RAS's HDF file does not export face profile, although in RAS Mapper
@@ -327,13 +339,17 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        hf = h5py.File(self.hdf_filename,'r') 
-        
-        self.plan_filename = hf['Plan Data']['Plan Information'].attrs["Plan Filename"].decode()
-        self.plan_name = hf['Plan Data']['Plan Information'].attrs["Plan Name"].decode()
-        self.plan_shortID = hf['Plan Data']['Plan Information'].attrs["Plan ShortID"].decode()
-        self.project_filename = hf['Plan Data']['Plan Information'].attrs["Project Filename"].decode()
-        
+        hf = h5py.File(self.hdf_filename,'r')
+        attrs = hf['Plan Data']['Plan Information'].attrs
+
+        def _decode(val):
+            return val.decode() if isinstance(val, bytes) else str(val)
+
+        self.plan_filename  = _decode(attrs["Plan Filename"])  if "Plan Filename"  in attrs else ''
+        self.plan_name      = _decode(attrs["Plan Name"])      if "Plan Name"      in attrs else ''
+        self.plan_shortID   = _decode(attrs["Plan ShortID"])   if "Plan ShortID"   in attrs else ''
+        self.project_filename = _decode(attrs["Project Filename"]) if "Project Filename" in attrs else ''
+
         hf.close()
 
         # HEC-RAS stores file paths that may be absolute paths from the original
@@ -351,19 +367,22 @@ class RAS_2D_Data(HydraulicData):
             self.plan_filename = os.path.abspath(plan_path_next_to_hdf)
         # (if still not found, leave as-is and let the caller surface the error)
 
-        # Resolve project_filename
-        self.project_file_name = os.path.basename(self.project_filename)
-        project_path_next_to_hdf = os.path.join(hdf_dir, self.project_file_name)
+        # Resolve project_filename (optional — older HDF files may not store this attribute)
+        if self.project_filename:
+            self.project_file_name = os.path.basename(self.project_filename)
+            project_path_next_to_hdf = os.path.join(hdf_dir, self.project_file_name)
 
-        if gVerbose:
-            print("project_filename (from HDF) = ", self.project_filename)
+            if gVerbose:
+                print("project_filename (from HDF) = ", self.project_filename)
 
-        if not os.path.isfile(project_path_next_to_hdf):
-            print("The project file " + self.project_file_name + " does not exist in the directory of the HDF file ("
-                  + hdf_dir + "). Move the case folder or run HEC-RAS in this location. Exiting ...")
-            sys.exit()
-
-        self.project_filename = os.path.abspath(project_path_next_to_hdf)
+            if os.path.isfile(project_path_next_to_hdf):
+                self.project_filename = os.path.abspath(project_path_next_to_hdf)
+            else:
+                if gVerbose:
+                    print("The project file " + self.project_file_name + " does not exist in the directory of the "
+                          "HDF file (" + hdf_dir + "). project_filename will remain as stored in the HDF.")
+        else:
+            self.project_file_name = ''
         if gVerbose:
             print("project_filename (adjusted) = ", self.project_filename)
 
@@ -439,17 +458,33 @@ class RAS_2D_Data(HydraulicData):
 
         if gVerbose:
             print("Extracting units from the HEC-RAS project file: ", self.project_filename)
-        
-        # open the HEC-RAS project file
-        #print("self.project_filename = ", self.project_filename)
-        with open(self.project_filename,'r') as project_file:
-            lines = project_file.readlines()
-            if "English Units" in lines[3]:
-                self.units = 'Feet'
-            elif "SI Units" in lines[3]:
-                self.units = "Meter"
-            else:
-                self.units = "Unknown units"
+
+        if self.project_filename and os.path.isfile(self.project_filename):
+            with open(self.project_filename, 'r') as project_file:
+                lines = project_file.readlines()
+                if len(lines) > 3 and "English Units" in lines[3]:
+                    self.units = 'Feet'
+                elif len(lines) > 3 and "SI Units" in lines[3]:
+                    self.units = "Meter"
+                else:
+                    self.units = "Unknown units"
+        else:
+            # Project file not available; try to infer units from geometry HDF attributes.
+            self.units = "Unknown units"
+            if self.geometry_file_name and os.path.isfile(self.geometry_file_name + '.hdf'):
+                try:
+                    with h5py.File(self.geometry_file_name + '.hdf', 'r') as gh:
+                        if 'Geometry' in gh and 'Units' in gh['Geometry'].attrs:
+                            raw = gh['Geometry'].attrs['Units']
+                            u = raw.decode() if isinstance(raw, bytes) else str(raw)
+                            if 'English' in u or 'US' in u or 'Feet' in u or 'feet' in u:
+                                self.units = 'Feet'
+                            elif 'SI' in u or 'Meter' in u or 'meter' in u:
+                                self.units = 'Meter'
+                except Exception:
+                    pass
+            if gVerbose:
+                print("Project file not found; units set to:", self.units)
 
         if gVerbose:
             print("Units = ", self.units)
@@ -460,11 +495,12 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        #print(os.getcwd())
         #check whether the plan file exists
-        if not os.path.isfile(self.plan_filename):
-            print("The HEC-RAS plan file", self.plan_filename, "does not exists. Exiting ...")
-            sys.exit()
+        if not self.plan_filename or not os.path.isfile(self.plan_filename):
+            if gVerbose:
+                print("The HEC-RAS plan file", self.plan_filename,
+                      "does not exist. Computation/output/mapping intervals will be empty.")
+            return
 
         comp_indicator = "Computation Interval="
         outp_indicator = "Output Interval="
@@ -615,9 +651,12 @@ class RAS_2D_Data(HydraulicData):
 
         """
 
-        hf = h5py.File(self.hdf_filename,'r') 
+        hf = h5py.File(self.hdf_filename,'r')
+        if ('Boundary Condition Lines' not in hf.get('Geometry', {}) or
+                'External Faces' not in hf['Geometry']['Boundary Condition Lines']):
+            hf.close()
+            return np.array([])
         hdf2DAreaBoundaryPoints = np.array(hf['Geometry']['Boundary Condition Lines']['External Faces'])
-        #print(hdf2DAreaBoundaryPoints)
         hf.close()
 
         return hdf2DAreaBoundaryPoints
@@ -633,6 +672,10 @@ class RAS_2D_Data(HydraulicData):
 
         """
         hf = h5py.File(self.hdf_filename,'r')
+        if ('Boundary Condition Lines' not in hf.get('Geometry', {}) or
+                'Attributes' not in hf['Geometry']['Boundary Condition Lines']):
+            hf.close()
+            return []
         hdf2DAreaBoundaryNamesTypes = hf['Geometry']['Boundary Condition Lines']['Attributes']
 
         #print(type(hdf2DAreaBoundaryNamesTypes))
@@ -664,16 +707,26 @@ class RAS_2D_Data(HydraulicData):
         """
 
         if gVerbose: print("Building HEC-RAS 2D area boundaries ...")
+
+        # If no boundary condition lines exist (e.g. 1D/2D models where the 2D
+        # area connects to 1D reaches via SA/2D connections rather than BC lines)
+        # return empty structures.
+        if self.TwoDAreaBoundaryPoints is None or len(self.TwoDAreaBoundaryPoints) == 0:
+            if gVerbose: print("No Boundary Condition Lines found in HDF. Returning empty boundary data.")
+            return (0,
+                    np.zeros(0, dtype=int), np.array([]), np.array([]),
+                    np.array([]), np.zeros(0, dtype=int), np.zeros((0, 0), dtype=int))
+
         maxNumBC = 10          #maximum number of boundaries (adjust according to the mesh)
         maxPointsPerBC = 1000   #maximum number of points per boundary
 
         boundaryIDList = np.zeros(maxNumBC,dtype=int)   #list of boundary IDs
         boundaryPointList = np.zeros((maxNumBC,maxPointsPerBC),dtype=int)  #list of point IDs on each boundary
-        boundaryTotalPoints = np.zeros(maxNumBC,dtype=int)    #total number of points in each boundary            
+        boundaryTotalPoints = np.zeros(maxNumBC,dtype=int)    #total number of points in each boundary
 
         #read the first row of BoundaryPoints
         totalBoundaries = 0                           #total number of boundaries
-        currentBoundary = 0                           #current BC counter 
+        currentBoundary = 0                           #current BC counter
         pointCounterInCurrentBoundary = 0             #point counter in current boundary
         boundaryIDList[currentBoundary] = self.TwoDAreaBoundaryPoints[0][0]       #first BC Line ID
         boundaryPointList[currentBoundary,0] = self.TwoDAreaBoundaryPoints[0][2]  #first point
@@ -776,9 +829,7 @@ class RAS_2D_Data(HydraulicData):
                 #hfManningN = h5py.File(fileBase + self.landcover_filename, 'r')
 
                 dset = hfManningN['IDs']
-
-                with dset.astype(np.uint8):
-                    IDs = dset[:]
+                IDs = dset[()].astype(np.uint8)
 
                 ManningN = np.array(hfManningN['ManningsN'])
                 Names = hfManningN['Names']
@@ -1957,41 +2008,61 @@ class RAS_2D_Data(HydraulicData):
             else:
                 raise Exception("The version of HEC-RAS that produced this HDF result file is not supported.")
 
-            try:
-                cellDepth = self.hdf2DAreaResultVar(area, depth_name)
-                cellWSE = self.hdf2DAreaResultVar(area, WSE_name)
+            def _try_load(varname):
+                """Load a result variable, returning None if not present."""
+                try:
+                    return self.hdf2DAreaResultVar(area, varname)
+                except KeyError:
+                    if gVerbose:
+                        print(f"  Variable '{varname}' not found in area '{area}'; skipping.")
+                    return None
 
-                if self.version == '6.6':
-                    cellVx = self.hdf2DAreaResultVar(area, cellVx_name)
-                    cellVy = self.hdf2DAreaResultVar(area, cellVy_name)
-            except KeyError as e:
-                raise KeyError(f"Variable '{depth_name}' or '{WSE_name}' not found in 2D area '{area}'. Available variables may vary by HEC-RAS version.")
-            
-            #slice the cell data array to get values only for cells in current 2D area. 
-            #The HEC-RAS results also contain values at the center of boundary faces.
-            cellDepth = cellDepth[0:(self.TwoDAreaCellCounts[i])]
-            cellWSE = cellWSE[0:(self.TwoDAreaCellCounts[i])]
+            cellDepth = _try_load(depth_name) if depth_name else None
+            cellWSE   = _try_load(WSE_name)   if WSE_name   else None
 
-            if self.version == '6.6':
-                cellVx = cellVx[0:(self.TwoDAreaCellCounts[i])]
-                cellVy = cellVy[0:(self.TwoDAreaCellCounts[i])]
+            n_cells = self.TwoDAreaCellCounts[i]
+
+            if cellDepth is not None:
+                cellDepth = cellDepth[0:n_cells]
+            else:
+                if gVerbose:
+                    print(f"  Depth not available for area '{area}'. TwoDAreaCellDepth will be empty.")
+                cellDepth = np.array([])
+
+            if cellWSE is not None:
+                cellWSE = cellWSE[0:n_cells]
+            else:
+                if gVerbose:
+                    print(f"  WSE not available for area '{area}'. TwoDAreaCellWSE will be empty.")
+                cellWSE = np.array([])
 
             self.TwoDAreaCellDepth.append(cellDepth)
             self.TwoDAreaCellWSE.append(cellWSE)
 
             if self.version == '6.6':
-                self.TwoDAreaCellVx.append(cellVx)
-                self.TwoDAreaCellVy.append(cellVy)
-                self.TwoDAreaCellVz.append(cellVx*0.0) #fake z velocity (=0)
-            
+                cellVx = _try_load(cellVx_name)
+                cellVy = _try_load(cellVy_name)
+                if cellVx is not None:
+                    cellVx = cellVx[0:n_cells]
+                    cellVy = cellVy[0:n_cells] if cellVy is not None else np.zeros_like(cellVx)
+                    self.TwoDAreaCellVx.append(cellVx)
+                    self.TwoDAreaCellVy.append(cellVy)
+                    self.TwoDAreaCellVz.append(cellVx * 0.0)
+
             #fetch point data
             #Node X Vel and Node Y Vel
-            pointVx=self.hdf2DAreaResultVar(area, nodeVx_name)
-            pointVy=self.hdf2DAreaResultVar(area, nodeVy_name)
+            pointVx = _try_load(nodeVx_name) if nodeVx_name else None
+            pointVy = _try_load(nodeVy_name) if nodeVy_name else None
+            if pointVx is None:
+                pointVx = np.array([])
+            if pointVy is None:
+                pointVy = np.array([])
 
-            #deal with nan in pointVx and pointVy
-            pointVx = np.where(np.isnan(pointVx), 0.0, pointVx)
-            pointVy = np.where(np.isnan(pointVy), 0.0, pointVy)
+            #deal with nan in pointVx and pointVy (only when data is present)
+            if pointVx.size > 0:
+                pointVx = np.where(np.isnan(pointVx), 0.0, pointVx)
+            if pointVy.size > 0:
+                pointVy = np.where(np.isnan(pointVy), 0.0, pointVy)
 
             #create pointVz which is zero
             pointVz = np.zeros_like(pointVx)
@@ -2307,21 +2378,23 @@ class RAS_2D_Data(HydraulicData):
                     
             
 
-    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,fileNameBase='',dir='',bFlat=False):
+    def saveHEC_RAS2D_results_to_VTK(self,timeStep=-1,lastTimeStep=False,fileNameBase='',dir='',bFlat=False,combined_areas=False):
         """Save HEC-RAS 2D solutions to VTK files.
 
         Note:
-           - Each area saved separately
+           - Each area saved separately (default) or merged into one VTK file per time step
+             when combined_areas=True.
            - Each time saved separately
 
         The resulted files will be RAS2D_areaName_timeSequence.vtk, e.g.,
         RAS2D_SpringCreek_0001.vtk, RAS2D_SpringCreek_0002.vtk, etc.
+        When combined_areas=True the file will be RAS2D_combined_timeSequence.vtk.
 
         The option lastTimeStep specifies whether only the last time step is saved (default=False).
         The option timeStep specifies the particular step to be saved.
         If both lastTimeSTep and timeStep are specified, lastTimeStep has the priority.
 
-        Note: 
+        Note:
             - In most HEC-RAS versions, the velocity can be exported at nodes (face points). But somehow in HEC-RAS 6.6,
               the nodal velocity is not exported correctly (it has overflow float points; don't know why); however, the velocity at cell centers is correct.
               Thus, we save the cell center velocity for version 6.6.
@@ -2334,6 +2407,9 @@ class RAS_2D_Data(HydraulicData):
             specify only the last time step
         dir : str, optional
             directory name to write to
+        combined_areas : bool, optional
+            if False (default), write one VTK file per 2D area; if True, merge all areas
+            into a single VTK file per time step.
 
         Returns
         -------
@@ -2937,7 +3013,10 @@ def main():
     -------
 
     """
-    my_ras_2d_data = RAS_2D_Data("Muncie2D.p01.hdf")
+    from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
+    project = HEC_RAS_Project("Muncie2D.prj")
+    plan = project.get_plan("p01")
+    my_ras_2d_data = plan.load_results()
     
     #print(my_ras_2d_data.TwoDAreaFace_FacePoints[0])
     

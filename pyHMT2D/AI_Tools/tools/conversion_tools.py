@@ -23,25 +23,27 @@ def _err(message: str) -> dict:
 
 def ras_to_srh(
     ras_hdf_file: str,
-    terrain_tif_file: str,
     srh_case_name: str,
+    terrain_tif_file: str = "",
 ) -> dict:
     """Convert a HEC-RAS 2D mesh and Manning's n values to SRH-2D format.
 
-    Reads the HEC-RAS 2D result HDF file and terrain GeoTIFF, then writes
-    ``<srh_case_name>.srhgeom`` and ``<srh_case_name>.srhmat`` in the current
-    working directory.  The ``.srhhydro`` boundary-condition file must be
-    created separately.
+    Derives the HEC-RAS project (.prj) file automatically from the HDF path,
+    then writes ``<srh_case_name>.srhgeom`` and ``<srh_case_name>.srhmat`` in
+    the current working directory.  The ``.srhhydro`` boundary-condition file
+    must be created separately.
 
     Parameters
     ----------
     ras_hdf_file : str
-        HEC-RAS 2D result HDF file (e.g. ``Muncie2D.p01.hdf``).
-    terrain_tif_file : str
-        Terrain file in GeoTIFF format (e.g. ``Terrain/terrain.tif``).
+        HEC-RAS 2D result HDF file (e.g. ``Muncie2D.p01.hdf``). Used to
+        derive the project file and plan ID automatically.
     srh_case_name : str
         Base name for the output SRH-2D files (e.g. ``srh_Muncie`` →
         produces ``srh_Muncie.srhgeom`` and ``srh_Muncie.srhmat``).
+    terrain_tif_file : str, optional
+        Kept for backwards compatibility; ignored (terrain is auto-detected
+        from the project geometry HDF and .rasmap file).
 
     Returns
     -------
@@ -50,13 +52,41 @@ def ras_to_srh(
     """
     if not os.path.isfile(ras_hdf_file):
         return _err(f"HEC-RAS HDF file not found: {ras_hdf_file}")
-    if not os.path.isfile(terrain_tif_file):
-        return _err(f"Terrain GeoTIFF not found: {terrain_tif_file}")
 
     try:
+        import re as _re
+        import glob as _glob
+
+        # Derive .prj file from the HDF path (e.g. Muncie2D.p01.hdf -> Muncie2D.prj)
+        hdf_abs = os.path.abspath(ras_hdf_file)
+        hdf_dir = os.path.dirname(hdf_abs)
+        stem = os.path.basename(hdf_abs)
+        for ext in (".hdf", ".hdf5"):
+            if stem.lower().endswith(ext):
+                stem = stem[: -len(ext)]
+        # Extract plan ID (e.g. "p01") and strip it from the stem
+        plan_match = _re.search(r'\.([pP]\d+)$', stem)
+        plan_id = plan_match.group(1).lower() if plan_match else None
+        stem_no_plan = _re.sub(r'\.[pP]\d+$', '', stem)
+        candidate_prj = os.path.join(hdf_dir, stem_no_plan + ".prj")
+        if not os.path.isfile(candidate_prj):
+            prj_files = _glob.glob(os.path.join(hdf_dir, "*.prj"))
+            if not prj_files:
+                return _err(
+                    f"Could not find a .prj project file next to: {ras_hdf_file}. "
+                    "Pass the .prj file path as ras_hdf_file or place the .prj alongside the HDF."
+                )
+            candidate_prj = prj_files[0]
+
+        if plan_id is None:
+            return _err(
+                f"Could not determine plan ID from HDF filename: {os.path.basename(ras_hdf_file)}. "
+                "Expected a name like 'CaseName.p01.hdf'."
+            )
+
         import pyHMT2D
         converter = pyHMT2D.Misc.RAS_to_SRH_Converter(
-            ras_hdf_file, terrain_tif_file, srh_case_name
+            candidate_prj, plan_id, srh_case_name
         )
         converter.convert_to_SRH()
 

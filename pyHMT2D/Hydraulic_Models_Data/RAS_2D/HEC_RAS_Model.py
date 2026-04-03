@@ -3,6 +3,7 @@ RAS_2D_Model:
 """
 
 #import win32com.client as win32  #moved inside code
+import os
 import os.path
 
 from pyHMT2D.Hydraulic_Models_Data import HydraulicModel
@@ -16,212 +17,513 @@ import sys
 
 import h5py
 
-class HEC_RAS_Project(object):
-    """ HEC-RAS project class (data from .prj file)
 
-    Attributes:
-        title : str
-            project title
-        currentPlanName : str
-            name of the current plan
-        geom_file_list : list
-            list of all geometry files
-        flow_file_list : list
-            list of all flow files
-        plan_file_list : list
-            list of all plan files
-    """
+class HEC_RAS_RASMapper:
+    """Parses a HEC-RAS .rasmap XML file to discover available terrain and land cover layers."""
 
-    def __init__(self, title='', current_plan_index=-1, currentPlanName='', currentPlanFile='', geom_file_list=[],
-                 flow_file_list=[], plan_file_list=[], plans=[], terrain_hdf_file_list=[], terrain_tiff_file_list=[]):
-        """HEC_RAS_Project class constructor
+    def __init__(self, rasmap_file):
+        self.rasmap_file = rasmap_file
+        self._project_dir = os.path.dirname(os.path.abspath(rasmap_file))
+        self.terrains = []    # list of {"name": str, "filename": str (absolute path)}
+        self.land_covers = [] # list of {"name": str, "filename": str (absolute path)}
 
-        Parameters
-        ----------
-        title : str, optional
-            title
-        current_plan_index : int, optional
-            index of the current plan in the plans list
-        currentPlanName : str, optional
-            current plan's name
-        currentPlanFile : str, optional
-            current plan's file name
-        geom_file_list : str, optional
-            list of geometry file names
-        flow_file_list : str, optional
-            list of flow file names
-        plan_file_list : str, optional
-            list of plan file names
-        plans : str
-            list of HEC_RAS_Plan objects
-        terrain_hdf_file_list : str, optional
-            list of terrain hdf file names
-        terrain_tiff_file_list : str, optional
-            list of terrain tiff file names
-        """
+    def parse(self):
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(self.rasmap_file)
+        root = tree.getroot()
 
-        self.title = title
-        self.current_plan_index = current_plan_index
-        self.currentPlanName = currentPlanName
-        self.currentPlanFile = currentPlanFile
+        terrains_elem = root.find('Terrains')
+        if terrains_elem is not None:
+            for layer in terrains_elem.findall('Layer'):
+                if layer.get('Type') == 'TerrainLayer':
+                    filename = layer.get('Filename', '')
+                    self.terrains.append({
+                        'name': layer.get('Name', ''),
+                        'filename': self._resolve_path(filename),
+                    })
 
-        self.terrain_hdf_file_list = terrain_hdf_file_list
-        self.terrain_tiff_file_list = terrain_tiff_file_list
+        map_layers_elem = root.find('MapLayers')
+        if map_layers_elem is not None:
+            for layer in map_layers_elem.findall('Layer'):
+                if layer.get('Type') == 'LandCoverLayer':
+                    filename = layer.get('Filename', '')
+                    self.land_covers.append({
+                        'name': layer.get('Name', ''),
+                        'filename': self._resolve_path(filename),
+                    })
+        return self
 
-        #current terrain file names 
-        self.current_terrainHDF_file_name = terrain_hdf_file_list[current_plan_index]
-        self.current_terrainTIFF_file_name = terrain_tiff_file_list[current_plan_index]
+    def get_first_terrain(self):
+        """Return first terrain entry (document order), or None if no terrains defined."""
+        return self.terrains[0] if self.terrains else None
 
-        self.geom_file_list = geom_file_list
-        self.flow_file_list = flow_file_list
-        self.plan_file_list = plan_file_list
-
-        #Plans in the opened HEC-RAS project: a list of HEC_RAS_Plan objects
-        #plans is a list of HEC_RAS_Plan objects: HEC_RAS_Plan(PlanNames[i], steady, geom_file, flow_file, plan_file)
-        self.plans = plans
-
-        
-       
-    def find_plan_index(self, plan_name):
-        """
-        Find the index of the plan in the plans list
-        """
-        plan_index = -1
-
-        for i in range(len(self.plans)):
-            if self.plans[i].plan_name == plan_name:
-                plan_index = i
-                break
-
-        if plan_index == -1:
-            print("Error: plan, ", plan_name, ", not found in the plans list")
-            sys.exit()
-        
-        return plan_index
-
-    def set_current_plan_index(self, current_plan_index):
-        """
-
-        Parameters
-        ----------
-        current_plan_index : int, optional
-            index of the current plan in the plans list
-
-        Returns
-        -------
-
-        """
-
-        self.current_plan_index = current_plan_index
-        self.currentPlanName = self.plans[current_plan_index].plan_name
-        self.currentPlanFile = self.plans[current_plan_index].plan_file
-        self.current_terrainHDF_file_name = self.terrain_hdf_file_list[current_plan_index]
-        self.current_terrainTIFF_file_name = self.terrain_tiff_file_list[current_plan_index]
-
-    def get_current_plan_file_name(self):
-        return self.currentPlanName, self.currentPlanFile
-
-    def get_current_terrainFileNames(self):
-        return self.current_terrainHDF_file_name, self.current_terrainTIFF_file_name
-
-    def __str__(self):
-        """Define the string representation of the object as HEC-RAS case's title
-
-        Returns
-        -------
-
-        """
-        return self.title
+    def _resolve_path(self, rel_path):
+        """Resolve a rasmap relative path (.\\...) to an absolute path."""
+        rel_path = rel_path.replace('\\', os.sep).replace('/', os.sep)
+        if rel_path.startswith('.' + os.sep):
+            rel_path = rel_path[2:]
+        return os.path.normpath(os.path.join(self._project_dir, rel_path))
 
     def __repr__(self):
-        """Define the object as a string representation
+        return (f"HEC_RAS_RASMapper(terrains={[t['name'] for t in self.terrains]}, "
+                f"land_covers={[lc['name'] for lc in self.land_covers]})")
 
-        Returns
-        -------
 
-        """
-        return 'HEC-RAS Project: title = "{}", ' \
-               'current plan name = "{}", ' \
-               'geometry file list = "{}", ' \
-               'flow file list = "{}", ' \
-               'plan file list = "{}", ' \
-               'plans = "{}"'.format(self.title, self.currentPlanName,
-                                         self.geom_file_list, self.flow_file_list,
-                                         self.plan_file_list, self.plans)
+class HEC_RAS_Geometry:
+    """Data for a HEC-RAS geometry (.g## file and .g##.hdf file).
 
-class HEC_RAS_Plan(object):
-    """ HEC-RAS plan (data from .p## file)
-
-    Attributes:
-         title : str
-            title of the plan
-         steady : bool
-            whether it is steady or not
-         geom_file : str
-            geometry file name, e.g., g01, g02, etc.
-         flow_file : str
-            flow file name, e.g, u01, u02, etc.
-         plan_file : str
-            plan file name, e.g., p01, p02, etc.
-
+    The .g##.hdf file (geometry HDF) is created by HEC-RAS after geometry
+    preprocessing and may not exist if preprocessing has not been run.
+    This class reads the geometry HDF lazily (only when needed).
     """
-    def __init__(self, title='', steady=False, geom_file='', flow_file='', plan_file=''):
-        """HEC_RAS_Plan class constructor
 
+    def __init__(self, geom_id, geom_file, project):
+        """
         Parameters
         ----------
-        title : str, optional
-            title of the plan, also the plan's name
-        steady : bool, optional
-            whether the plan is steady or not (unsteady)
-        geom_file : str, optional
-            geometry file name
-        flow_file : str, optional
-            flow file name
-        plan_file : str, optional
-            plan file name
+        geom_id : str
+            Geometry short ID, e.g. 'g02'.
+        geom_file : str
+            Absolute path to the .g## text file.
+        project : HEC_RAS_Project
+            Back-reference to the owning project.
         """
-
-        self.title = title
-        self.plan_name = title
-        self.steady = steady
+        self.geom_id = geom_id
         self.geom_file = geom_file
+        self.hdf_file = geom_file + '.hdf'
+        self.project = project
+        self._title = None
+        self._terrain_hdf_file = None
+        self._terrain_tiff_file = None
+        self._terrain_resolved = False
+
+    @property
+    def title(self):
+        if self._title is None:
+            self._parse_geom_file()
+        return self._title
+
+    def _parse_geom_file(self):
+        self._title = ''
+        if not os.path.isfile(self.geom_file):
+            return
+        with open(self.geom_file, 'r', errors='replace') as f:
+            for line in f:
+                if line.startswith('Geom Title='):
+                    self._title = line.split('=', 1)[1].strip()
+                    break
+
+    def hdf_exists(self):
+        """Return True if the geometry HDF file exists."""
+        return os.path.isfile(self.hdf_file)
+
+    @property
+    def terrain_tiff_file(self):
+        """Absolute path to the terrain GeoTIFF file, resolved via fallback chain."""
+        if not self._terrain_resolved:
+            self._resolve_terrain()
+        return self._terrain_tiff_file
+
+    @property
+    def terrain_hdf_file(self):
+        """Absolute path to the RASMapper terrain HDF file."""
+        if not self._terrain_resolved:
+            self._resolve_terrain()
+        return self._terrain_hdf_file
+
+    def _resolve_terrain(self):
+        """Resolve terrain files using the fallback chain:
+        1. Geometry HDF Terrain Filename attribute
+        2. First terrain in project .rasmap (document order)
+        3. First .tif file found in the Terrain/ subdirectory
+        4. None (warn; face-point Z will be NaN)
+        """
+        self._terrain_resolved = True
+
+        # Step 1: geometry HDF
+        if self.hdf_exists():
+            try:
+                hdf_path, tiff_path = extract_terrain_file_names(self.geom_file)
+                self._terrain_hdf_file = hdf_path
+                if tiff_path and os.path.isfile(tiff_path):
+                    self._terrain_tiff_file = tiff_path
+                    return
+                elif tiff_path:
+                    print(f"Warning: Terrain TIFF referenced in geometry HDF not found: {tiff_path}")
+            except Exception as e:
+                print(f"Warning: Could not read terrain from geometry HDF ({self.hdf_file}): {e}")
+
+        # Step 2: first terrain in rasmap
+        if self.project and self.project.rasmap:
+            first = self.project.rasmap.get_first_terrain()
+            if first:
+                terrain_hdf = first['filename']
+                self._terrain_hdf_file = terrain_hdf
+                if os.path.isfile(terrain_hdf):
+                    try:
+                        tiff_name = get_terrain_file_attribute(terrain_hdf)
+                        if tiff_name:
+                            terrain_dir = os.path.dirname(terrain_hdf)
+                            tiff_path = os.path.normpath(os.path.join(terrain_dir, tiff_name))
+                            if os.path.isfile(tiff_path):
+                                self._terrain_tiff_file = tiff_path
+                                print(f"Info: Using terrain from rasmap for geometry {self.geom_id}: {tiff_path}")
+                                return
+                    except Exception as e:
+                        print(f"Warning: Could not read terrain from rasmap entry ({terrain_hdf}): {e}")
+
+        # Step 3: scan Terrain/ subdirectory
+        project_dir = os.path.dirname(os.path.abspath(self.geom_file))
+        terrain_dir = os.path.join(project_dir, 'Terrain')
+        if os.path.isdir(terrain_dir):
+            for fname in os.listdir(terrain_dir):
+                if fname.lower().endswith('.tif') or fname.lower().endswith('.tiff'):
+                    self._terrain_tiff_file = os.path.join(terrain_dir, fname)
+                    print(f"Warning: Auto-discovered terrain TIFF for geometry {self.geom_id}: "
+                          f"{self._terrain_tiff_file}. Verify this is the correct terrain file.")
+                    return
+
+        # Step 4: not found
+        print(f"Warning: No terrain TIFF file found for geometry {self.geom_id}. "
+              f"Face-point elevations will be set to NaN.")
+        self._terrain_tiff_file = None
+
+    def __str__(self):
+        return f"{self.geom_id}: {self.title}"
+
+    def __repr__(self):
+        return (f"HEC_RAS_Geometry(geom_id='{self.geom_id}', "
+                f"title='{self.title}', "
+                f"hdf_exists={self.hdf_exists()})")
+
+
+class HEC_RAS_SteadyFlow:
+    """Data for a HEC-RAS steady flow (.f## file)."""
+
+    def __init__(self, flow_id, flow_file, project):
+        self.flow_id = flow_id
         self.flow_file = flow_file
+        self.project = project
+        self._title = None
+
+    @property
+    def title(self):
+        if self._title is None:
+            self._parse_flow_file()
+        return self._title
+
+    def _parse_flow_file(self):
+        self._title = ''
+        if not os.path.isfile(self.flow_file):
+            return
+        with open(self.flow_file, 'r', errors='replace') as f:
+            for line in f:
+                if line.startswith('Flow Title='):
+                    self._title = line.split('=', 1)[1].strip()
+                    break
+
+    def __str__(self):
+        return f"{self.flow_id}: {self.title}"
+
+    def __repr__(self):
+        return f"HEC_RAS_SteadyFlow(flow_id='{self.flow_id}', title='{self.title}')"
+
+
+class HEC_RAS_UnsteadyFlow:
+    """Data for a HEC-RAS unsteady flow (.u## file).
+
+    Note: DSS (HEC Data Storage System) support for reading/writing boundary
+    condition time series is a planned future feature.
+    """
+
+    def __init__(self, flow_id, flow_file, project):
+        self.flow_id = flow_id
+        self.flow_file = flow_file
+        self.project = project
+        self._title = None
+        # TODO (future): DSS support for reading/writing boundary condition time series.
+
+    @property
+    def title(self):
+        if self._title is None:
+            self._parse_flow_file()
+        return self._title
+
+    def _parse_flow_file(self):
+        self._title = ''
+        if not os.path.isfile(self.flow_file):
+            return
+        with open(self.flow_file, 'r', errors='replace') as f:
+            for line in f:
+                if line.startswith('Flow Title='):
+                    self._title = line.split('=', 1)[1].strip()
+                    break
+
+    def __str__(self):
+        return f"{self.flow_id}: {self.title}"
+
+    def __repr__(self):
+        return f"HEC_RAS_UnsteadyFlow(flow_id='{self.flow_id}', title='{self.title}')"
+
+
+class HEC_RAS_Plan:
+    """Data for a HEC-RAS plan (.p## file).
+
+    Each plan owns a RAS_2D_Data object (populated lazily via load_results()).
+    """
+
+    def __init__(self, plan_id, plan_file, project):
+        """
+        Parameters
+        ----------
+        plan_id : str
+            Plan short ID, e.g. 'p03'.
+        plan_file : str
+            Absolute path to the .p## text file.
+        project : HEC_RAS_Project
+            Back-reference to the owning project.
+        """
+        self.plan_id = plan_id
         self.plan_file = plan_file
+        self.hdf_file = plan_file + '.hdf'
+        self.project = project
+        self._plan_name = None
+        self._steady = None
+        self._geometry_id = None
+        self._flow_id = None
+        self.ras_2d_data = None  # populated by load_results()
+
+    @property
+    def plan_name(self):
+        if self._plan_name is None:
+            self._parse_plan_file()
+        return self._plan_name
+
+    @property
+    def steady(self):
+        if self._steady is None:
+            self._parse_plan_file()
+        return self._steady
+
+    @property
+    def geometry_id(self):
+        if self._geometry_id is None:
+            self._parse_plan_file()
+        return self._geometry_id
+
+    @property
+    def flow_id(self):
+        if self._flow_id is None:
+            self._parse_plan_file()
+        return self._flow_id
+
+    @property
+    def geometry(self):
+        """Return the HEC_RAS_Geometry object associated with this plan."""
+        if self.project and self.geometry_id:
+            return self.project.geometries.get(self.geometry_id)
+        return None
+
+    def _parse_plan_file(self):
+        self._plan_name = ''
+        self._steady = False
+        self._geometry_id = ''
+        self._flow_id = ''
+        if not os.path.isfile(self.plan_file):
+            return
+        has_unsteady = False
+        with open(self.plan_file, 'r', errors='replace') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('Plan Title='):
+                    self._plan_name = line.split('=', 1)[1].strip()
+                elif line.startswith('Geom File='):
+                    self._geometry_id = line.split('=', 1)[1].strip()
+                elif line.startswith('Flow File='):
+                    self._flow_id = line.split('=', 1)[1].strip()
+                    fid = self._flow_id
+                    if fid.lower().startswith('u'):
+                        has_unsteady = True
+        self._steady = not has_unsteady
+
+    def hdf_exists(self):
+        """Return True if the plan result HDF file exists."""
+        return os.path.isfile(self.hdf_file)
+
+    def load_results(self, terrain_file=None):
+        """Load plan simulation results into ras_2d_data.
+
+        Parameters
+        ----------
+        terrain_file : str, optional
+            Path to a GeoTIFF terrain file. Overrides auto-detection from the
+            geometry HDF and rasmap. Required only if auto-detection fails.
+
+        Returns
+        -------
+        RAS_2D_Data
+            The loaded data object (also stored as self.ras_2d_data).
+        """
+        from pyHMT2D.Hydraulic_Models_Data.RAS_2D.RAS_2D_Data import RAS_2D_Data
+        if not self.hdf_exists():
+            raise FileNotFoundError(
+                f"Result HDF file '{self.hdf_file}' not found. "
+                "Run the HEC-RAS simulation first."
+            )
+        self.ras_2d_data = RAS_2D_Data(self, terrain_file)
+        return self.ras_2d_data
+
+    def __str__(self):
+        return f"{self.plan_id}: {self.plan_name}"
+
+    def __repr__(self):
+        return (f"HEC_RAS_Plan(plan_id='{self.plan_id}', "
+                f"plan_name='{self.plan_name}', "
+                f"geometry_id='{self.geometry_id}', "
+                f"flow_id='{self.flow_id}', "
+                f"steady={self.steady})")
+
+
+class HEC_RAS_Project:
+    """HEC-RAS project class — parses .prj and .rasmap files.
+
+    Can be used standalone (no COM / HEC-RAS installation required) for
+    post-processing simulation results.
+
+    Typical usage (post-processing only)::
+
+        project = HEC_RAS_Project("Muncie.prj")
+        plan    = project.get_plan("p03")      # by ID or title
+        data    = plan.load_results()           # terrain auto-detected
+        data.saveHEC_RAS2D_results_to_VTK(...)
+
+    When running simulations use HEC_RAS_Model (which extends this via
+    composition and adds COM control).
+    """
+
+    def __init__(self, prj_file):
+        """
+        Parameters
+        ----------
+        prj_file : str
+            Path to the HEC-RAS project file (.prj).
+        """
+        if not os.path.isfile(prj_file):
+            raise FileNotFoundError(f"Project file '{prj_file}' not found.")
+
+        self.prj_file = os.path.abspath(prj_file)
+        self.project_dir = os.path.dirname(self.prj_file)
+        self.project_name = os.path.splitext(os.path.basename(self.prj_file))[0]
+
+        self.title = ''
+        self.units = ''  # 'Feet' or 'Meter'
+
+        # Ordered dicts: short-ID (str) -> object, e.g. "p03" -> HEC_RAS_Plan
+        self.plans = {}
+        self.geometries = {}
+        self.unsteady_flows = {}
+        self.steady_flows = {}
+
+        self.current_plan_id = None  # e.g. "p04"
+
+        # RASMapper layer pool (None if .rasmap file not found)
+        self.rasmap = None
+
+        self._parse_prj()
+        self._parse_rasmap()
+
+    def _parse_prj(self):
+        geom_ids = []
+        plan_ids = []
+        unsteady_ids = []
+        steady_ids = []
+
+        with open(self.prj_file, 'r', errors='replace') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('Proj Title='):
+                    self.title = line.split('=', 1)[1].strip()
+                elif line == 'English Units':
+                    self.units = 'Feet'
+                elif line == 'SI Units':
+                    self.units = 'Meter'
+                elif line.startswith('Geom File='):
+                    geom_ids.append(line.split('=', 1)[1].strip())
+                elif line.startswith('Plan File='):
+                    plan_ids.append(line.split('=', 1)[1].strip())
+                elif line.startswith('Unsteady File='):
+                    unsteady_ids.append(line.split('=', 1)[1].strip())
+                elif line.startswith('Flow File='):
+                    steady_ids.append(line.split('=', 1)[1].strip())
+                elif line.startswith('Current Plan='):
+                    self.current_plan_id = line.split('=', 1)[1].strip()
+
+        for gid in geom_ids:
+            geom_file = os.path.join(self.project_dir, self.project_name + '.' + gid)
+            self.geometries[gid] = HEC_RAS_Geometry(gid, geom_file, self)
+
+        for pid in plan_ids:
+            plan_file = os.path.join(self.project_dir, self.project_name + '.' + pid)
+            self.plans[pid] = HEC_RAS_Plan(pid, plan_file, self)
+
+        for uid in unsteady_ids:
+            flow_file = os.path.join(self.project_dir, self.project_name + '.' + uid)
+            self.unsteady_flows[uid] = HEC_RAS_UnsteadyFlow(uid, flow_file, self)
+
+        for fid in steady_ids:
+            flow_file = os.path.join(self.project_dir, self.project_name + '.' + fid)
+            self.steady_flows[fid] = HEC_RAS_SteadyFlow(fid, flow_file, self)
+
+    def _parse_rasmap(self):
+        rasmap_file = os.path.join(self.project_dir, self.project_name + '.rasmap')
+        if os.path.isfile(rasmap_file):
+            self.rasmap = HEC_RAS_RASMapper(rasmap_file)
+            self.rasmap.parse()
+
+    def get_plan(self, plan_id_or_name):
+        """Get a plan by short ID (e.g. 'p03') or by plan title.
+
+        Parameters
+        ----------
+        plan_id_or_name : str
+            Plan short ID or plan title string.
+
+        Returns
+        -------
+        HEC_RAS_Plan
+        """
+        if plan_id_or_name in self.plans:
+            return self.plans[plan_id_or_name]
+        for plan in self.plans.values():
+            if plan.plan_name == plan_id_or_name:
+                return plan
+        raise KeyError(
+            f"Plan '{plan_id_or_name}' not found. "
+            f"Available plan IDs: {list(self.plans.keys())}"
+        )
+
+    @property
+    def current_plan(self):
+        """Return the current plan as an HEC_RAS_Plan object."""
+        if self.current_plan_id and self.current_plan_id in self.plans:
+            return self.plans[self.current_plan_id]
+        return None
+
+    def set_current_plan_id(self, plan_id):
+        """Set current plan by short ID."""
+        if plan_id not in self.plans:
+            raise KeyError(f"Plan ID '{plan_id}' not found.")
+        self.current_plan_id = plan_id
 
     def __str__(self):
         return self.title
 
     def __repr__(self):
-        return 'HEC-RAS plan: title = "{}", ' \
-               'steady = "{}", ' \
-               'geometry file = "{}", ' \
-               'flow file = "{}"'.format(self.title, self.steady,
-                                         self.geom_file, self.flow_file)
+        return (f"HEC_RAS_Project(title='{self.title}', "
+                f"units='{self.units}', "
+                f"plans={list(self.plans.keys())}, "
+                f"geometries={list(self.geometries.keys())})")
 
-class HEC_RAS_Geometry(object):
-    """ Data for a HEC-RAS geometry (from .g## file)
-
-    Not implemented yet.
-    """
-
-    pass
-
-class HEC_RAS_SteadyFlow(object):
-    """ Data for a HEC-RAS steady flow (from .f## file)
-
-    Not implemented yet.
-    """
-
-    pass
-
-class HEC_RAS_UnsteadyFlow(object):
-    """ Data for a HEC-RAS unsteady flow (from .u## file)
-
-    Not implemented yet.
-    """
-
-    pass
 
 class HEC_RAS_Model(HydraulicModel):
     """HEC-RAS Model class
@@ -378,288 +680,127 @@ class HEC_RAS_Model(HydraulicModel):
         #_ = input("Press ENTER to continue:")
 
 
-    def open_project(self,projectFileName):
-        """ open the specified HEC-RAS project
+    def open_project(self, projectFileName):
+        """Open the specified HEC-RAS project.
+
+        Parses the project file structure and opens the project via the COM
+        interface. The returned HEC_RAS_Project can also be created without
+        COM for post-processing-only workflows.
 
         Parameters
         ----------
         projectFileName : str
-            project file name including the path
-        terrainFileName : str, obsolete
-            file name for the terrain (not necessarily the terrain used by HEC-RAS for the project). This
-            terrain file (in GeoTiff format) is used to interpolate the elevation at face points (which HEC-RAS
-            does not export to result HDF files). This GeoTiff terrain file can be converted from the terrain used
-            in the HEC-RAS project. 
-
-            7/25/2025: The mesh in a plan in HEC-RAS has the terrain information (in geometry hdf file). So, the terrain file is not
-            necessary.
+            Path to the HEC-RAS project file (.prj).
 
         Returns
         -------
-            currentPlanFile : str
-                name of current plan file
-            currentPlanName: str
-                name of current plan
-
+        HEC_RAS_Project
+            The parsed project object.
         """
+        if gVerbose:
+            print("HEC-RAS opens project: ", projectFileName)
 
-        if gVerbose: print("HEC-RAS opens project: ", projectFileName)
-
-        # check whether the HEC-RAS model has been initialized. If not, call init_model()
         if self._RASController is None:
             self.init_model()
 
-        # check whether the specified projectFileName file exists
         if os.path.isfile(projectFileName):
-            #get the absolute path of the project file (it seems HEC-RAS does not like the relative path)
             self._project_file_name = os.path.abspath(projectFileName)
         else:
-            error = 'Project file "{}" not found.'.format(projectFileName)
+            raise FileNotFoundError(f'Project file "{projectFileName}" not found.')
 
-        # open the project
+        # Open via COM
         self._RASController.Project_Open(self._project_file_name)
 
-        title = self._RASController.CurrentProjectTitle()
+        # Parse the project file structure (pure Python, no COM)
+        self._project = HEC_RAS_Project(self._project_file_name)
 
-
-        ###########################################
-        # Build data for the HEC_RAS_Project object
-        ###########################################
-        PlanCount = 0
-        PlanNames = None
-        IncludeOnlyPlansInBaseDirectory = False
-
-        PlanCount, PlanNames = self.get_plan_names(IncludeOnlyPlansInBaseDirectory)
-
-        if gVerbose:
-            print("There are ", PlanCount, "plan(s) in current project.")
-            print('Plan names: ', PlanNames)  # returns plan names
-
-        #infer the current plan from current plan file
-        #HEC-RAS does not provide a function to get current plan name
-        currentPlanFile = self._RASController.CurrentPlanFile()
-
-        currentPlanName = ''
-
-        for i in range(PlanCount):
-            if currentPlanFile == self._RASController.Plan_GetFilename(PlanNames[i])[0]:
-                currentPlanName = PlanNames[i]
-                break
-
-        #print("Current plan name is ", currentPlanName)
-
-        #If plans are not empty, build these plans
+        # Reconcile current plan with what COM reports
+        current_plan_file = self._RASController.CurrentPlanFile()
+        if current_plan_file:
+            current_plan_file_abs = os.path.abspath(current_plan_file)
+            for pid, plan in self._project.plans.items():
+                if os.path.abspath(plan.plan_file) == current_plan_file_abs:
+                    self._project.current_plan_id = pid
+                    break
 
         if gVerbose:
-            print("Building all the plans in the project ...")
+            print("Project opened:", self._project)
+            print("Current plan:", self._project.current_plan)
 
-        geom_file_list = []
-        terrain_hdf_file_list = []
-        terrain_tiff_file_list = []
-        flow_file_list = []
-        plan_file_list = []
+        return self._project
 
-        plans = []
-
-        if PlanCount > 0:
-            for i in range(PlanCount):
-                if gVerbose:
-                    print("Plan ", i, ",", PlanNames[i], ":")
-
-                #temporarily set the current plan to be PlanNames[i]; will be restored.
-                self._RASController.Plan_SetCurrent(PlanNames[i])
-
-                #get the plan file for the current plan
-                plan_file = self._RASController.CurrentPlanFile()
-                plan_file_list.append(plan_file)
-
-                #get the geometry file for the current plan
-                geom_file = self._RASController.CurrentGeomFile()
-                geom_file_list.append(geom_file)
-
-                #get the terrain hdf file name and the tiff file name for the current plan
-                terrain_hdf_file_name, terrain_tiff_file_name = extract_terrain_file_names(geom_file)
-                terrain_hdf_file_list.append(terrain_hdf_file_name)
-                terrain_tiff_file_list.append(terrain_tiff_file_name)
-
-                #get the flow file for the current plan
-                flow_file_steady = self._RASController.CurrentSteadyFile()
-                flow_file_unsteady = self._RASController.CurrentUnSteadyFile()
-
-                if gVerbose:
-                    print("    plan file = ", plan_file)
-                    print("    geom file = ", geom_file)
-
-                #print("flow_file_steady = ", flow_file_steady)
-                #print("flow_file_unsteady = ", flow_file_unsteady)
-
-                #check whether both steady and unsteady flow files are empty
-                if (not flow_file_steady) and (not flow_file_unsteady):
-                    print("Error: no flow file specified in the current plan. Exiting.")
-                    sys.exit()
-
-                steady = False
-
-                if (flow_file_unsteady):
-                    if gVerbose:
-                        print("    It is an unsteady flow plan.")
-                    flow_file = flow_file_unsteady
-                else:
-                    if gVerbose:
-                        print("    It is a steady flow plan.")
-                    steady = True
-                    flow_file = flow_file_steady
-
-                if gVerbose:
-                    print("    flow file = ", flow_file)
-
-                flow_file_list.append(flow_file)
-
-                plans.append(HEC_RAS_Plan(PlanNames[i], steady, geom_file, flow_file, plan_file))
-
-        #print(plans)
-
-        #find the index of the current plan in the plans list
-        current_plan_index = -1
-        for i in range(len(plans)):
-            if plans[i].plan_name == currentPlanName:
-                current_plan_index = i
-                break
-
-        if current_plan_index == -1:
-            print("Error: current plan, ", currentPlanName, ", not found in the plans list")
-            sys.exit()
-
-        #set the current plan to the current plan index
-        self._RASController.Plan_SetCurrent(plans[current_plan_index].plan_name)
-
-        #set the current plan back to its original value
-        #self._RASController.Plan_SetCurrent(currentPlanName)
-
-        #create the HEC_RAS_Project object
-        if self._project is not None:
-            self._project = None
-
-        self._project = HEC_RAS_Project(title, current_plan_index, currentPlanName, currentPlanFile, geom_file_list, 
-                                        flow_file_list, plan_file_list, plans, terrain_hdf_file_list, terrain_tiff_file_list)
-
-        #dump _project content to screen
-        #print(self._project)
-
-        #create RAS_2D_Data object (can't be here because the plan.hdf file exists only after the plan has been run)
-        #self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf", terrainFileName)
-
-        if gVerbose: 
-            print("Finished building all the plans in the project.")
-
-        return currentPlanName, currentPlanFile
-
-    def set_current_plan(self, planName):
-        """
+    def set_current_plan(self, plan_id_or_name):
+        """Set the current plan by short ID (e.g. 'p03') or plan title.
 
         Parameters
         ----------
-        planName : str
-            name of the plan to be set as current. The name should be like "Peak_flow_plan", not "p01" or "p02"
-
-        Returns
-        -------
-
+        plan_id_or_name : str
+            Plan short ID (e.g. 'p03') or plan title string.
         """
-
-        #TODO: should check whether planName is in the list plans of current project
-
-        #Plan_SetCurrent(...) returns a tuple (True/False, planName)
-        ret = self._RASController.Plan_SetCurrent(planName)
-
+        plan = self._project.get_plan(plan_id_or_name)
+        # COM needs the plan title (name), not the ID
+        ret = self._RASController.Plan_SetCurrent(plan.plan_name)
         if ret[0]:
+            self._project.current_plan_id = plan.plan_id
             if gVerbose:
-                print("Call to set_current_plan(...) is successful. Current plan is ", planName, " with plan file ", self._RASController.CurrentPlanFile())
-
-            #set the current plan name and file name (this is to update the variables in the _project object)
-            plan_index = self._project.find_plan_index(planName)
-            self._project.set_current_plan_index(plan_index)
+                print(f"Current plan set to: {plan}")
         else:
-            print("Call to set_current_plan(...) failed. Current plan not changed. Check the validity of the plan name: ", planName)
+            print(f"Warning: COM Plan_SetCurrent failed for '{plan.plan_name}'. "
+                  f"Updating internal state only.")
+            self._project.current_plan_id = plan.plan_id
 
-    def get_current_planFile(self):
-        """
-        Return the current plan file (it seems there is no function to get plan name)
+    def load_current_plan_results(self, terrain_file=None):
+        """Load simulation results for the current plan.
+
+        Parameters
+        ----------
+        terrain_file : str, optional
+            Path to a GeoTIFF terrain file. Passed to plan.load_results().
+            If None, terrain is auto-detected from the geometry HDF and rasmap.
 
         Returns
         -------
-
+        RAS_2D_Data
         """
-
-        plan_file = self._RASController.CurrentPlanFile()
-
-        return plan_file
-
-    
-
-    def load_current_plan_results(self):
-        """
-        Load the current plan results to ras_2d_data
-        Returns
-        -------
-
-        """
-
-        currentPlanName, currentPlanFile = self._project.get_current_plan_file_name()
-        current_terrainHDF_file_name, current_terrainTIFF_file_name = self._project.get_current_terrainFileNames()
+        plan = self._project.current_plan
+        if plan is None:
+            raise RuntimeError("No current plan set. Call open_project() first.")
 
         if gVerbose:
-            print("Loading results for current plan: ", currentPlanName)
-            print("Current plan file: ", currentPlanFile)
-            print("Current terrain TIFF file: ", current_terrainTIFF_file_name)
+            print(f"Loading results for plan: {plan}")
 
-        #check whether the hdf file exists
-        if not os.path.isfile(currentPlanFile):
-            raise Exception("The result HDF file for current plan does not exist. Make sure to run HEC-RAS before calling this function.")
-        elif not os.path.isfile(current_terrainTIFF_file_name):
-            raise Exception("The specified terrain TIFF file " + current_terrainTIFF_file_name + " does not exist.")
-        else:
-            self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
-                
-            #try:
-            #    self._ras_2d_data = RAS_2D_Data(currentPlanFile + ".hdf")
-            #except Exception as e:                
-            #    raise Exception("Error in loading the results for current plan. " + str(e))
-
+        return plan.load_results(terrain_file=terrain_file)
 
     def get_simulation_case(self, bReload=False):
-        """Get the simulation case to RAS_2D_data
+        """Return the RAS_2D_Data for the current plan, loading if necessary.
 
         Parameters
         ----------
+        bReload : bool, optional
+            If True, reload results from the HDF file even if already loaded.
 
         Returns
         -------
-        ras_2d_data : RAS_2D_Data
-            an object from class RAS_2D_Data, which should be created before calling
-        bRelaod: bool
-            whether to reload the results from the HDF file
-
+        RAS_2D_Data
         """
+        plan = self._project.current_plan
+        if plan is None:
+            raise RuntimeError("No current plan set. Call open_project() first.")
 
-        if self._ras_2d_data is None or bReload:
+        if plan.ras_2d_data is None or bReload:
             self.load_current_plan_results()
 
-        return self._ras_2d_data
+        return plan.ras_2d_data
+
+    def get_current_planFile(self):
+        """Return the current plan file path."""
+        return self._RASController.CurrentPlanFile()
 
     def get_current_project(self):
-        """Get the current opened project
-
-        Returns
-        -------
-
-        """
-
-        if (self._project is not None):
+        """Return the current HEC_RAS_Project."""
+        if self._project is not None:
             return self._project
-        else:
-            raise Exception("HEC-RAS has no project opend. Open the project first.")
-
+        raise RuntimeError("No project opened. Call open_project() first.")
 
     def save_project(self):
         """Save the current project
@@ -788,5 +929,5 @@ class HEC_RAS_Model(HydraulicModel):
 
         #it returns PlanCount, PlanNames and IncludeOnlyPlansInBaseDirectory (temp; not used)
         PlanCount, PlanNames, temp = self._RASController.Plan_Names(None, None, IncludeOnlyPlansInBaseDirectory)
-        
+
         return PlanCount, PlanNames

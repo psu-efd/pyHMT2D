@@ -17,6 +17,7 @@ import sys
 import pyHMT2D
 import shutil
 from pathlib import Path
+from pyHMT2D.Hydraulic_Models_Data.RAS_2D.HEC_RAS_Model import HEC_RAS_Project
 
 def run_HEC_RAS():
 
@@ -32,7 +33,6 @@ def run_HEC_RAS():
     print("Hydraulic model version: ", my_hec_ras_model.getVersion())
 
     #open a HEC-RAS project
-    #my_hec_ras_model.open_project("Muncie2D.prj", "Terrain/TerrainMuncie_composite.tif")
     my_hec_ras_model.open_project("Muncie2D.prj")
 
     #run the HEC-RAS model's current project
@@ -54,8 +54,9 @@ def convert_HEC_RAS_to_VTK():
 
     print("Converting HEC-RAS result to VTK...")
 
-    my_ras_2d_data = pyHMT2D.RAS_2D.RAS_2D_Data("Muncie2D.p01.hdf",
-                                         "Terrain/TerrainMuncie_composite.tif")
+    project = HEC_RAS_Project("Muncie2D.prj")
+    plan = project.get_plan("p01")
+    my_ras_2d_data = plan.load_results()
 
     my_ras_2d_data.saveHEC_RAS2D_results_to_VTK(lastTimeStep=True)
 
@@ -85,4 +86,3 @@ if __name__ == "__main__":
     convert_HEC_RAS_to_VTK()
 
     print("All done!")
-
