@@ -2,18 +2,19 @@
 
 ## *pyHMT2D* - Python-based Hydraulic Modeling Tools - 2D
 
-*pyHMT2D* is a Python package developed to control and (semi)automate 2D hydraulic modeling, and pre-/post-process simulation results.  
+*pyHMT2D* is a Python package for controlling and (semi)automating 2D hydraulic modeling, pre-/post-processing simulation results, and enabling AI-agent workflows through MCP tools and Agent Skills.  
+
 Currently, the following hydraulic models are supported:
 
 - [SRH-2D](https://www.usbr.gov/tsc/techreferences/computer%20software/models/srh2d/index.html)
 - [HEC-RAS](https://www.hec.usace.army.mil/software/hec-ras/)
 - Backwater-1D (a simple toy model for demonstration purpose)
 
-In the future, support for more 2D models may be added. To use this Python package, an obvious prerequisite is that the hydraulic model you want to use has been properly installed. Please see their respective website and documentation for installation and usage.
+In the future, support for more 2D models may be added. To use this Python package, an obvious prerequisite is that the hydraulic model you want to use has been properly installed. Please see their respective website and documentation for installation and usage. If you want to use the AI-agent workflow, you will also need an AI coding assistant such as Claude Code, Cursor, or Gemini, along with the AI extras (`pip install pyHMT2D[ai]`).
 
 ## Supported Platform
 
-Currently, only Windows is supported. This is because SRH-2D and HEC-RAS 2D are for Windows only. Most practitioners and engineers who run these 2D models use Windows almost exclusively.
+Currently, only Windows is supported. This is because SRH-2D and HEC-RAS 2D are for Windows only. Most practitioners and engineers who run these 2D models use Windows almost exclusively. Linux platform has also been tested, but with limited support (you will need the Linux version of the hydraulics models).
 
 ## Motivations
 
@@ -49,6 +50,13 @@ With the control and automation capability above, it is much easier to do the fo
 
 - Monte-Carlo simulations with scripting and Python’s statistic libraries
 - ...
+
+**AI-assisted modeling:**
+
+- expose SRH-2D and HEC-RAS project operations through an MCP server with 27 AI-agent-callable tools
+- use natural-language prompts in MCP-capable AI coding assistants to inspect projects, edit Manning's n and boundary conditions, run simulations, query results, and export VTK files
+- run AI-assisted calibration and Monte Carlo workflows for supported models
+- use repository-provided Agent Skills such as `/hmt-open`, `/hmt-modify`, `/hmt-run`, `/hmt-results`, `/hmt-export`, `/hmt-convert`, `/hmt-calibrate`, and `/hmt-monte-carlo`
 
 **Other features:**
 
@@ -219,7 +227,66 @@ hmt-cli srh_to_vtk --args '{"srhhydro_file": "Muncie.srhhydro", "output_file": "
 
 See `examples/cli` for more details.
 
-More examples can be found in the `examples` directory.
+### Use with AI coding assistants (Claude Code, Cursor, Codex, etc.)
+
+*pyHMT2D* includes an **MCP (Model Context Protocol) server** that exposes 27 tools for opening projects, modifying parameters, running simulations, querying results, calibration, and Monte Carlo analysis. Any AI coding assistant that supports MCP can use these tools.
+
+**Setup (one-time):**
+
+1. Install *pyHMT2D* with the AI extras:
+   ```bash
+   pip install -e ".[ai]"
+   ```
+
+2. Register the MCP server with your AI assistant. For **Codex CLI**:
+   ```bash
+   codex mcp add pyHMT2D -- python -m pyHMT2D.AI_Tools.mcp_server
+   ```
+   This registers the server in your user-level Codex config (`~/.codex/config.toml`). Start a new Codex session after adding it so the MCP tools are loaded.
+
+   For **Claude Code**:
+   ```bash
+   claude mcp add pyHMT2D -- python -m pyHMT2D.AI_Tools.mcp_server
+   ```
+   For **Cursor**, **Windsurf**, or other MCP-compatible assistants, add the following to their MCP configuration:
+   ```json
+   {
+     "mcpServers": {
+       "pyHMT2D": {
+         "command": "python",
+         "args": ["-m", "pyHMT2D.AI_Tools.mcp_server"]
+       }
+     }
+   }
+   ```
+
+3. Ensure the hydraulic solver(s) you want to use (HEC-RAS and/or SRH-2D) are installed.
+
+**Usage:** Once the MCP server is registered, you can give natural-language instructions to your AI assistant, for example:
+
+> *"Open the HEC-RAS project in the Muncie directory, tell me what materials are defined and their Manning's n values, and list the boundary conditions."*
+
+The assistant will call the appropriate MCP tools to carry out the task. See `examples/AI_Tools/` for more prompt examples covering project inspection, parameter modification, simulation, result querying, calibration, and Monte Carlo analysis.
+
+**Slash-command skills (automatic):**
+
+The repository includes pre-built **Agent Skills** in `.agents/skills/` that follow the [Agent Skills open standard](https://agentskills.io). These are automatically discovered by any AI coding assistant that supports the standard (Claude Code, Cursor, Codex, GitHub Copilot, Windsurf, Gemini CLI, and others — no extra setup needed). When you clone the repo and open it in a supported AI assistant, the following slash commands become available:
+
+| Command | Description |
+|---------|-------------|
+| `/hmt-open` | Open and inspect a hydraulic model project |
+| `/hmt-status` | Show current session state and suggested next steps |
+| `/hmt-modify` | Modify Manning's n, inlet flow, or exit water surface elevation |
+| `/hmt-run` | Run the simulation (SRH-2D preprocessing + solver) |
+| `/hmt-results` | Query results: point values, statistics, flood extent, cross-sections |
+| `/hmt-export` | Export results or mesh to VTK for ParaView |
+| `/hmt-convert` | Convert between model formats (HEC-RAS to SRH-2D, SRH-2D to VTK) |
+| `/hmt-calibrate` | Automated Manning's n calibration against observations |
+| `/hmt-monte-carlo` | Monte Carlo uncertainty analysis |
+
+Each skill orchestrates multiple MCP tool calls in the correct sequence, so you can type `/hmt-open` instead of manually calling individual tools.
+
+More examples can be found in the `examples/AI_Tools` directory.
 
 ## Limitations
 
@@ -231,11 +298,38 @@ More examples can be found in the `examples` directory.
 
 **For HEC-RAS 2D:**
 
-- Only **one** 2D flow area is supported.
-- Only 2D flow area information is processed; others such as 1D channels and structures are ignored.
+- Multiple 2D flow areas are supported; 1D channels and hydraulic structures are not processed.
+- VTK export can write each 2D area to a separate file (default) or combine all areas into one file.
 - Currently, only flow data is processes; others such as sediment and water quality are ignored.
 - This package is currently developed using HEC-RAS v6.6; other versions may work but have not been tested.
 - RAS 2025 is currently not supported due to its development status.
+
+## Troubleshooting
+
+### HEC-RAS: stale pywin32 COM cache
+
+**Symptom:** When running any script that calls `HEC_RAS_Model.init_model()`, you see an error like:
+
+```
+AttributeError: module 'win32com.gen_py.A1640D88-9FCB-465D-80A9-84BA8B96D413x0x1x0'
+has no attribute 'CLSIDToClassMap'
+```
+
+**Cause:** `pywin32` generates and caches Python wrappers for the HEC-RAS COM interface the first time it is used. If HEC-RAS is reinstalled, upgraded, or repaired after that cache was created, the cached module becomes stale and pywin32 cannot load it.
+
+**Fix:** Delete the stale cache directory. Run the following one-liner in a terminal (adjust the Python version subfolder `3.12` if you are using a different Python version):
+
+```bash
+python -c "import shutil, os; path = os.path.join(os.environ['TEMP'], 'gen_py', '3.12', 'A1640D88-9FCB-465D-80A9-84BA8B96D413x0x1x0'); shutil.rmtree(path, ignore_errors=True); print('Cleared:', path)"
+```
+
+pywin32 will rebuild the cache automatically on the next run. If the CLSID subfolder name differs for your version of HEC-RAS, list the contents of `%TEMP%\gen_py\<python-version>\` to find the correct folder:
+
+```bash
+python -c "import os; print(os.listdir(os.path.join(os.environ['TEMP'], 'gen_py', '3.12')))"
+```
+
+Delete the folder whose name starts with the HEC-RAS CLSID (typically `A1640D88-...`).
 
 ## API Documentation
 

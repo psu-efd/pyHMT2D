@@ -25,7 +25,7 @@
     "Node Velocity - Velocity Y",
     "Water Surface"
   ],
-  "vtk_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\RAS_2D\\03_query_results\\vtk_output\\ras_resultPeak_flow_plan_Muncie_Geom_0008.vtk",
+  "vtk_file": null,
   "config_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\RAS_2D\\hmt_config.json",
   "_srh_pre_path": null,
   "_srh_path": null,

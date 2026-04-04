@@ -1,7 +1,8 @@
 """
-Perform Monte Carlo simulation with the HEC_RAS_Model and HEC_RAS_Data classes
+Perform Monte Carlo simulation with the HEC_RAS_Model and HEC_RAS_Project/RAS_2D_Data classes.
 
-It demonstrates how to use pyHMT2D to control the run of HEC-RAS model, extract information, and parallelization.
+It demonstrates how to use pyHMT2D to control the run of HEC-RAS model, extract results via the
+project-centric API (HEC_RAS_Project -> plan -> RAS_2D_Data), and run cases in parallel.
 """
 
 #if run in the cloud, need to specify the location of pyHMT2D. If pyHMT2D is installed

@@ -18,7 +18,7 @@ def run_SRH_2D(srhcontrol_file, system_name):
 
     if system_name == "Windows":
         #the following should be modified based on your installation of SRH-2D on Windows
-        version = "3.6.5"
+        version = "3.7.1"
         srh_pre_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe\SRH_Pre_Console.exe"
         srh_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe\SRH-2D_Console.exe"
         extra_dll_path = r"C:\Program Files\SMS 13.4 64-bit\python\Lib\site-packages\srh2d_exe"

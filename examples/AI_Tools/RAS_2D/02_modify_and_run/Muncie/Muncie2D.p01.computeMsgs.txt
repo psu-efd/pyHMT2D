@@ -2,14 +2,14 @@ Message  | Notes generated when writing the computation files:
 Message  | Testing program set the number of cores for 2d flow area: 'Muncie_Geom' from 0 to 0
 Message  | 
 Message  | Plan: 'Peak_flow_plan' (Muncie2D.p01)
-Message  | Simulation started at: 26Mar2026 04:06:29 PM
+Message  | Simulation started at: 04Apr2026 08:54:43 AM
 Message  | 
 Message  | PROCESS:RasProcess
 Message  | Writing Plan GIS Data...
 Progress | 100
 Message  | Completed Writing Plan GIS Data
 Message  | Writing Geometry...
-Message  | Computing 2D Flow Area 'Muncie_Geom' tables: Associated Manning's n layer layer has been updated (26MAR2026 16:00:49 -> 26MAR2026 16:05:37)
+Message  | Computing 2D Flow Area 'Muncie_Geom' tables: Associated Manning's n layer layer has been updated (02APR2026 23:21:39 -> 04APR2026 08:54:32)
 Progress | 0.01
 Progress | 0.04
 Progress | 0.07
@@ -19,17 +19,14 @@ Progress | 0.14
 Progress | 0.17
 Progress | 0.2
 Progress | 0.23
-Progress | 0.28
 Progress | 0.2
 Progress | 0.23
-Progress | 0.28
+Progress | 0.29
 Progress | 0.44
 Progress | 0.46
 Progress | 0.49
-Progress | 0.52
 Progress | 0.54
-Progress | 0.57
-Progress | 0.6
+Progress | 0.59
 Progress | 0.84
 Progress | 1
 Progress | 1
@@ -107,7 +104,7 @@ Progress | 0.91
 Progress | 0.94
 Progress | 0.97
 Progress | 1
-Message  | 2D Flow Area 'Muncie_Geom' tables complete 23.44 sec
+Message  | 2D Flow Area 'Muncie_Geom' tables complete 13.13 sec
 Progress | 30
 Progress | 50
 Progress | 80
@@ -133,14 +130,12 @@ Message  | Performing Unsteady Flow Simulation  HEC-RAS 6.6 September 2024
 Progress | 0.1
 Progress | 0.2
 Progress | 0.3
-Message  | 'wmic' is not recognized as an internal or external command,
-Message  | operable program or batch file.
 Message  |  
-Progress | 7.929687E-02
+Progress | 6.953125E-02
 Message  | 	
 Message  | Unsteady Input Summary:
 Message  |      2D Unsteady SWE-ELM Equation Set (faster)
-Message  |      2D number of Solver Cores:    8
+Message  |      2D number of Solver Cores:    4
 Progress | 0.3
 Progress | 0.4
 Progress | 0.5
@@ -149,308 +144,287 @@ Progress | 0.7333333
 Message  | 
 Message  | Maximum iteration location		Cell	 WSEL	ERROR	ITERATIONS
 Message  | 
-Message  | 01JAN1900 00:00:10  Muncie_Geom	Cell #	     17766	  944.85	   1.427	20
+Message  | 01JAN1900 00:00:10  Muncie_Geom	Cell #	     17766	  944.81	   1.481	21
 Progress | 1.388889E-03
-Message  | 01JAN1900 00:00:20  Muncie_Geom	Cell #	     18450	  939.52	   1.643	21
-Message  | 01JAN1900 00:00:30  Muncie_Geom	Cell #	     17222	  936.48	   0.452	21
-Message  | 01JAN1900 00:00:40  Muncie_Geom	Cell #	     17780	  943.00	   0.059	20
+Message  | 01JAN1900 00:00:20  Muncie_Geom	Cell #	     18450	  939.33	   1.697	21
+Message  | 01JAN1900 00:00:30  Muncie_Geom	Cell #	     18453	  943.60	   0.795	20
+Message  | 01JAN1900 00:00:40  Muncie_Geom	Cell #	     17790	  937.45	   0.242	20
 Message  | 
-Message  | 01JAN1900 00:00:50  Muncie_Geom	Cell #	     18468	  937.33	   0.372	20
-Message  | 01JAN1900 00:01:00  Muncie_Geom	Cell #	     18474	  937.23	   0.319	22
-Message  | 01JAN1900 00:01:10  Muncie_Geom	Cell #	     16895	  945.67	   0.324	21
-Message  | 01JAN1900 00:01:20  Muncie_Geom	Cell #	     17802	  942.64	   0.194	20
+Message  | 01JAN1900 00:00:50  Muncie_Geom	Cell #	     18468	  936.86	   0.742	20
+Message  | 01JAN1900 00:01:00  Muncie_Geom	Cell #	     17798	  939.07	   0.184	20
+Message  | 01JAN1900 00:01:10  Muncie_Geom	Cell #	     16895	  945.67	   0.326	21
+Message  | 01JAN1900 00:01:20  Muncie_Geom	Cell #	     17802	  942.59	   0.114	20
 Message  | 
-Message  | 01JAN1900 00:01:30  Muncie_Geom	Cell #	     18485	  941.49	   0.026	20
-Message  | 01JAN1900 00:01:40  Muncie_Geom	Cell #	     16936	  941.47	   0.063	20
-Message  | 01JAN1900 00:01:50  Muncie_Geom	Cell #	     16980	  941.19	   0.350	22
-Message  | 01JAN1900 00:02:00  Muncie_Geom	Cell #	     17024	  941.43	   0.414	21
+Message  | 01JAN1900 00:01:30  Muncie_Geom	Cell #	     18484	  941.04	   0.087	20
+Message  | 01JAN1900 00:01:40  Muncie_Geom	Cell #	     17103	  946.18	   0.203	20
+Message  | 01JAN1900 00:01:50  Muncie_Geom	Cell #	     16980	  940.87	   0.522	20
+Message  | 01JAN1900 00:02:00  Muncie_Geom	Cell #	     16936	  943.40	   0.595	21
 Message  | 
-Message  | 01JAN1900 00:02:10  Muncie_Geom	Cell #	     17025	  944.21	   0.230	21
-Message  | 01JAN1900 00:02:20  Muncie_Geom	Cell #	     18501	  943.96	   0.273	21
-Message  | 01JAN1900 00:02:30  Muncie_Geom	Cell #	     16928	  942.58	   0.119	20
-Message  | 01JAN1900 00:02:40  Muncie_Geom	Cell #	     16836	  942.08	   0.308	20
+Message  | 01JAN1900 00:02:10  Muncie_Geom	Cell #	     17102	  944.74	   0.271	20
+Message  | 01JAN1900 00:02:20  Muncie_Geom	Cell #	     18501	  943.85	   0.166	22
+Message  | 01JAN1900 00:02:30  Muncie_Geom	Cell #	     16928	  942.66	   0.259	21
+Message  | 01JAN1900 00:02:40  Muncie_Geom	Cell #	     16836	  941.77	   0.279	21
 Message  | 
-Message  | 01JAN1900 00:02:50  Muncie_Geom	Cell #	     16928	  943.50	   0.852	22
+Message  | 01JAN1900 00:02:50  Muncie_Geom	Cell #	     16928	  943.44	   0.645	23
 Progress | 2.361111E-02
-Message  | 01JAN1900 00:03:00  Muncie_Geom	Cell #	     16970	  945.56	   0.492	20
-Message  | 01JAN1900 00:03:20  Muncie_Geom	Cell #	     16970	  946.51	   0.461	21
-Message  | 01JAN1900 00:03:30  Muncie_Geom	Cell #	     16970	  946.40	   0.025	20
+Message  | 01JAN1900 00:03:00  Muncie_Geom	Cell #	     16970	  945.98	   0.499	21
+Message  | 01JAN1900 00:03:10  Muncie_Geom	Cell #	     16926	  944.69	   0.307	20
+Message  | 01JAN1900 00:03:20  Muncie_Geom	Cell #	     16970	  946.16	   0.326	20
 Message  | 
-Message  | 01JAN1900 00:04:30  Muncie_Geom	Cell #	     16684	  945.05	   0.015	20
-Message  | 01JAN1900 00:04:50  Muncie_Geom	Cell #	     16630	  943.81	   0.027	20
-Message  | 01JAN1900 00:05:00  Muncie_Geom	Cell #	     16575	  945.41	   0.066	20
-Message  | 01JAN1900 00:05:30  Muncie_Geom	Cell #	     14454	  940.93	   0.187	21
+Message  | 01JAN1900 00:03:30  Muncie_Geom	Cell #	     16970	  946.37	   0.232	21
+Message  | 01JAN1900 00:05:10  Muncie_Geom	Cell #	     14453	  941.16	   0.189	20
+Message  | 01JAN1900 00:05:20  Muncie_Geom	Cell #	     16515	  946.34	   0.030	20
+Message  | 01JAN1900 00:05:30  Muncie_Geom	Cell #	     14454	  940.64	   0.299	21
 Progress | 4.583333E-02
 Message  | 
-Message  | 01JAN1900 00:05:40  Muncie_Geom	Cell #	     16397	  945.46	   0.039	20
-Message  | 01JAN1900 00:05:50  Muncie_Geom	Cell #	     16528	  944.05	   0.110	20
-Message  | 01JAN1900 00:06:00  Muncie_Geom	Cell #	     16393	  947.20	   0.183	20
-Message  | 01JAN1900 00:06:10  Muncie_Geom	Cell #	     14273	  941.78	   0.316	21
+Message  | 01JAN1900 00:05:40  Muncie_Geom	Cell #	     16397	  945.43	   0.193	20
+Message  | 01JAN1900 00:05:50  Muncie_Geom	Cell #	     16528	  944.13	   0.053	20
+Message  | 01JAN1900 00:06:00  Muncie_Geom	Cell #	     16465	  944.63	   0.106	21
+Message  | 01JAN1900 00:06:10  Muncie_Geom	Cell #	     14455	  940.85	   0.119	20
 Message  | 
-Message  | 01JAN1900 00:06:20  Muncie_Geom	Cell #	     16698	  947.01	   0.012	20
-Message  | 01JAN1900 00:06:30  Muncie_Geom	Cell #	     19262	  944.19	   0.012	20
-Message  | 01JAN1900 00:06:40  Muncie_Geom	Cell #	     16699	  945.66	   0.029	20
-Message  | 01JAN1900 00:06:50  Muncie_Geom	Cell #	     18549	  943.30	   0.100	20
+Message  | 01JAN1900 00:06:20  Muncie_Geom	Cell #	     14273	  941.86	   0.386	21
+Message  | 01JAN1900 00:06:40  Muncie_Geom	Cell #	     16699	  945.69	   0.032	20
+Message  | 01JAN1900 00:06:50  Muncie_Geom	Cell #	     18549	  943.29	   0.100	20
+Message  | 01JAN1900 00:07:10  Muncie_Geom	Cell #	     18549	  943.40	   0.121	20
 Message  | 
-Message  | 01JAN1900 00:07:10  Muncie_Geom	Cell #	     18549	  943.52	   0.121	20
-Message  | 01JAN1900 00:07:20  Muncie_Geom	Cell #	     18549	  943.51	   0.104	20
-Message  | 01JAN1900 00:07:40  Muncie_Geom	Cell #	     18549	  943.78	   0.106	20
-Message  | 01JAN1900 00:07:50  Muncie_Geom	Cell #	     18549	  943.86	   0.112	20
-Message  | 
-Message  | 01JAN1900 00:08:00  Muncie_Geom	Cell #	     18549	  943.83	   0.109	20
+Message  | 01JAN1900 00:07:20  Muncie_Geom	Cell #	     14271	  943.05	   0.024	20
+Message  | 01JAN1900 00:07:30  Muncie_Geom	Cell #	     18549	  943.59	   0.104	20
+Message  | 01JAN1900 00:07:50  Muncie_Geom	Cell #	     18549	  943.86	   0.106	20
+Message  | 01JAN1900 00:08:00  Muncie_Geom	Cell #	     18549	  943.95	   0.110	20
 Progress | 6.805556E-02
-Message  | 01JAN1900 00:08:40  Muncie_Geom	Cell #	     18535	  946.65	   0.011	20
-Message  | 01JAN1900 00:09:00  Muncie_Geom	Cell #	     16645	  946.43	   0.012	20
-Message  | 01JAN1900 00:09:30  Muncie_Geom	Cell #	     14815	  943.98	   0.016	20
+Message  | 
+Message  | 01JAN1900 00:09:20  Muncie_Geom	Cell #	     18591	  941.63	   0.012	20
 Progress | 9.027778E-02
-Message  | 
 Message  | 01JAN1900 00:12:10  Muncie_Geom	Cell #	     14277	  943.87	   0.019	20
-Message  | 01JAN1900 00:13:30  Muncie_Geom	Cell #	     13721	  943.61	   0.018	20
 Progress | 0.1125
-Message  | 01JAN1900 00:14:00  Muncie_Geom	Cell #	     12226	  943.09	   0.018	20
-Message  | 01JAN1900 00:14:10  Muncie_Geom	Cell #	     12225	  942.44	   0.035	20
+Message  | 01JAN1900 00:14:20  Muncie_Geom	Cell #	     12225	  942.55	   0.028	20
+Message  | 01JAN1900 00:15:00  Muncie_Geom	Cell #	     10911	  941.64	   0.100	20
 Message  | 
-Message  | 01JAN1900 00:15:20  Muncie_Geom	Cell #	     10911	  942.32	   0.089	20
+Message  | 01JAN1900 00:15:10  Muncie_Geom	Cell #	     10911	  942.18	   0.028	20
+Message  | 01JAN1900 00:15:20  Muncie_Geom	Cell #	     10911	  942.32	   0.093	20
 Progress | 0.1347222
-Message  | 01JAN1900 00:16:20  Muncie_Geom	Cell #	     12593	  941.45	   0.029	20
-Message  | 01JAN1900 00:17:30  Muncie_Geom	Cell #	     12593	  942.04	   0.220	20
-Message  | 01JAN1900 00:17:40  Muncie_Geom	Cell #	     12593	  941.92	   0.028	20
+Message  | 01JAN1900 00:17:30  Muncie_Geom	Cell #	     12593	  941.84	   0.168	21
+Message  | 01JAN1900 00:17:40  Muncie_Geom	Cell #	     12971	  941.69	   0.023	20
 Message  | 
-Message  | 01JAN1900 00:17:50  Muncie_Geom	Cell #	     12404	  942.54	   0.037	20
-Message  | 01JAN1900 00:18:00  Muncie_Geom	Cell #	     14258	  942.75	   0.031	20
+Message  | 01JAN1900 00:17:50  Muncie_Geom	Cell #	     12221	  942.84	   0.010	20
+Message  | 01JAN1900 00:18:00  Muncie_Geom	Cell #	     12404	  942.64	   0.022	20
 Progress | 0.1569444
-Message  | 01JAN1900 00:19:40  Muncie_Geom	Cell #	     13334	  940.09	   0.015	20
-Message  | 01JAN1900 00:19:50  Muncie_Geom	Cell #	     12961	  940.52	   0.010	20
+Message  | 01JAN1900 00:19:20  Muncie_Geom	Cell #	     11842	  939.14	   0.011	20
+Message  | 01JAN1900 00:19:30  Muncie_Geom	Cell #	     13149	  940.30	   0.035	20
 Message  | 
-Message  | 01JAN1900 00:20:50  Muncie_Geom	Cell #	     11642	  937.97	   0.072	20
-Message  | 01JAN1900 00:21:10  Muncie_Geom	Cell #	     11454	  937.57	   0.028	20
+Message  | 01JAN1900 00:19:40  Muncie_Geom	Cell #	     12961	  940.39	   0.017	20
+Message  | 01JAN1900 00:20:00  Muncie_Geom	Cell #	     12961	  940.55	   0.018	20
+Message  | 01JAN1900 00:20:20  Muncie_Geom	Cell #	     13751	  948.90	   0.010	20
+Message  | 01JAN1900 00:20:50  Muncie_Geom	Cell #	     11642	  937.85	   0.050	20
+Message  | 
+Message  | 01JAN1900 00:21:30  Muncie_Geom	Cell #	     13749	  947.49	   0.086	20
 Progress | 0.1791667
-Message  | 01JAN1900 00:21:40  Muncie_Geom	Cell #	     13749	  947.43	   0.170	20
-Message  | 01JAN1900 00:21:50  Muncie_Geom	Cell #	     13749	  947.55	   0.059	20
+Message  | 01JAN1900 00:21:40  Muncie_Geom	Cell #	     13749	  947.60	   0.067	20
+Message  | 01JAN1900 00:22:50  Muncie_Geom	Cell #	     15437	  945.55	   0.016	20
 Progress | 0.2013889
-Message  | 
-Message  | 01JAN1900 00:25:30  Muncie_Geom	Cell #	     12586	  941.45	   0.014	20
 Progress | 0.2236111
 Progress | 0.2458333
 Progress | 0.2680556
-Message  | 01JAN1900 00:32:40  Muncie_Geom	Cell #	     13381	  948.74	   0.019	20
-Message  | 01JAN1900 00:32:50  Muncie_Geom	Cell #	     13381	  948.81	   0.021	20
+Message  | 01JAN1900 00:32:20  Muncie_Geom	Cell #	     13381	  948.78	   0.016	20
+Message  | 
+Message  | 01JAN1900 00:34:20  Muncie_Geom	Cell #	     18050	  940.63	   0.026	20
 Progress | 0.2902778
-Message  | 01JAN1900 00:35:00  Muncie_Geom	Cell #	     18050	  940.66	   0.018	20
+Message  | 01JAN1900 00:35:10  Muncie_Geom	Cell #	     18050	  940.73	   0.031	20
+Message  | 01JAN1900 00:36:10  Muncie_Geom	Cell #	     18050	  940.83	   0.044	20
+Message  | 01JAN1900 00:36:40  Muncie_Geom	Cell #	     18050	  940.88	   0.045	20
 Message  | 
-Message  | 01JAN1900 00:35:40  Muncie_Geom	Cell #	     18050	  940.69	   0.039	20
-Message  | 01JAN1900 00:36:00  Muncie_Geom	Cell #	     18052	  940.60	   0.010	20
-Message  | 01JAN1900 00:36:10  Muncie_Geom	Cell #	     18052	  940.62	   0.019	20
-Message  | 01JAN1900 00:37:30  Muncie_Geom	Cell #	     18050	  940.86	   0.053	20
+Message  | 01JAN1900 00:37:10  Muncie_Geom	Cell #	     18050	  940.90	   0.014	20
+Message  | 01JAN1900 00:37:20  Muncie_Geom	Cell #	     18050	  940.95	   0.049	20
 Progress | 0.3125
+Message  | 01JAN1900 00:37:40  Muncie_Geom	Cell #	     18052	  940.80	   0.016	20
+Message  | 01JAN1900 00:37:50  Muncie_Geom	Cell #	     18050	  940.99	   0.030	20
 Message  | 
-Message  | 01JAN1900 00:38:10  Muncie_Geom	Cell #	     18050	  940.95	   0.038	20
-Message  | 01JAN1900 00:38:20  Muncie_Geom	Cell #	     18050	  940.94	   0.010	20
-Message  | 01JAN1900 00:38:30  Muncie_Geom	Cell #	     18052	  940.81	   0.018	20
-Message  | 01JAN1900 00:39:10  Muncie_Geom	Cell #	     18052	  940.89	   0.035	20
+Message  | 01JAN1900 00:38:10  Muncie_Geom	Cell #	     18050	  941.03	   0.041	20
+Message  | 01JAN1900 00:38:30  Muncie_Geom	Cell #	     18050	  941.01	   0.042	20
+Message  | 01JAN1900 00:38:50  Muncie_Geom	Cell #	     18050	  941.08	   0.053	20
+Message  | 01JAN1900 00:39:10  Muncie_Geom	Cell #	     18052	  940.92	   0.027	20
 Message  | 
-Message  | 01JAN1900 00:39:20  Muncie_Geom	Cell #	     18050	  941.07	   0.038	20
-Message  | 01JAN1900 00:39:40  Muncie_Geom	Cell #	     18052	  940.93	   0.045	20
-Message  | 01JAN1900 00:39:50  Muncie_Geom	Cell #	     18052	  940.95	   0.047	20
-Message  | 01JAN1900 00:40:00  Muncie_Geom	Cell #	     18050	  941.13	   0.034	20
+Message  | 01JAN1900 00:39:20  Muncie_Geom	Cell #	     18050	  941.07	   0.051	20
+Message  | 01JAN1900 00:39:50  Muncie_Geom	Cell #	     12566	  944.70	   0.049	20
+Message  | 01JAN1900 00:40:00  Muncie_Geom	Cell #	     18052	  940.98	   0.040	20
+Message  | 01JAN1900 00:40:10  Muncie_Geom	Cell #	     18050	  941.19	   0.052	20
 Progress | 0.3347222
 Message  | 
-Message  | 01JAN1900 00:40:20  Muncie_Geom	Cell #	     18050	  941.11	   0.023	20
-Message  | 01JAN1900 00:40:40  Muncie_Geom	Cell #	     13869	  944.54	   0.165	20
-Message  | 01JAN1900 00:40:50  Muncie_Geom	Cell #	     18052	  941.02	   0.046	20
-Message  | 01JAN1900 00:41:00  Muncie_Geom	Cell #	     13869	  944.49	   0.082	21
+Message  | 01JAN1900 00:40:20  Muncie_Geom	Cell #	     13869	  944.43	   0.054	20
+Message  | 01JAN1900 00:40:40  Muncie_Geom	Cell #	     13869	  944.41	   0.073	21
+Message  | 01JAN1900 00:40:50  Muncie_Geom	Cell #	     18052	  941.07	   0.019	20
+Message  | 01JAN1900 00:41:00  Muncie_Geom	Cell #	     18052	  941.07	   0.019	20
 Message  | 
-Message  | 01JAN1900 00:41:10  Muncie_Geom	Cell #	     18052	  941.00	   0.042	20
-Message  | 01JAN1900 00:41:20  Muncie_Geom	Cell #	     18052	  941.06	   0.057	20
-Message  | 01JAN1900 00:41:50  Muncie_Geom	Cell #	     18052	  941.09	   0.031	20
-Message  | 01JAN1900 00:42:00  Muncie_Geom	Cell #	     18052	  941.10	   0.036	20
+Message  | 01JAN1900 00:41:10  Muncie_Geom	Cell #	     17875	  946.06	   0.113	20
+Message  | 01JAN1900 00:41:20  Muncie_Geom	Cell #	     18052	  941.08	   0.043	20
+Message  | 01JAN1900 00:41:30  Muncie_Geom	Cell #	     18052	  941.14	   0.059	20
+Message  | 01JAN1900 00:42:00  Muncie_Geom	Cell #	     18052	  941.16	   0.034	20
 Message  | 
-Message  | 01JAN1900 00:42:10  Muncie_Geom	Cell #	     18060	  940.82	   0.034	20
-Message  | 01JAN1900 00:42:20  Muncie_Geom	Cell #	     18052	  941.14	   0.059	20
-Message  | 01JAN1900 00:42:30  Muncie_Geom	Cell #	     12565	  943.55	   0.037	20
-Message  | 01JAN1900 00:42:40  Muncie_Geom	Cell #	     12565	  943.59	   0.026	20
-Message  | 
-Message  | 01JAN1900 00:42:50  Muncie_Geom	Cell #	     18052	  941.14	   0.024	20
+Message  | 01JAN1900 00:42:10  Muncie_Geom	Cell #	     12565	  943.59	   0.049	20
+Message  | 01JAN1900 00:42:20  Muncie_Geom	Cell #	     12565	  943.55	   0.053	20
+Message  | 01JAN1900 00:42:40  Muncie_Geom	Cell #	     18052	  941.19	   0.031	20
+Message  | 01JAN1900 00:42:50  Muncie_Geom	Cell #	     18052	  941.19	   0.034	20
 Progress | 0.3569444
-Message  | 01JAN1900 00:43:00  Muncie_Geom	Cell #	     18052	  941.13	   0.040	20
-Message  | 01JAN1900 00:43:10  Muncie_Geom	Cell #	     18052	  941.19	   0.058	20
-Message  | 01JAN1900 00:43:30  Muncie_Geom	Cell #	     18052	  941.21	   0.046	20
 Message  | 
-Message  | 01JAN1900 00:43:50  Muncie_Geom	Cell #	     18052	  941.19	   0.037	20
-Message  | 01JAN1900 00:44:00  Muncie_Geom	Cell #	     18052	  941.19	   0.058	20
-Message  | 01JAN1900 00:44:10  Muncie_Geom	Cell #	     18052	  941.20	   0.056	20
-Message  | 01JAN1900 00:44:20  Muncie_Geom	Cell #	     12941	  942.04	   0.065	20
+Message  | 01JAN1900 00:43:00  Muncie_Geom	Cell #	     18052	  941.20	   0.037	20
+Message  | 01JAN1900 00:43:10  Muncie_Geom	Cell #	     18052	  941.24	   0.034	20
+Message  | 01JAN1900 00:43:30  Muncie_Geom	Cell #	     18052	  941.28	   0.048	20
+Message  | 01JAN1900 00:43:50  Muncie_Geom	Cell #	     18052	  941.25	   0.033	20
 Message  | 
-Message  | 01JAN1900 00:44:30  Muncie_Geom	Cell #	     12941	  942.04	   0.084	20
-Message  | 01JAN1900 00:44:40  Muncie_Geom	Cell #	     12941	  942.06	   0.065	20
-Message  | 01JAN1900 00:44:50  Muncie_Geom	Cell #	     12941	  942.05	   0.107	20
-Message  | 01JAN1900 00:45:00  Muncie_Geom	Cell #	     12941	  942.06	   0.116	20
+Message  | 01JAN1900 00:44:00  Muncie_Geom	Cell #	     18052	  941.26	   0.054	20
+Message  | 01JAN1900 00:44:10  Muncie_Geom	Cell #	     12941	  942.14	   0.141	21
+Message  | 01JAN1900 00:44:20  Muncie_Geom	Cell #	     12941	  941.85	   0.393	20
+Message  | 01JAN1900 00:44:30  Muncie_Geom	Cell #	     18052	  941.31	   0.032	20
 Message  | 
-Message  | 01JAN1900 00:45:10  Muncie_Geom	Cell #	     12941	  942.07	   0.129	20
-Message  | 01JAN1900 00:45:20  Muncie_Geom	Cell #	     12941	  942.08	   0.123	20
-Message  | 01JAN1900 00:45:30  Muncie_Geom	Cell #	     12941	  942.10	   0.095	20
+Message  | 01JAN1900 00:44:40  Muncie_Geom	Cell #	     12941	  942.17	   0.131	20
+Message  | 01JAN1900 00:44:50  Muncie_Geom	Cell #	     12941	  942.19	   0.161	20
+Message  | 01JAN1900 00:45:00  Muncie_Geom	Cell #	     12941	  942.16	   0.088	21
+Message  | 01JAN1900 00:45:10  Muncie_Geom	Cell #	     13683	  943.03	   0.054	20
+Message  | 
+Message  | 01JAN1900 00:45:20  Muncie_Geom	Cell #	     13683	  942.93	   0.146	20
 Progress | 0.3791667
-Message  | 01JAN1900 00:45:40  Muncie_Geom	Cell #	     13683	  943.09	   0.197	21
+Message  | 01JAN1900 00:45:40  Muncie_Geom	Cell #	     13683	  943.08	   0.057	20
+Message  | 01JAN1900 00:45:50  Muncie_Geom	Cell #	     13683	  943.12	   0.107	20
+Message  | 01JAN1900 00:46:00  Muncie_Geom	Cell #	     13683	  942.88	   0.337	20
 Message  | 
-Message  | 01JAN1900 00:45:50  Muncie_Geom	Cell #	     13683	  943.18	   0.417	20
-Message  | 01JAN1900 00:46:00  Muncie_Geom	Cell #	     13683	  942.78	   0.435	21
-Message  | 01JAN1900 00:46:10  Muncie_Geom	Cell #	     12941	  942.31	   0.234	21
-Message  | 01JAN1900 00:46:20  Muncie_Geom	Cell #	     13683	  943.19	   0.269	20
+Message  | 01JAN1900 00:46:20  Muncie_Geom	Cell #	     18052	  941.41	   0.037	20
+Message  | 01JAN1900 00:46:30  Muncie_Geom	Cell #	     18052	  941.41	   0.048	20
+Message  | 01JAN1900 00:46:40  Muncie_Geom	Cell #	     12941	  942.17	   0.088	21
+Message  | 01JAN1900 00:46:50  Muncie_Geom	Cell #	     12560	  942.70	   0.257	20
 Message  | 
-Message  | 01JAN1900 00:46:30  Muncie_Geom	Cell #	     13683	  942.88	   0.361	21
-Message  | 01JAN1900 00:46:50  Muncie_Geom	Cell #	     12560	  942.56	   0.051	20
-Message  | 01JAN1900 00:47:00  Muncie_Geom	Cell #	     12941	  942.19	   0.049	20
-Message  | 01JAN1900 00:47:10  Muncie_Geom	Cell #	     10346	  943.44	   0.084	20
+Message  | 01JAN1900 00:47:00  Muncie_Geom	Cell #	     12941	  942.28	   0.101	21
+Message  | 01JAN1900 00:47:10  Muncie_Geom	Cell #	     12941	  942.13	   0.171	20
+Message  | 01JAN1900 00:47:20  Muncie_Geom	Cell #	     12560	  942.72	   0.274	20
+Message  | 01JAN1900 00:47:30  Muncie_Geom	Cell #	     12560	  942.75	   0.305	22
 Message  | 
-Message  | 01JAN1900 00:47:20  Muncie_Geom	Cell #	     12560	  942.53	   0.162	20
-Message  | 01JAN1900 00:47:30  Muncie_Geom	Cell #	     12941	  942.17	   0.123	20
-Message  | 01JAN1900 00:47:40  Muncie_Geom	Cell #	     12560	  942.45	   0.260	20
-Message  | 01JAN1900 00:47:50  Muncie_Geom	Cell #	     12941	  942.13	   0.155	20
-Message  | 
-Message  | 01JAN1900 00:48:00  Muncie_Geom	Cell #	     12560	  942.74	   0.302	21
-Message  | 01JAN1900 00:48:10  Muncie_Geom	Cell #	     12560	  942.75	   0.309	22
+Message  | 01JAN1900 00:47:40  Muncie_Geom	Cell #	     12941	  942.32	   0.122	20
+Message  | 01JAN1900 00:47:50  Muncie_Geom	Cell #	     12941	  942.23	   0.020	20
+Message  | 01JAN1900 00:48:00  Muncie_Geom	Cell #	     12560	  942.46	   0.283	20
 Progress | 0.4013889
-Message  | 01JAN1900 00:48:20  Muncie_Geom	Cell #	     12560	  942.75	   0.262	20
-Message  | 01JAN1900 00:48:30  Muncie_Geom	Cell #	     12560	  942.55	   0.210	22
+Message  | 01JAN1900 00:48:20  Muncie_Geom	Cell #	     12560	  942.51	   0.240	22
 Message  | 
-Message  | 01JAN1900 00:48:50  Muncie_Geom	Cell #	     12560	  942.75	   0.218	20
-Message  | 01JAN1900 00:49:00  Muncie_Geom	Cell #	     12560	  942.75	   0.211	22
-Message  | 01JAN1900 00:49:10  Muncie_Geom	Cell #	     12560	  942.60	   0.149	20
-Message  | 01JAN1900 00:49:30  Muncie_Geom	Cell #	     12560	  942.65	   0.074	21
+Message  | 01JAN1900 00:48:40  Muncie_Geom	Cell #	     12560	  942.55	   0.196	21
+Message  | 01JAN1900 00:49:00  Muncie_Geom	Cell #	     12560	  942.60	   0.148	21
+Message  | 01JAN1900 00:49:20  Muncie_Geom	Cell #	     18048	  941.74	   0.034	20
+Message  | 01JAN1900 00:49:40  Muncie_Geom	Cell #	     18048	  941.74	   0.048	20
 Message  | 
-Message  | 01JAN1900 00:49:50  Muncie_Geom	Cell #	     18048	  941.72	   0.039	20
-Message  | 01JAN1900 00:50:00  Muncie_Geom	Cell #	     18048	  941.73	   0.051	20
-Message  | 01JAN1900 00:50:10  Muncie_Geom	Cell #	     18048	  941.68	   0.049	20
-Message  | 01JAN1900 00:50:30  Muncie_Geom	Cell #	     18048	  941.71	   0.041	20
+Message  | 01JAN1900 00:50:00  Muncie_Geom	Cell #	     18048	  941.80	   0.054	20
+Message  | 01JAN1900 00:50:10  Muncie_Geom	Cell #	     18048	  941.81	   0.069	20
+Message  | 01JAN1900 00:50:20  Muncie_Geom	Cell #	     18048	  941.81	   0.065	20
+Message  | 01JAN1900 00:50:30  Muncie_Geom	Cell #	     18048	  941.77	   0.048	20
 Message  | 
-Message  | 01JAN1900 00:50:50  Muncie_Geom	Cell #	     18048	  941.70	   0.060	21
+Message  | 01JAN1900 00:50:40  Muncie_Geom	Cell #	     18048	  941.81	   0.022	20
+Message  | 01JAN1900 00:50:50  Muncie_Geom	Cell #	     18048	  941.80	   0.039	20
 Progress | 0.4236111
-Message  | 01JAN1900 00:51:10  Muncie_Geom	Cell #	     18048	  941.73	   0.050	20
-Message  | 01JAN1900 00:51:30  Muncie_Geom	Cell #	     18048	  941.74	   0.046	20
-Message  | 01JAN1900 00:51:50  Muncie_Geom	Cell #	     18048	  941.74	   0.052	20
+Message  | 01JAN1900 00:51:10  Muncie_Geom	Cell #	     18048	  941.83	   0.042	20
+Message  | 01JAN1900 00:51:20  Muncie_Geom	Cell #	     18048	  941.78	   0.052	20
 Message  | 
-Message  | 01JAN1900 00:52:00  Muncie_Geom	Cell #	     13500	  942.73	   0.110	21
-Message  | 01JAN1900 00:52:10  Muncie_Geom	Cell #	     18048	  941.81	   0.060	20
-Message  | 01JAN1900 00:52:20  Muncie_Geom	Cell #	     18048	  941.74	   0.050	21
-Message  | 01JAN1900 00:52:30  Muncie_Geom	Cell #	     13500	  942.79	   0.012	20
+Message  | 01JAN1900 00:51:30  Muncie_Geom	Cell #	     13500	  942.74	   0.098	21
+Message  | 01JAN1900 00:51:40  Muncie_Geom	Cell #	     18048	  941.81	   0.045	20
+Message  | 01JAN1900 00:51:50  Muncie_Geom	Cell #	     13500	  942.76	   0.066	20
+Message  | 01JAN1900 00:52:00  Muncie_Geom	Cell #	     18048	  941.83	   0.039	20
 Message  | 
-Message  | 01JAN1900 00:52:40  Muncie_Geom	Cell #	     18048	  941.78	   0.045	20
-Message  | 01JAN1900 00:53:00  Muncie_Geom	Cell #	     18048	  941.83	   0.045	20
-Message  | 01JAN1900 00:53:10  Muncie_Geom	Cell #	     18048	  941.83	   0.055	20
-Message  | 01JAN1900 00:53:20  Muncie_Geom	Cell #	     18048	  941.79	   0.043	20
+Message  | 01JAN1900 00:52:20  Muncie_Geom	Cell #	     18048	  941.87	   0.045	20
+Message  | 01JAN1900 00:52:30  Muncie_Geom	Cell #	     18048	  941.84	   0.038	20
+Message  | 01JAN1900 00:52:50  Muncie_Geom	Cell #	     18048	  941.88	   0.038	20
+Message  | 01JAN1900 00:53:00  Muncie_Geom	Cell #	     18048	  941.88	   0.031	20
+Message  | 
+Message  | 01JAN1900 00:53:10  Muncie_Geom	Cell #	     18048	  941.88	   0.036	20
+Message  | 01JAN1900 00:53:20  Muncie_Geom	Cell #	     18048	  941.84	   0.045	20
 Progress | 0.4458333
+Message  | 01JAN1900 00:53:40  Muncie_Geom	Cell #	     18048	  941.90	   0.026	20
+Message  | 01JAN1900 00:54:00  Muncie_Geom	Cell #	     18048	  941.87	   0.044	20
 Message  | 
-Message  | 01JAN1900 00:53:40  Muncie_Geom	Cell #	     18048	  941.80	   0.050	20
-Message  | 01JAN1900 00:54:00  Muncie_Geom	Cell #	     18048	  941.83	   0.042	20
-Message  | 01JAN1900 00:54:20  Muncie_Geom	Cell #	     18048	  941.86	   0.045	20
-Message  | 01JAN1900 00:54:30  Muncie_Geom	Cell #	     18048	  941.83	   0.038	20
-Message  | 
-Message  | 01JAN1900 00:54:50  Muncie_Geom	Cell #	     18048	  941.83	   0.041	20
-Message  | 01JAN1900 00:55:10  Muncie_Geom	Cell #	     18048	  941.86	   0.037	20
-Message  | 01JAN1900 00:55:30  Muncie_Geom	Cell #	     18048	  941.85	   0.039	20
-Message  | 01JAN1900 00:55:50  Muncie_Geom	Cell #	     18048	  941.91	   0.050	20
-Message  | 
-Message  | 01JAN1900 00:56:00  Muncie_Geom	Cell #	     18048	  941.89	   0.023	20
-Message  | 01JAN1900 00:56:10  Muncie_Geom	Cell #	     18048	  941.85	   0.037	20
+Message  | 01JAN1900 00:54:20  Muncie_Geom	Cell #	     18048	  941.91	   0.022	20
+Message  | 01JAN1900 00:54:40  Muncie_Geom	Cell #	     18048	  941.92	   0.028	20
+Message  | 01JAN1900 00:54:50  Muncie_Geom	Cell #	     18048	  941.89	   0.040	20
+Message  | 01JAN1900 00:55:30  Muncie_Geom	Cell #	     18048	  941.92	   0.026	20
 Progress | 0.4680555
-Message  | 01JAN1900 00:56:30  Muncie_Geom	Cell #	     18048	  941.89	   0.034	20
-Message  | 01JAN1900 00:56:50  Muncie_Geom	Cell #	     18048	  941.91	   0.028	20
 Message  | 
-Message  | 01JAN1900 00:57:10  Muncie_Geom	Cell #	     18048	  941.92	   0.033	20
-Message  | 01JAN1900 00:57:20  Muncie_Geom	Cell #	     18048	  941.89	   0.035	20
-Message  | 01JAN1900 00:57:40  Muncie_Geom	Cell #	     12674	  934.74	   0.029	20
-Message  | 01JAN1900 00:57:50  Muncie_Geom	Cell #	     12674	  934.70	   0.028	20
+Message  | 01JAN1900 00:56:30  Muncie_Geom	Cell #	     18048	  941.94	   0.016	20
+Message  | 01JAN1900 00:56:50  Muncie_Geom	Cell #	     10346	  944.24	   0.058	20
+Message  | 01JAN1900 00:57:00  Muncie_Geom	Cell #	     10346	  944.25	   0.066	21
+Message  | 01JAN1900 00:57:10  Muncie_Geom	Cell #	     10346	  944.25	   0.071	21
 Message  | 
-Message  | 01JAN1900 00:58:10  Muncie_Geom	Cell #	     12674	  934.69	   0.027	20
-Message  | 01JAN1900 00:58:30  Muncie_Geom	Cell #	     12674	  934.68	   0.036	20
-Message  | 01JAN1900 00:58:50  Muncie_Geom	Cell #	     12674	  934.59	   0.184	20
+Message  | 01JAN1900 00:57:20  Muncie_Geom	Cell #	     10346	  944.26	   0.076	20
+Message  | 01JAN1900 00:57:30  Muncie_Geom	Cell #	     10346	  944.27	   0.080	21
+Message  | 01JAN1900 00:57:40  Muncie_Geom	Cell #	     10346	  944.27	   0.084	20
+Message  | 01JAN1900 00:58:00  Muncie_Geom	Cell #	     10346	  944.26	   0.061	21
+Message  | 
+Message  | 01JAN1900 00:58:20  Muncie_Geom	Cell #	     10346	  944.21	   0.067	20
+Message  | 01JAN1900 00:58:30  Muncie_Geom	Cell #	     10346	  944.27	   0.062	20
+Message  | 01JAN1900 00:58:50  Muncie_Geom	Cell #	     10346	  944.21	   0.076	20
 Progress | 0.4902778
-Message  | 01JAN1900 00:59:00  Muncie_Geom	Cell #	     10346	  944.17	   0.067	21
+Message  | 01JAN1900 00:59:00  Muncie_Geom	Cell #	     10346	  944.29	   0.069	20
 Message  | 
-Message  | 01JAN1900 00:59:10  Muncie_Geom	Cell #	     12674	  934.79	   0.256	21
-Message  | 01JAN1900 00:59:20  Muncie_Geom	Cell #	     12674	  934.43	   0.429	21
-Message  | 01JAN1900 00:59:40  Muncie_Geom	Cell #	     12674	  934.42	   0.416	21
-Message  | 01JAN1900 01:00:00  Muncie_Geom	Cell #	     12674	  934.42	   0.406	20
+Message  | 01JAN1900 00:59:20  Muncie_Geom	Cell #	     12674	  934.59	   0.185	20
+Message  | 01JAN1900 00:59:40  Muncie_Geom	Cell #	     12674	  934.79	   0.265	21
+Message  | 01JAN1900 00:59:50  Muncie_Geom	Cell #	     12674	  934.42	   0.439	21
+Message  | 01JAN1900 01:00:10  Muncie_Geom	Cell #	     12674	  934.40	   0.438	21
 Message  | 
-Message  | 01JAN1900 01:00:20  Muncie_Geom	Cell #	     12674	  934.39	   0.433	20
-Message  | 01JAN1900 01:00:40  Muncie_Geom	Cell #	     12674	  934.40	   0.399	20
-Message  | 01JAN1900 01:01:00  Muncie_Geom	Cell #	     12674	  934.39	   0.410	20
-Message  | 01JAN1900 01:01:10  Muncie_Geom	Cell #	     10346	  944.21	   0.071	20
-Message  | 
-Message  | 01JAN1900 01:01:20  Muncie_Geom	Cell #	     12674	  934.40	   0.388	21
+Message  | 01JAN1900 01:00:30  Muncie_Geom	Cell #	     12674	  934.38	   0.449	20
+Message  | 01JAN1900 01:00:50  Muncie_Geom	Cell #	     12674	  934.41	   0.392	20
+Message  | 01JAN1900 01:01:10  Muncie_Geom	Cell #	     12674	  934.40	   0.402	20
+Message  | 01JAN1900 01:01:30  Muncie_Geom	Cell #	     12674	  934.40	   0.394	20
 Progress | 0.5125
-Message  | 01JAN1900 01:01:40  Muncie_Geom	Cell #	     12674	  934.39	   0.399	20
-Message  | 01JAN1900 01:02:00  Muncie_Geom	Cell #	     12674	  934.79	   0.384	21
-Message  | 01JAN1900 01:02:10  Muncie_Geom	Cell #	     12674	  934.22	   0.648	21
 Message  | 
-Message  | 01JAN1900 01:02:30  Muncie_Geom	Cell #	     12674	  934.36	   0.423	21
-Message  | 01JAN1900 01:02:50  Muncie_Geom	Cell #	     12674	  934.78	   0.406	21
-Message  | 01JAN1900 01:03:00  Muncie_Geom	Cell #	     12674	  934.19	   0.678	21
-Message  | 01JAN1900 01:03:20  Muncie_Geom	Cell #	     12674	  934.38	   0.396	20
+Message  | 01JAN1900 01:01:50  Muncie_Geom	Cell #	     12674	  934.40	   0.387	20
+Message  | 01JAN1900 01:02:10  Muncie_Geom	Cell #	     12674	  934.79	   0.389	21
+Message  | 01JAN1900 01:02:20  Muncie_Geom	Cell #	     12674	  934.25	   0.622	21
+Message  | 01JAN1900 01:02:40  Muncie_Geom	Cell #	     12674	  934.38	   0.409	20
 Message  | 
-Message  | 01JAN1900 01:03:40  Muncie_Geom	Cell #	     12674	  934.37	   0.408	21
-Message  | 01JAN1900 01:04:00  Muncie_Geom	Cell #	     12674	  934.77	   0.393	20
-Message  | 01JAN1900 01:04:10  Muncie_Geom	Cell #	     12674	  934.16	   0.693	21
+Message  | 01JAN1900 01:03:00  Muncie_Geom	Cell #	     12674	  934.39	   0.387	20
+Message  | 01JAN1900 01:03:20  Muncie_Geom	Cell #	     12674	  934.78	   0.381	21
+Message  | 01JAN1900 01:03:30  Muncie_Geom	Cell #	     12674	  934.22	   0.642	21
+Message  | 01JAN1900 01:03:50  Muncie_Geom	Cell #	     12674	  934.78	   0.398	21
+Message  | 
+Message  | 01JAN1900 01:04:00  Muncie_Geom	Cell #	     12674	  934.20	   0.655	21
 Progress | 0.5347222
-Message  | 01JAN1900 01:04:30  Muncie_Geom	Cell #	     12674	  934.36	   0.412	21
+Message  | 01JAN1900 01:04:20  Muncie_Geom	Cell #	     12674	  934.39	   0.382	21
+Message  | 01JAN1900 01:04:40  Muncie_Geom	Cell #	     12674	  934.39	   0.382	21
+Message  | 01JAN1900 01:05:00  Muncie_Geom	Cell #	     12674	  934.40	   0.362	21
 Message  | 
-Message  | 01JAN1900 01:04:50  Muncie_Geom	Cell #	     12674	  934.36	   0.400	20
-Message  | 01JAN1900 01:05:10  Muncie_Geom	Cell #	     12674	  934.76	   0.382	20
-Message  | 01JAN1900 01:05:20  Muncie_Geom	Cell #	     12674	  934.13	   0.715	21
-Message  | 01JAN1900 01:05:40  Muncie_Geom	Cell #	     12674	  934.76	   0.412	21
+Message  | 01JAN1900 01:05:20  Muncie_Geom	Cell #	     12674	  934.76	   0.374	20
+Message  | 01JAN1900 01:05:30  Muncie_Geom	Cell #	     12674	  934.16	   0.683	21
+Message  | 01JAN1900 01:05:50  Muncie_Geom	Cell #	     12674	  934.76	   0.392	20
+Message  | 01JAN1900 01:06:00  Muncie_Geom	Cell #	     12674	  934.15	   0.693	21
 Message  | 
-Message  | 01JAN1900 01:05:50  Muncie_Geom	Cell #	     12674	  934.10	   0.741	21
-Message  | 01JAN1900 01:06:10  Muncie_Geom	Cell #	     12674	  934.44	   0.262	20
-Message  | 01JAN1900 01:06:30  Muncie_Geom	Cell #	     12674	  934.54	   0.090	20
-Message  | 01JAN1900 01:06:50  Muncie_Geom	Cell #	     12674	  934.58	   0.014	20
+Message  | 01JAN1900 01:06:20  Muncie_Geom	Cell #	     12674	  934.36	   0.402	21
+Message  | 01JAN1900 01:06:40  Muncie_Geom	Cell #	     12674	  934.71	   0.260	20
+Message  | 01JAN1900 01:06:50  Muncie_Geom	Cell #	     12674	  934.79	   0.533	21
 Progress | 0.5569444
+Message  | 01JAN1900 01:07:00  Muncie_Geom	Cell #	     12674	  934.05	   0.815	21
+Message  | 
+Message  | 01JAN1900 01:07:20  Muncie_Geom	Cell #	     12674	  934.50	   0.142	20
+Message  | 01JAN1900 01:07:40  Muncie_Geom	Cell #	     12674	  934.60	   0.033	20
 Progress | 0.5791667
 Progress | 0.6013889
+Message  | 01JAN1900 01:13:00  Muncie_Geom	Cell #	     17674	  942.82	   0.107	20
+Message  | 01JAN1900 01:13:10  Muncie_Geom	Cell #	     17674	  942.88	   0.030	20
 Message  | 
-Message  | 01JAN1900 01:14:00  Muncie_Geom	Cell #	     17674	  942.92	   0.110	20
-Message  | 01JAN1900 01:14:10  Muncie_Geom	Cell #	     17674	  943.00	   0.338	21
-Message  | 01JAN1900 01:14:20  Muncie_Geom	Cell #	     17674	  942.59	   0.464	22
-Message  | 01JAN1900 01:14:40  Muncie_Geom	Cell #	     17674	  942.67	   0.342	20
+Message  | 01JAN1900 01:13:20  Muncie_Geom	Cell #	     17674	  942.93	   0.108	20
+Message  | 01JAN1900 01:13:30  Muncie_Geom	Cell #	     17674	  943.00	   0.276	21
+Message  | 01JAN1900 01:13:40  Muncie_Geom	Cell #	     17674	  942.68	   0.345	21
+Message  | 01JAN1900 01:14:00  Muncie_Geom	Cell #	     17674	  943.00	   0.266	21
+Message  | 
+Message  | 01JAN1900 01:14:10  Muncie_Geom	Cell #	     17674	  942.71	   0.314	21
+Message  | 01JAN1900 01:14:30  Muncie_Geom	Cell #	     17674	  942.78	   0.209	21
+Message  | 01JAN1900 01:14:40  Muncie_Geom	Cell #	     17674	  942.92	   0.053	20
+Message  | 01JAN1900 01:14:50  Muncie_Geom	Cell #	     17674	  942.89	   0.043	20
 Progress | 0.6236111
 Message  | 
-Message  | 01JAN1900 01:15:00  Muncie_Geom	Cell #	     17674	  943.02	   0.317	22
-Message  | 01JAN1900 01:15:10  Muncie_Geom	Cell #	     17674	  942.65	   0.398	21
-Message  | 01JAN1900 01:15:30  Muncie_Geom	Cell #	     17674	  942.70	   0.319	21
-Message  | 01JAN1900 01:15:50  Muncie_Geom	Cell #	     17674	  942.73	   0.286	20
-Message  | 
-Message  | 01JAN1900 01:16:10  Muncie_Geom	Cell #	     17674	  943.02	   0.254	22
-Message  | 01JAN1900 01:16:20  Muncie_Geom	Cell #	     17674	  942.74	   0.289	21
-Message  | 01JAN1900 01:16:40  Muncie_Geom	Cell #	     17674	  942.80	   0.190	21
-Message  | 01JAN1900 01:16:50  Muncie_Geom	Cell #	     17674	  942.90	   0.112	21
-Message  | 
-Message  | 01JAN1900 01:17:00  Muncie_Geom	Cell #	     17674	  942.96	   0.068	20
-Message  | 01JAN1900 01:17:10  Muncie_Geom	Cell #	     17674	  942.90	   0.029	20
-Message  | 01JAN1900 01:17:20  Muncie_Geom	Cell #	     17674	  942.95	   0.018	20
+Message  | 01JAN1900 01:15:00  Muncie_Geom	Cell #	     17674	  942.96	   0.072	20
+Message  | 01JAN1900 01:15:10  Muncie_Geom	Cell #	     17674	  942.95	   0.086	20
+Message  | 01JAN1900 01:15:20  Muncie_Geom	Cell #	     17674	  942.89	   0.041	20
 Progress | 0.6458333
 Progress | 0.6680555
 Progress | 0.6902778
 Progress | 0.7125
-Message  | 01JAN1900 01:26:50  Muncie_Geom	Cell #	     18813	  939.22	   0.013	20
-Message  | 
-Message  | 01JAN1900 01:27:20  Muncie_Geom	Cell #	     18813	  939.22	   0.013	20
-Message  | 01JAN1900 01:27:50  Muncie_Geom	Cell #	     18813	  939.22	   0.013	20
 Progress | 0.7347222
-Message  | 01JAN1900 01:28:20  Muncie_Geom	Cell #	     18813	  939.22	   0.013	20
-Message  | 01JAN1900 01:28:40  Muncie_Geom	Cell #	     18813	  939.23	   0.013	20
-Message  | 
-Message  | 01JAN1900 01:29:00  Muncie_Geom	Cell #	     18813	  939.23	   0.013	20
-Message  | 01JAN1900 01:29:20  Muncie_Geom	Cell #	     18813	  939.23	   0.013	20
-Message  | 01JAN1900 01:29:40  Muncie_Geom	Cell #	     18813	  939.23	   0.013	20
-Message  | 01JAN1900 01:30:00  Muncie_Geom	Cell #	     18813	  939.23	   0.013	20
-Message  | 
-Message  | 01JAN1900 01:30:10  Muncie_Geom	Cell #	     18813	  939.25	   0.012	20
-Message  | 01JAN1900 01:30:30  Muncie_Geom	Cell #	     18813	  939.25	   0.012	20
-Message  | 01JAN1900 01:30:50  Muncie_Geom	Cell #	     18813	  939.25	   0.012	20
 Progress | 0.7569444
-Message  | 01JAN1900 01:31:20  Muncie_Geom	Cell #	     18813	  939.25	   0.012	20
+Message  | 01JAN1900 01:32:30  Muncie_Geom	Cell #	     18813	  939.30	   0.013	20
 Message  | 
-Message  | 01JAN1900 01:31:50  Muncie_Geom	Cell #	     18813	  939.26	   0.012	20
-Message  | 01JAN1900 01:32:20  Muncie_Geom	Cell #	     18813	  939.26	   0.012	20
+Message  | 01JAN1900 01:33:10  Muncie_Geom	Cell #	     18813	  939.31	   0.013	20
 Progress | 0.7791666
 Progress | 0.8013889
 Progress | 0.8236111
@@ -462,13 +436,13 @@ Progress | 0.9347222
 Progress | 0.9569445
 Progress | 0.9791667
 Message  | 
-Message  | Overall Volume Accounting Error in Acre Feet:           0.02406
-Message  | Overall Volume Accounting Error as percentage:          0.000413
+Message  | Overall Volume Accounting Error in Acre Feet:           0.02851
+Message  | Overall Volume Accounting Error as percentage:          0.000490
 Message  | Please review "Computational Log File" output for volume accounting details
 Message  | 
 Message  | Writing Results to DSS
 Message  | 
-Message  | The maximum cell wsel error was     1.64
+Message  | The maximum cell wsel error was     1.70
 Message  | At Muncie_Geom    cell    18450
 Progress | 1
 Message  | 
@@ -479,11 +453,11 @@ Message  |
 Message  | Computations Summary
 Message  | 
 Message  | Computation Task	Time(hh:mm:ss)
-Message  | Completing Geometry, Flow and Plan	      29
-Message  | Preprocessing Geometry	       1
-Message  | Unsteady Flow Computations	    3:17
-Message  | Complete Process	    3:48
+Message  | Completing Geometry, Flow and Plan	      16
+Message  | Preprocessing Geometry	<1
+Message  | Unsteady Flow Computations	      45
+Message  | Complete Process	    1:03
 Message  | 
 Message  | Computation Speed	Simulation/Runtime
-Message  | Unsteady Flow Computations	36.5x
-Message  | Complete Process	31.5x
+Message  | Unsteady Flow Computations	160x
+Message  | Complete Process	114x

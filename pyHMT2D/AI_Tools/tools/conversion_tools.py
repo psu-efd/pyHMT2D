@@ -25,6 +25,7 @@ def ras_to_srh(
     ras_hdf_file: str,
     srh_case_name: str,
     terrain_tif_file: str = "",
+    area_index: int = 0,
 ) -> dict:
     """Convert a HEC-RAS 2D mesh and Manning's n values to SRH-2D format.
 
@@ -44,6 +45,9 @@ def ras_to_srh(
     terrain_tif_file : str, optional
         Kept for backwards compatibility; ignored (terrain is auto-detected
         from the project geometry HDF and .rasmap file).
+    area_index : int, optional
+        Index of the 2D flow area to convert (default 0). For plans with
+        multiple 2D areas, specify which area to export.
 
     Returns
     -------
@@ -86,7 +90,8 @@ def ras_to_srh(
 
         import pyHMT2D
         converter = pyHMT2D.Misc.RAS_to_SRH_Converter(
-            candidate_prj, plan_id, srh_case_name
+            candidate_prj, plan_id, srh_case_name,
+            twoDAreaNumber=area_index,
         )
         converter.convert_to_SRH()
 

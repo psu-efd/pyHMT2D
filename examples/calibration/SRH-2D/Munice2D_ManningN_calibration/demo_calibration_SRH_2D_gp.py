@@ -56,7 +56,7 @@ MANNING_MATERIAL_IDS = [2, 4]
 MANNING_MATERIAL_NAMES = ["channel", "left_2"]
 # Bounds for each parameter (same order as MANNING_MATERIAL_IDS)
 BOUNDS = [(0.02, 0.08), (0.02, 0.08)]
-N_CALLS = 50  # max objective evaluations (gp_minimize)
+N_CALLS = 10  # max objective evaluations (gp_minimize). Adjust as needed (more calls = better calibration but longer runtime).
 
 
 def load_hwms(filepath):

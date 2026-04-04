@@ -10,8 +10,10 @@ Run from this directory (the one containing base_case and HWMs.dat).
 """
 
 import os
+import subprocess
 import sys
 import shutil
+import time
 import numpy as np
 from pathlib import Path
 
@@ -50,7 +52,7 @@ MANNING_ZONE_IDS_0BASED = [1, 3]
 MANNING_ZONE_NAMES = ["channel", "left_2"]
 # Bounds for (n_channel, n_left_2)
 BOUNDS = [(0.02, 0.08), (0.02, 0.08)]
-N_CALLS = 50  # max objective evaluations
+N_CALLS = 10  # max objective evaluations. Adjust as needed (more calls = better calibration but longer runtime).
 
 
 def load_hwms(filepath):
@@ -74,10 +76,25 @@ def run_hec_ras_with_mannings_n(run_dir, n_channel, n_left2):
     """
     run_dir = Path(run_dir)
     if run_dir.exists():
-        shutil.rmtree(run_dir)
+        # Retry rmtree — HEC-RAS may still hold file locks briefly after exit
+        for attempt in range(5):
+            try:
+                shutil.rmtree(run_dir)
+                break
+            except PermissionError:
+                if attempt < 4:
+                    time.sleep(2)
+                else:
+                    # Kill any orphaned HEC-RAS processes locking the directory
+                    print("Warning: calib_run still locked. Killing orphaned Ras.exe processes.")
+                    subprocess.run(["taskkill", "/F", "/IM", "Ras.exe"],
+                                   capture_output=True)
+                    time.sleep(3)
+                    shutil.rmtree(run_dir)  # final attempt
     shutil.copytree(BASE_CASE_DIR, run_dir)
 
     cwd = os.getcwd()
+    model = None
     try:
         os.chdir(run_dir)
 
@@ -103,6 +120,7 @@ def run_hec_ras_with_mannings_n(run_dir, n_channel, n_left2):
         ok = model.run_model()
         model.close_project()
         model.exit_model()
+        model = None
 
         if not ok:
             os.chdir(cwd)
@@ -121,6 +139,12 @@ def run_hec_ras_with_mannings_n(run_dir, n_channel, n_left2):
 
     except Exception as e:
         print("Error in run_hec_ras_with_mannings_n:", e)
+        if model is not None:
+            try:
+                model.close_project()
+                model.exit_model()
+            except Exception:
+                pass
         os.chdir(cwd)
         return False, None
 

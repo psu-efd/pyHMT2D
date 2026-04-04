@@ -21,7 +21,7 @@
     "Water_Depth_ft",
     "Water_Elev_ft"
   ],
-  "vtk_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\SRH_2D\\01_open_inspect\\SRH2D_Muncie_C_0002.vtk",
+  "vtk_file": null,
   "config_file": "C:\\Users\\xzl123\\Dropbox\\PycharmProjects\\pyHMT2D\\examples\\AI_Tools\\SRH_2D\\hmt_config.json",
   "_srh_pre_path": "C:/Program Files/SMS 13.4 64-bit/python/Lib/site-packages/srh2d_exe/SRH_Pre_Console.exe",
   "_srh_path": "C:/Program Files/SMS 13.4 64-bit/python/Lib/site-packages/srh2d_exe/SRH-2D_Console.exe",
@@ -29,5 +29,6 @@
   "_srh_version": "3.7",
   "_hecras_version": null,
   "_base_case_dir": "./base_case",
-  "_work_dir": "./mc_runs"
+  "_work_dir": "./mc_runs",
+  "_hecras_prj_file": null
 }

@@ -25,7 +25,7 @@ Ending Time:     01Jan1900 0200
                 #                                              #
                 #          HEC-RAS 6.6 September 2024          #
                 #                                              #
-                #             14MAR26 at 17:58:30              #
+                #             03APR26 at 15:45:38              #
                 #                                              #
                 ################################################
                 
@@ -49,22 +49,22 @@ Ending Time:     01Jan1900 0200
            *******    ************      **********      **********     ***********           *****   *************
  
  
-       Muncie_Geom           2476.           2368.           3347.           3455.         0.01922        0.000556
+       Muncie_Geom           2476.           2316.           3347.           3508.         0.01822        0.000519
 
 
 
                  ***   Total Volume Accounting (for the entire model) in Acre Feet   ***
 
 Total Boundary Flux of Water In            3347.
-Total Boundary Flux of Water Out           3455.
+Total Boundary Flux of Water Out           3508.
 
 Starting Volume                            2476.
-Ending Volume                              2368.
+Ending Volume                              2316.
 
 
                              Error   Percent Error
                              *****   *************
-                           0.01922        0.000330
+                           0.01822        0.000313
 
 
 

@@ -248,7 +248,7 @@ class RAS_2D_Data(HydraulicData):
         self.ManningNZones = {}
         self.build2DManningNZones()
 
-        #cell IDs in each Manning's n zones (for srhmat output)
+        #cell IDs in each Manning's n zones (for srhmat output); list of dicts, one per area
         self.cellsInManningZones = []
 
         #2D area Manning's n at cell center: a list for all 2D areas
@@ -1708,13 +1708,14 @@ class RAS_2D_Data(HydraulicData):
             print("The specified area with name", area, "was not found in the geometry. Exiting ...")
             sys.exit()
 
-        #Get the start and end of current 2D flow area cell index
+        #Get the cell count for current 2D flow area (excludes ghost cells).
+        #Cell Info columns: [global_start_offset, cell_count].
+        #Per-area data starts at index 0; use [0:cell_count] to trim ghost cells.
         temp = hf['Geometry']['2D Flow Areas']['Cell Info']
-        iStart = temp[areaIndex,0]
-        iEnd = temp[areaIndex,1]
+        nCells = temp[areaIndex, 1]
 
         hdf2DAreaCellCenterCoordinates = np.array(hf['Geometry']['2D Flow Areas'][area]
-                                                  ['Cells Center Coordinate'])[iStart:iEnd,:]
+                                                  ['Cells Center Coordinate'])[0:nCells, :]
         # print(hdf2DAreaCellCenterCoordinates)
         hf.close()
 
@@ -2021,20 +2022,31 @@ class RAS_2D_Data(HydraulicData):
             cellWSE   = _try_load(WSE_name)   if WSE_name   else None
 
             n_cells = self.TwoDAreaCellCounts[i]
+            nT = len(self.solution_time)
+            area_str = area.decode('utf-8') if isinstance(area, bytes) else area
+
+            def _to_2d_cells(arr):
+                """Return arr as 2D (nT, n_cells). 1D -> wrap in time axis; 2D -> trim columns."""
+                if arr.ndim == 1:
+                    return arr[np.newaxis, 0:n_cells]
+                return arr[:, 0:n_cells]
 
             if cellDepth is not None:
-                cellDepth = cellDepth[0:n_cells]
+                cellDepth = _to_2d_cells(cellDepth)
             else:
-                if gVerbose:
-                    print(f"  Depth not available for area '{area}'. TwoDAreaCellDepth will be empty.")
-                cellDepth = np.array([])
+                print(f"Warning: '{depth_name}' not found for area '{area_str}'. "
+                      f"This variable is not saved by default in HEC-RAS. "
+                      f"To enable it, go to HEC-RAS -> Unsteady Flow Analysis -> "
+                      f"Options -> Output Options and check 'Depth'. "
+                      f"Using zeros as placeholder.")
+                cellDepth = np.zeros((nT, n_cells))
 
             if cellWSE is not None:
-                cellWSE = cellWSE[0:n_cells]
+                cellWSE = _to_2d_cells(cellWSE)
             else:
-                if gVerbose:
-                    print(f"  WSE not available for area '{area}'. TwoDAreaCellWSE will be empty.")
-                cellWSE = np.array([])
+                print(f"Warning: '{WSE_name}' not found for area '{area_str}'. "
+                      f"Using zeros as placeholder.")
+                cellWSE = np.zeros((nT, n_cells))
 
             self.TwoDAreaCellDepth.append(cellDepth)
             self.TwoDAreaCellWSE.append(cellWSE)
@@ -2042,21 +2054,39 @@ class RAS_2D_Data(HydraulicData):
             if self.version == '6.6':
                 cellVx = _try_load(cellVx_name)
                 cellVy = _try_load(cellVy_name)
-                if cellVx is not None:
-                    cellVx = cellVx[0:n_cells]
-                    cellVy = cellVy[0:n_cells] if cellVy is not None else np.zeros_like(cellVx)
-                    self.TwoDAreaCellVx.append(cellVx)
-                    self.TwoDAreaCellVy.append(cellVy)
-                    self.TwoDAreaCellVz.append(cellVx * 0.0)
+                if cellVx is None or cellVy is None:
+                    print(f"Warning: Cell velocity not found for area '{area_str}'. "
+                          f"This variable is not saved by default in HEC-RAS. "
+                          f"To enable it, go to HEC-RAS -> Unsteady Flow Analysis -> "
+                          f"Options -> Output Options and check 'Velocity'. "
+                          f"Using zeros as placeholder.")
+                cellVx = _to_2d_cells(cellVx) if cellVx is not None else np.zeros((nT, n_cells))
+                cellVy = _to_2d_cells(cellVy) if cellVy is not None else np.zeros((nT, n_cells))
+                self.TwoDAreaCellVx.append(cellVx)
+                self.TwoDAreaCellVy.append(cellVy)
+                self.TwoDAreaCellVz.append(np.zeros_like(cellVx))
 
             #fetch point data
             #Node X Vel and Node Y Vel
             pointVx = _try_load(nodeVx_name) if nodeVx_name else None
             pointVy = _try_load(nodeVy_name) if nodeVy_name else None
-            if pointVx is None:
-                pointVx = np.array([])
-            if pointVy is None:
-                pointVy = np.array([])
+
+            # normalise to 2D (nT, nNodes); use empty node dimension when unavailable
+            if pointVx is not None:
+                if pointVx.ndim == 1:
+                    pointVx = pointVx[np.newaxis, :]
+            else:
+                print(f"Warning: Node velocity not found for area '{area_str}'. "
+                      f"This variable is not saved by default in HEC-RAS. "
+                      f"To enable it, go to HEC-RAS -> Unsteady Flow Analysis -> "
+                      f"Options -> Output Options and check 'Velocity'. "
+                      f"Using zeros as placeholder.")
+                pointVx = np.zeros((nT, 0))
+            if pointVy is not None:
+                if pointVy.ndim == 1:
+                    pointVy = pointVy[np.newaxis, :]
+            else:
+                pointVy = np.zeros((nT, 0))
 
             #deal with nan in pointVx and pointVy (only when data is present)
             if pointVx.size > 0:
@@ -2305,15 +2335,6 @@ class RAS_2D_Data(HydraulicData):
         if gVerbose: print("Building cell's Manning n values from GeoTiff and HDF ...")
 
         self.TwoDAreaCellManningN = []
-        self.TwoDAreaCellManningN.append(np.zeros(self.TwoDAreaCellCounts[0]))
-
-        cell_center_coordinates = np.array(self.get2DAreaCellCenterCoordiantes(self.TwoDAreaNames[0]))
-
-        #loop through each cell
-        #for cellI in range(self.TwoDAreaCellCounts[0]):
-        #    ManningN_ID = int(self.ManningNIDInterpolator(cell_center_coordinates[cellI,0],
-        #                                                  cell_center_coordinates[cellI,1]))
-        #    cell_ManningN[cellI] = self.ManningNZones[ManningN_ID][1]  #get the Manning n value
 
         #get the full land cover file name (deal with relative path w.r.t. the script where RAS_2D_Data class is used)
         if os.path.dirname(self.hdf_filename) == '':
@@ -2332,29 +2353,32 @@ class RAS_2D_Data(HydraulicData):
             errMessage = "HEC-RAS version not supported. version = " + self.version
             raise Exception(errMessage)
 
-        if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
-            ManningN_IDs = [0] * self.TwoDAreaCellCounts[0]
+        #bin each cell to different Manning's n zones (one dict per area, used by exportSRHMATFile)
+        self.cellsInManningZones = []
 
-        else:
-            # Prefer rasterio-based interpolation when available; fall back to the GDAL-based version.
-            ManningN_IDs = self.interpolatorFromGeoTiff_rasterio(
-                full_landcover_filename, cell_center_coordinates
-            )
+        #loop through each 2D area
+        for area, i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
+            self.TwoDAreaCellManningN.append(np.zeros(self.TwoDAreaCellCounts[i]))
 
-        #set the Manning's n values for each cells
-        for cellI in range(self.TwoDAreaCellCounts[0]):
-            self.TwoDAreaCellManningN[0][cellI] = self.ManningNZones[ManningN_IDs[cellI]][1]  #get the Manning n value
+            cell_center_coordinates = np.array(self.get2DAreaCellCenterCoordiantes(area))
 
-        #bin each cell to different Manning's n zones
-        self.cellsInManningZones = [ [] for _ in range(len(self.ManningNZones))]  # a list of lists
-
-        for cellI in range(self.TwoDAreaCellCounts[0]):
-            if self.cellsInManningZones[ManningN_IDs[cellI]]:
-                self.cellsInManningZones[ManningN_IDs[cellI]].append(cellI)
+            if self.landcover_filename == b'':  #if there is no "Land cover Filename" specified.
+                ManningN_IDs = [0] * self.TwoDAreaCellCounts[i]
             else:
-                self.cellsInManningZones[ManningN_IDs[cellI]] = [cellI]
+                # Prefer rasterio-based interpolation when available; fall back to the GDAL-based version.
+                ManningN_IDs = self.interpolatorFromGeoTiff_rasterio(
+                    full_landcover_filename, cell_center_coordinates
+                )
 
-        #print("cellsInManningZones = ", self.cellsInManningZones)
+            #set the Manning's n values for each cell
+            for cellI in range(self.TwoDAreaCellCounts[i]):
+                self.TwoDAreaCellManningN[i][cellI] = self.ManningNZones[ManningN_IDs[cellI]][1]
+
+            #bin cells into Manning's n zones for this area
+            areaZones = {zone_id: [] for zone_id in self.ManningNZones}
+            for cellI in range(self.TwoDAreaCellCounts[i]):
+                areaZones[ManningN_IDs[cellI]].append(cellI)
+            self.cellsInManningZones.append(areaZones)
 
 
     def buildFace_FacePoints(self):
@@ -2417,7 +2441,7 @@ class RAS_2D_Data(HydraulicData):
         """
 
         if gVerbose: print('Saving RAS-2D results to VTK ...')
-        
+
         #check the sanity of timeStep
         if (timeStep != -1) and (not timeStep in range(len(self.solution_time))):
             message = "Specified timeStep = %d not in range (0 to %d)." % (timeStep, len(self.solution_time))
@@ -2437,7 +2461,13 @@ class RAS_2D_Data(HydraulicData):
             print("Wrong units specified in the HEC-RAS project file. Units = ", self.units)
             print("Exiting ...")
             sys.exit()
-        
+
+        if fileNameBase == '':
+            fileNameBase = 'RAS2D_'
+
+        allVtkFiles = []
+        grids_by_time = {}  # {timeI: [uGrid, ...]} used only when combined_areas=True
+
         #loop through each 2D areas
         for area,i in zip(self.TwoDAreaNames, range(len(self.TwoDAreaNames))):
             #print("2D Flow Area = ", area)
@@ -2487,10 +2517,7 @@ class RAS_2D_Data(HydraulicData):
             #print("type(cellDepth) =", type(cellDepth))
             #print("cellDepth =", cellDepth)
 
-            # list of vtkFileName (to be returned to caller)
-            vtkFileNameList = []
-            
-            #loop through solution times 
+            #loop through solution times
             for timeI in range(len(self.solution_time)):
                 
                 if lastTimeStep:
@@ -2553,18 +2580,23 @@ class RAS_2D_Data(HydraulicData):
 
                 #add solutions
 
+                # clip time index to available range (handles single-snapshot HDF output)
+                t = min(timeI, cellDepth.shape[0] - 1)
+
                 #add cell center data
-                currentTimeCellDepth = cellDepth[timeI,:]
-                currentTimeCellWSE = cellWSE[timeI,:]
+                currentTimeCellDepth = cellDepth[t,:]
+                currentTimeCellWSE = cellWSE[t,:]
 
                 if self.version == '6.6':
-                    currentTimeCellVx = cellVx[timeI,:]
-                    currentTimeCellVy = cellVy[timeI,:]
-                    currentTimeCellVz = cellVz[timeI,:]
-                
-                currentTimePointVx = pointVx[timeI,:]
-                currentTimePointVy = pointVy[timeI,:]
-                currentTimePointVz = pointVz[timeI,:]
+                    currentTimeCellVx = cellVx[t,:]
+                    currentTimeCellVy = cellVy[t,:]
+                    currentTimeCellVz = cellVz[t,:]
+
+                nFacePoints = facePointsCoordinates.shape[0]
+                tp = min(timeI, pointVx.shape[0] - 1) if pointVx.shape[0] > 0 else 0
+                currentTimePointVx = pointVx[tp,:] if pointVx.size > 0 else np.zeros(nFacePoints)
+                currentTimePointVy = pointVy[tp,:] if pointVy.size > 0 else np.zeros(nFacePoints)
+                currentTimePointVz = pointVz[tp,:] if pointVz.size > 0 else np.zeros(nFacePoints)
 
                 #combine cell center velocity components into a vector (numpy array)
                 if self.version == '6.6':
@@ -2624,28 +2656,43 @@ class RAS_2D_Data(HydraulicData):
                 #field_data = {'TIME': np.array([self.solution_time[timeI]]), 'DATE_TIME': str(self.solution_time_date[timeI],'utf-8')}
                 field_data = {'TIME': np.array([self.solution_time[timeI]])}
 
-                #write to vtk file
-                if fileNameBase=='':
-                    fileNameBase='RAS2D_'
+                if not combined_areas:
+                    #write one VTK per area per time step
+                    if dir != '':
+                        vtkFileName = "%s/%s%s_%s_%s.vtk" % (dir, fileNameBase, self.plan_name, area.astype(str), str(timeI).zfill(4))
+                    else:
+                        vtkFileName = "%s%s_%s_%s.vtk" % (fileNameBase, self.plan_name, area.astype(str), str(timeI).zfill(4))
 
-                fileName_temp = []
-                if dir!= '':
-                    fileName_temp = [dir, '/', fileNameBase, self.plan_name, '_', area.astype(str), '_', str(timeI).zfill(4),'.vtk']
+                    unstr_writer = vtk.vtkUnstructuredGridWriter()
+                    unstr_writer.SetFileName(vtkFileName)
+                    unstr_writer.SetInputData(uGrid)
+                    unstr_writer.Write()
+                    allVtkFiles.append(vtkFileName)
                 else:
-                    fileName_temp = [fileNameBase, self.plan_name, '_', area.astype(str), '_', str(timeI).zfill(4), '.vtk']
-                vtkFileName = "".join(fileName_temp)
+                    #collect uGrid for this time step; merge after all areas are processed
+                    grids_by_time.setdefault(timeI, []).append(uGrid)
 
-                # write out the ugrid
-                unstr_writer = vtk.vtkUnstructuredGridWriter()  # this can save as vtu format
+        #if combined_areas, merge all areas into one VTK per time step
+        if combined_areas:
+            for timeI in sorted(grids_by_time.keys()):
+                appendFilter = vtk.vtkAppendFilter()
+                appendFilter.MergePointsOff()
+                for g in grids_by_time[timeI]:
+                    appendFilter.AddInputData(g)
+                appendFilter.Update()
+
+                if dir != '':
+                    vtkFileName = "%s/%s%s_combined_%s.vtk" % (dir, fileNameBase, self.plan_name, str(timeI).zfill(4))
+                else:
+                    vtkFileName = "%s%s_combined_%s.vtk" % (fileNameBase, self.plan_name, str(timeI).zfill(4))
+
+                unstr_writer = vtk.vtkUnstructuredGridWriter()
                 unstr_writer.SetFileName(vtkFileName)
-                unstr_writer.SetInputData(uGrid)
+                unstr_writer.SetInputData(appendFilter.GetOutput())
                 unstr_writer.Write()
+                allVtkFiles.append(vtkFileName)
 
-                # add the vtkFileName to vtkFileNameList
-                vtkFileNameList.append(vtkFileName)
-
-            # vtkFileNameList
-            return vtkFileNameList
+        return allVtkFiles
 
 
     def exportSRHGEOMFile(self, srhgeomFileName, twoDAreaNumber = 0):
@@ -2692,7 +2739,7 @@ class RAS_2D_Data(HydraulicData):
         fid.write('GridUnit \"%s\" \n' % self.units)        
         
         #all cells
-        for cellI in range(self.TwoDAreaCellCounts[0]):
+        for cellI in range(self.TwoDAreaCellCounts[twoDAreaNumber]):
             cell_list = cellFacePointIndexes[cellI,0:cellsFaceOrientationInfo[cellI,1]]
 
             for i in range(len(cell_list)):
@@ -2744,20 +2791,21 @@ class RAS_2D_Data(HydraulicData):
         print("SRHGEOM file exported successfully: ", fname)
         
 
-    def exportSRHMATFile(self, srhmatFileName):
+    def exportSRHMATFile(self, srhmatFileName, twoDAreaNumber=0):
         """Export the SRHMAT file
 
         Parameters
         ----------
         srhmatFileName : str
             name of the srhmat file to write to
+        twoDAreaNumber : int, optional
+            2D flow area number (default = 0)
 
         Returns
         -------
 
         """
-        #only the first 2D area is exported.
-        cell_ManningN = self.TwoDAreaCellManningN[0]  #cell Manning's n
+        cell_ManningN = self.TwoDAreaCellManningN[twoDAreaNumber]  #cell Manning's n
         
         if gVerbose: print("cell_ManningN", cell_ManningN)
         
@@ -2778,23 +2826,26 @@ class RAS_2D_Data(HydraulicData):
         fid.write('SRHMAT 30\n')
         fid.write('NMaterials %d\n' % (nManningNZones + 1))  #+1 is because SRH-2D also counts the default Manning's n in srhhydro file.
         
-        #output MatName
-        for matID in range(nManningNZones):
-            fid.write('MatName %d \"%s\" \n' % (matID + 1, self.ManningNZones[matID][0].decode("utf-8")))  # +1 because SRH-2D is 1-based
-    
+        #output MatName (enumerate sorted zone IDs to produce sequential 1-based SRH-2D material IDs)
+        sorted_zone_ids = sorted(self.ManningNZones.keys())
+        for srhID, zone_id in enumerate(sorted_zone_ids, start=1):
+            fid.write('MatName %d \"%s\" \n' % (srhID, self.ManningNZones[zone_id][0].decode("utf-8")))
+
         #output cells in different material categories
-        for matID in range(nManningNZones):
-            if not self.cellsInManningZones[matID]: #this Manning's n zone has no cells
+        areaCellsInZones = self.cellsInManningZones[twoDAreaNumber]
+        for srhID, zone_id in enumerate(sorted_zone_ids, start=1):
+            cells = areaCellsInZones[zone_id]
+            if not cells:  # this Manning's n zone has no cells
                 continue
 
-            fid.write('Material %d ' % (matID+1))
-            
+            fid.write('Material %d ' % srhID)
+
             #loop over all cells in current Manning's n zone
-            for cellI in range(len(self.cellsInManningZones[matID])):
-                fid.write(" %d" % (self.cellsInManningZones[matID][cellI]+1))  #+1 because SRH-2D is 1-based
+            for cellI, globalCellIdx in enumerate(cells):
+                fid.write(" %d" % (globalCellIdx + 1))  #+1 because SRH-2D is 1-based
 
                 # 10 numbers per line or this is the last cell, start a new line
-                if (((cellI+1) % 10) == 0) or (cellI == (len(self.cellsInManningZones[matID])-1)):
+                if (((cellI + 1) % 10) == 0) or (cellI == len(cells) - 1):
                     fid.write("\n")
 
         fid.close()

@@ -156,7 +156,28 @@ def _preload_heavy_modules() -> None:
         sys.stdout = _stdout
 
 
+def _cleanup_session() -> None:
+    """Best-effort cleanup: close the solver and session on process exit."""
+    try:
+        from pyHMT2D.AI_Tools.state import get_session
+        session = get_session()
+        if session.model is not None:
+            try:
+                session.model.close_project()
+            except Exception:
+                pass
+            try:
+                session.model.exit_model()
+            except Exception:
+                pass
+        session.clear()
+    except Exception:
+        pass
+
+
 def main() -> None:
+    import atexit
+    atexit.register(_cleanup_session)
     _preload_heavy_modules()
     mcp.run()
 
