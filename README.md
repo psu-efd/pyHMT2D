@@ -153,15 +153,27 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
 
 If you only need the *pyHMT2D* library in your own scripts and do not need the examples:
 
-```bash
-pip install pyHMT2D
-```
+1. **Create and activate a virtual environment**
+   ```bash
+   python -m venv .venv
+   ```
+   - **Command Prompt (cmd.exe)**:
+     ```bash
+     .venv\Scripts\activate
+     ```
+   - **PowerShell**:
+     ```bash
+     .venv\Scripts\Activate.ps1
+     ```
 
-To include the AI-agent workflow support:
-
-```bash
-pip install pyHMT2D[ai]
-```
+2. **Install from PyPI**
+   ```bash
+   pip install pyHMT2D
+   ```
+   To include the AI-agent workflow support:
+   ```bash
+   pip install pyHMT2D[ai]
+   ```
 
 ## Example Usage (see the "examples" directory for more details)
 
