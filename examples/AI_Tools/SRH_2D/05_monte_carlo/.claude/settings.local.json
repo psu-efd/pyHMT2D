@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "mcp__pyHMT2D__get_mc_statistics"
-    ]
-  }
-}

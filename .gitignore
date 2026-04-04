@@ -4,6 +4,15 @@
 ai_tool_output.json
 ai_tool_output.md
 example_runs_results.json
+.hmt_session.json
+systemInfoEncoded.txt
+
+# Generated run directories
+calib_run*/
+mc_runs/
+
+# Claude Code local settings
+.claude/settings.local.json
 
 docs/pyHMT2D_User_Manual.pdf
 README.rst

@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(hmt-cli get_project_info --args '{\"\"model_file\"\": \"\"Muncie.srhhydro\"\"}')",
-      "Bash(hmt-cli get_project_info --args '{\"\"srhhydro_file\"\": \"\"Muncie.srhhydro\"\"}')"
-    ]
-  }
-}
