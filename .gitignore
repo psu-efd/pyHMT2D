@@ -208,6 +208,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Obsolete workflows
+.github/workflows/draft-pdf.yml
+
 # pycharm
 .idea
 

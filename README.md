@@ -10,7 +10,7 @@ Currently, the following hydraulic models are supported:
 - [HEC-RAS](https://www.hec.usace.army.mil/software/hec-ras/)
 - Backwater-1D (a simple toy model for demonstration purpose)
 
-In the future, support for more 2D models may be added. To use this Python package, an obvious prerequisite is that the hydraulic model you want to use has been properly installed. Please see their respective website and documentation for installation and usage. If you want to use the AI-agent workflow, you will also need an AI coding assistant such as Claude Code, Cursor, or Gemini, along with the AI extras (`pip install pyHMT2D[ai]`).
+In the future, support for more 2D models may be added. If you want to use the AI-agent workflow, you will also need an AI coding assistant such as Claude Code, Cursor, or Gemini, along with the AI extras (`pip install pyHMT2D[ai]`).
 
 ## Supported Platform
 
@@ -49,11 +49,12 @@ Two-dimensional (2D) hydraulic modeling, replacing one-dimensional (1D) modeling
 With the control and automation capability above, it is much easier to do the following:
 
 - Monte-Carlo simulations with scripting and Python’s statistic libraries
+- Automatic and customized model calibration
 - ...
 
-**AI-assisted modeling:**
+**AI-assisted modeling (vibe modeling):**
 
-- expose SRH-2D and HEC-RAS project operations through an MCP server with 27 AI-agent-callable tools
+- expose SRH-2D and HEC-RAS project operations through an MCP server with AI-agent-callable tools
 - use natural-language prompts in MCP-capable AI coding assistants to inspect projects, edit Manning's n and boundary conditions, run simulations, query results, and export VTK files
 - run AI-assisted calibration and Monte Carlo workflows for supported models
 - use repository-provided Agent Skills such as `/hmt-open`, `/hmt-modify`, `/hmt-run`, `/hmt-results`, `/hmt-export`, `/hmt-convert`, `/hmt-calibrate`, and `/hmt-monte-carlo`
@@ -62,11 +63,11 @@ With the control and automation capability above, it is much easier to do the fo
 
 - calculate the difference between simulation results (regardless they are on the same mesh or not)
 - create and manipulate georeferenced terrain data for 2D modeling
-- conversion of 2D model mesh and result to 3D through extrusion (one layer or multiple layers) and VTK interpolation. This feature is useful to use 2D simulation result in 3D applications, e.g., fish passage design or use 2D result as initial condition for 3D CFD simulations. Currently, conversion to [OpenFOAM](https://www.openfoam.com/) is supported through [Gmsh](https://gmsh.info/)'s MSH file format.
+- conversion of 2D model mesh and result to 3D through extrusion (one layer or multiple layers) and VTK interpolation. This feature is useful to use 2D simulation result in 3D applications, e.g., use 2D result as initial condition for 3D CFD simulations. Currently, conversion to [OpenFOAM](https://www.openfoam.com/) is supported through [Gmsh](https://gmsh.info/)'s MSH file format.
 
 ## Installation
 
-This section describes how to install *pyHMT2D* on Windows. If you are not very familiar with Python, start with the **Quick start** instructions.
+This section describes how to install *pyHMT2D* on Windows. There are two options: (1) clone from GitHub and install locally (recommended, gives you access to all examples), or (2) install from PyPI with `pip` (library only, no examples).
 
 ### Prerequisites
 
@@ -94,9 +95,12 @@ Before installing *pyHMT2D*, make sure that:
     - Download the **Windows installer** for Python 3.8 or newer. The current **pyHMT2D** is developed and tested with Python 3.12.10.
     - Run the installer and accept the defaults, making sure the option *“Add Python to PATH”* is selected.
     - After installation, open a new Command Prompt or PowerShell window and run `python --version` and `pip --version` again to verify.
-- **Hydraulic models**: SRH-2D (via Aquaveo's SMS software) and/or HEC-RAS are installed separately if you plan to control them with *pyHMT2D*. See their official websites for installers and documentation.
+- **Hydraulic models**: See their official websites for installers and documentation.
+  - SRH-2D (via [Aquaveo's SMS software](https://aquaveo.com/downloads-sms))
+  - and/or [HEC-RAS](https://www.hec.usace.army.mil/software/hec-ras/download.aspx) are installed separately if you plan to control them with *pyHMT2D*
+  - **Note**: As of April, 2026, pyHMT2D is developed with SMS v13.4.1 and HEC-RAS v6.6. Other versions may work, but not fully tested.
 
-### Clone and install in a development environment (recommended)
+### Installation Option 1: Clone and install from GitHub (recommended)
 
 These steps install *pyHMT2D* from a **local clone** into a **virtual environment** so it does not interfere with other Python projects on your machine and you can easily run/modify the examples.
 
@@ -128,6 +132,11 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
   ```bash
   pip install -e .
   ```
+  If you want AI-agent workflow support, do the following:
+  ```bash
+  pip install -e ".[ai]"
+  ```
+
   If you want to update *pyHMT2D* to the latest version, you can pull the latest changes from the GitHub repository:
   ```bash
   git pull
@@ -139,6 +148,20 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
   python -c "import pyHMT2D; print(pyHMT2D.__version__)"
   ```
   If this command prints a version number without errors, *pyHMT2D* is installed correctly and you can start exploring the examples under the `examples` directory.
+
+### Installation Option 2: Install from PyPI (library only; no examples)
+
+If you only need the *pyHMT2D* library in your own scripts and do not need the examples:
+
+```bash
+pip install pyHMT2D
+```
+
+To include the AI-agent workflow support:
+
+```bash
+pip install pyHMT2D[ai]
+```
 
 ## Example Usage (see the "examples" directory for more details)
 
@@ -225,7 +248,9 @@ hmt-cli ras_to_srh --args '{"ras_hdf_file": "Muncie2D.p01.hdf", "terrain_tif_fil
 hmt-cli srh_to_vtk --args '{"srhhydro_file": "Muncie.srhhydro", "output_file": "Muncie_XMDFC.h5"}'
 ```
 
-See `examples/cli` for more details.
+See `examples/cli` for more details. 
+
+**Note**: CLI in *pyHMT2D* uses JSON format for its arguments becaues these CLIs are meant for AI agents to call, not really for humans.
 
 ### Use with AI coding assistants (Claude Code, Cursor, Codex, etc.)
 
@@ -233,9 +258,13 @@ See `examples/cli` for more details.
 
 **Setup (one-time):**
 
-1. Install *pyHMT2D* with the AI extras:
+1. Install *pyHMT2D* with the AI extras (if you haven't done so during your installation of *pyHMT2D*). You can run this even if you already installed *pyHMT2D* without `[ai]` — it will add the missing dependencies. If you installed from GitHub source, run:
    ```bash
    pip install -e ".[ai]"
+   ```
+   Or if you installed from PyPI, run:
+   ```bash
+   pip install pyHMT2D[ai]
    ```
 
 2. Register the MCP server with your AI assistant. For **Codex CLI**:
