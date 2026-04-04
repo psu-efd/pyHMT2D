@@ -4,10 +4,11 @@
 # Modified from https://raw.githubusercontent.com/navdeep-G/setup.py/master/setup.py
 
 # Note: To use the 'upload' functionality of this file, you must:
-#   $ pipenv install twine --dev
+#   $ pip install build twine
 
 import io
 import os
+import subprocess
 import sys
 from shutil import rmtree
 
@@ -20,7 +21,7 @@ URL = 'https://github.com/psu-efd/pyHMT2D'
 EMAIL = 'xiaofengliu19@gmail.com'
 AUTHOR = 'Xiaofeng Liu'
 REQUIRES_PYTHON = '>=3.8.0, <3.14.0'
-VERSION = '1.0.6'
+VERSION = '2.0.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -61,10 +62,17 @@ else:
 
 
 class UploadCommand(Command):
-    """Support setup.py upload."""
+    """Support setup.py upload.
 
-    description = 'Build and publish the package.'
-    user_options = []
+    Usage:
+        python setup.py upload          # build and upload to PyPI
+        python setup.py upload --test   # build and upload to Test PyPI
+    """
+
+    description = 'Build and publish the package using build + twine.'
+    user_options = [
+        ('test', 't', 'Upload to Test PyPI instead of production PyPI'),
+    ]
 
     @staticmethod
     def status(s):
@@ -72,7 +80,7 @@ class UploadCommand(Command):
         print('\033[1m{0}\033[0m'.format(s))
 
     def initialize_options(self):
-        pass
+        self.test = False
 
     def finalize_options(self):
         pass
@@ -81,18 +89,29 @@ class UploadCommand(Command):
         try:
             self.status('Removing previous builds…')
             rmtree(os.path.join(here, 'dist'))
+            rmtree(os.path.join(here, 'build'))
         except OSError:
             pass
 
-        self.status('Building Source and Wheel (universal) distribution…')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        self.status('Building source and wheel distribution…')
+        subprocess.check_call([sys.executable, '-m', 'build'])
 
-        self.status('Uploading the package to PyPI via Twine…')
-        os.system('twine upload dist/*')
+        if self.test:
+            self.status('Uploading to Test PyPI via Twine…')
+            subprocess.check_call([
+                sys.executable, '-m', 'twine', 'upload',
+                '--repository', 'testpypi', 'dist/*',
+            ])
+        else:
+            self.status('Uploading to PyPI via Twine…')
+            subprocess.check_call([
+                sys.executable, '-m', 'twine', 'upload', 'dist/*',
+            ])
 
         self.status('Pushing git tags…')
-        os.system('git tag v{0}'.format(about['__version__']))
-        os.system('git push --tags')
+        tag = 'v{0}'.format(about['__version__'])
+        subprocess.check_call(['git', 'tag', tag])
+        subprocess.check_call(['git', 'push', '--tags'])
 
         sys.exit()
 
