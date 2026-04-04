@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme sphinx-copybutton m2r2
+          pip install sphinx sphinx-rtd-theme sphinx-copybutton myst-parser
           pip install -e .
 
       - name: Build Sphinx docs

@@ -254,7 +254,7 @@ See `examples/cli` for more details.
 
 ### Use with AI coding assistants (Claude Code, Cursor, Codex, etc.)
 
-*pyHMT2D* includes an **MCP (Model Context Protocol) server** that exposes 27 tools for opening projects, modifying parameters, running simulations, querying results, calibration, and Monte Carlo analysis. Any AI coding assistant that supports MCP can use these tools.
+*pyHMT2D* includes an **MCP (Model Context Protocol) server** that exposes tools for opening projects, modifying parameters, running simulations, querying results, calibration, and Monte Carlo analysis. Any AI coding assistant that supports MCP can use these tools.
 
 **Setup (one-time):**
 
@@ -360,10 +360,21 @@ python -c "import os; print(os.listdir(os.path.join(os.environ['TEMP'], 'gen_py'
 
 Delete the folder whose name starts with the HEC-RAS CLSID (typically `A1640D88-...`).
 
+## TODO / Roadmap
+
+The following features are planned for future releases:
+
+- **DSS file support for HEC-RAS**: Read and write HEC-DSS time series data (e.g., flow hydrographs, stage data) for automated boundary condition setup and result extraction.
+- **Modify unsteady boundary conditions**: Programmatically change inflow hydrographs, stage hydrographs, and other time-varying boundary conditions for HEC-RAS and SRH-2D.
+- **Hydraulic structures support**: Parse and modify hydraulic structures (bridges, culverts, inline structures, lateral structures, SA/2D connections) in SRH-2D and HEC-RAS projects.
+- **1D channel support**: Process 1D cross-sections and channel geometry in combined 1D/2D HEC-RAS models.
+- **Sediment and water quality**: Extend data readers and VTK export to handle sediment transport and water quality variables.
+- **RAS 2025 support**: Add compatibility with HEC-RAS 2025 once its version stabilizes.
+
 ## API Documentation
 
 The API documentation is hosted at  
-[https://psu-efd.github.io/pyHMT2D_API_Web/](https://psu-efd.github.io/pyHMT2D_API_Web/)
+[https://psu-efd.github.io/pyHMT2D/](https://psu-efd.github.io/pyHMT2D/)
 
 ## Acknowledgements and References
 
@@ -381,6 +392,10 @@ Some of the examples and tests use dataset from public domain or authorized sour
 - [Lidar data set from USGS](https://www.usgs.gov/core-science-systems/ngp/3dep) (public domain)
 
 The inclusion of these data sets in *pyHMT2D* is strictly for demonstration purpose only. Reuse or repurpose of these dataset without explicit authorization from the original owner or copyright holder is not permitted.
+
+
+
+Contributions and feature requests are welcome via [GitHub Issues](https://github.com/psu-efd/pyHMT2D/issues).
 
 ## License
 
