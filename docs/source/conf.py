@@ -17,6 +17,12 @@ import datetime
 sys.path.insert(0, os.path.abspath('../..'))
 #sys.setrecursionlimit(1500)
 
+# Mock imports that are unavailable during doc builds (e.g., pywin32 on Linux/CI)
+autodoc_mock_imports = [
+    'win32com', 'pythoncom', 'pywintypes',
+    'win32com.client',
+]
+
 
 # -- Project information -----------------------------------------------------
 
@@ -26,7 +32,7 @@ copyright = f'2020-{year}, Xiaofeng Liu'
 author = 'Xiaofeng Liu'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.0'
+release = '2.0.0'
 
 
 # -- General configuration ---------------------------------------------------
