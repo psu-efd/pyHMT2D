@@ -12,6 +12,10 @@ Currently, the following hydraulic models are supported:
 
 In the future, support for more 2D models may be added. If you want to use the AI-agent workflow, you will also need an AI coding assistant such as Claude Code, Cursor, or Gemini, along with the AI extras (`pip install pyHMT2D[ai]`).
 
+## YouTube Video Demo: Installation and Running Examples
+
+[![Watch the video](https://img.youtube.com/vi/p0Pxxbh5lts/maxresdefault.jpg)](https://www.youtube.com/watch?v=p0Pxxbh5lts)
+
 ## Supported Platform
 
 Currently, only Windows is supported. This is because SRH-2D and HEC-RAS 2D are for Windows only. Most practitioners and engineers who run these 2D models use Windows almost exclusively. Linux platform has also been tested, but with limited support (you will need the Linux version of the hydraulics models).
@@ -151,7 +155,7 @@ These steps install *pyHMT2D* from a **local clone** into a **virtual environmen
 
 ### Installation Option 2: Install from PyPI (library only; no examples)
 
-If you only need the *pyHMT2D* library in your own scripts and do not need the examples:
+Use this option if you only need the *pyHMT2D* library in your own scripts and do not need the examples. In Windows Command Prompt (cmd.exe) or PowerShell, navigate to a folder of your choice (e.g., `C:\Users\YourName\test`), and create a virtual environment:
 
 1. **Create and activate a virtual environment**
    ```bash
@@ -166,7 +170,7 @@ If you only need the *pyHMT2D* library in your own scripts and do not need the e
      .venv\Scripts\Activate.ps1
      ```
 
-2. **Install from PyPI**
+2. **Install from PyPI within the activated virtual environment**
    ```bash
    pip install pyHMT2D
    ```
