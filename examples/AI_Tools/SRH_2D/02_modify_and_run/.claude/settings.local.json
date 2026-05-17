@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__pyHMT2D__load_config",
+      "mcp__pyHMT2D__get_project_info",
+      "mcp__pyHMT2D__get_materials",
+      "mcp__pyHMT2D__set_manning_n",
+      "mcp__pyHMT2D__save_modified_inputs",
+      "mcp__pyHMT2D__run_preprocessing",
+      "mcp__pyHMT2D__run_simulation",
+      "mcp__pyHMT2D__read_results",
+      "mcp__pyHMT2D__get_simulation_status",
+      "mcp__pyHMT2D__get_result_statistics",
+      "Bash(hmt-cli:*)"
+    ]
+  }
+}

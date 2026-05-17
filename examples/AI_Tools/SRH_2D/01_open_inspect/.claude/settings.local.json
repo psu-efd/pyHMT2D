@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(hmt-cli:*)",
+      "Bash(wait)",
+      "Bash(python -m pyHMT2D.AI_Tools.cli get_project_info --args '{\"\"project_file\"\": \"\"Muncie.srhhydro\"\"}')"
+    ]
+  }
+}
