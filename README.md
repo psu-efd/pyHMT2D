@@ -102,7 +102,7 @@ Before installing *pyHMT2D*, make sure that:
 - **Hydraulic models**: See their official websites for installers and documentation.
   - SRH-2D (via [Aquaveo's SMS software](https://aquaveo.com/downloads-sms))
   - and/or [HEC-RAS](https://www.hec.usace.army.mil/software/hec-ras/download.aspx) are installed separately if you plan to control them with *pyHMT2D*
-  - **Note**: As of April, 2026, pyHMT2D is developed with SMS v13.4.1 and HEC-RAS v6.6. Other versions may work, but not fully tested.
+  - **Note**: As of April, 2026, pyHMT2D is developed with SMS v13.4.11 and HEC-RAS v6.6. Other versions may work, but not fully tested.
 
 ### Installation Option 1: Clone and install from GitHub (recommended)
 
