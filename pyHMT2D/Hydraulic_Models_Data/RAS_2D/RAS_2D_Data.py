@@ -160,6 +160,15 @@ class RAS_2D_Data(HydraulicData):
         self.units = ''    #units used
         self.short_ID = '' #short_ID of the plan
 
+        # Older plan HDFs may not store a usable 'Project Filename' attribute.
+        # Fall back to the project's .prj path when available, since the caller
+        # already located it via HEC_RAS_Project.
+        if (not self.project_filename or not os.path.isfile(self.project_filename)):
+            project_obj = getattr(plan, 'project', None)
+            prj_file = getattr(project_obj, 'prj_file', None)
+            if prj_file and os.path.isfile(prj_file):
+                self.project_filename = os.path.abspath(prj_file)
+
         #extract version
         self.extract_version()
 

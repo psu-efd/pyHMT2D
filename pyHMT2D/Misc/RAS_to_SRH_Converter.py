@@ -11,7 +11,8 @@ class RAS_to_SRH_Converter:
     twoDAreaNumber (default: 0, the first area).
     """
 
-    def __init__(self, prj_file, plan_id_or_name, srh_case_name, twoDAreaNumber=0):
+    def __init__(self, prj_file, plan_id_or_name, srh_case_name,
+                 twoDAreaNumber=0, terrain_file=None):
         """
         Parameters
         ----------
@@ -24,11 +25,19 @@ class RAS_to_SRH_Converter:
         twoDAreaNumber : int, optional
             Index of the 2D area to convert (default 0, i.e. first area).
             For single-area cases this should always be 0.
+        terrain_file : str, optional
+            Path to a single-source GeoTIFF terrain file. Overrides
+            auto-discovery from the geometry HDF / rasmap. Required when
+            the project uses a composite terrain (stack of TIFFs), since
+            auto-discovery currently picks only the first layer in the
+            stack and produces incorrect floodplain elevations.
+            See: https://github.com/psu-efd/pyHMT2D/issues/13
         """
         self.prj_file = prj_file
         self.plan_id_or_name = plan_id_or_name
         self.srh_case_name = srh_case_name
         self.twoDAreaNumber = twoDAreaNumber
+        self.terrain_file = terrain_file
 
     def convert_to_SRH(self):
         """Perform the conversion and write .srhgeom and .srhmat files."""
@@ -44,7 +53,7 @@ class RAS_to_SRH_Converter:
                 "Run the HEC-RAS simulation first."
             )
 
-        ras_2d_data = plan.load_results()
+        ras_2d_data = plan.load_results(terrain_file=self.terrain_file)
 
         n_areas = len(ras_2d_data.TwoDAreaNames)
         if self.twoDAreaNumber >= n_areas:
@@ -53,7 +62,9 @@ class RAS_to_SRH_Converter:
                 f"This plan has {n_areas} 2D area(s) (indices 0..{n_areas-1})."
             )
 
-        ras_2d_data.exportSRHGEOMFile(self.srh_case_name + ".srhgeom",
+        # exportSRH{GEOM,MAT}File append the extension themselves — pass the
+        # base name only to avoid producing files like "Muncie.srhgeom.srhgeom".
+        ras_2d_data.exportSRHGEOMFile(self.srh_case_name,
                                        twoDAreaNumber=self.twoDAreaNumber)
-        ras_2d_data.exportSRHMATFile(self.srh_case_name + ".srhmat",
+        ras_2d_data.exportSRHMATFile(self.srh_case_name,
                                      twoDAreaNumber=self.twoDAreaNumber)
