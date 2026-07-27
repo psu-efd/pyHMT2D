@@ -349,7 +349,15 @@ def get_result_statistics(
             if session.model_type == "SRH-2D" and session.data.xmdfAllData_Cell:
                 candidates = list(session.data.xmdfAllData_Cell.keys())
             else:
-                candidates = []
+                # HEC-RAS (and SRH-2D falling back to VTK) keeps its variables in
+                # the exported VTK, not in xmdfAllData_Cell — look there instead,
+                # otherwise the candidate list is empty and masking always fails.
+                vtk_file, verr = _ensure_vtk(session, timestep)
+                if verr:
+                    return _err(verr)
+                from pyHMT2D.Misc import vtkHandler
+                reader = vtkHandler().readVTK_UnstructuredGrid(vtk_file)
+                candidates = _get_vtk_cell_array_names(reader)
             for candidate in candidates:
                 if "depth" in candidate.lower():
                     depth_var = candidate
@@ -362,26 +370,25 @@ def get_result_statistics(
             depth_arr, err = _load_array(depth_var)
             if err:
                 return _err(f"Failed to load depth variable '{depth_var}': {err}")
-            depth_arr = depth_arr[np.isfinite(depth_arr)]
-            wet_mask = depth_arr >= depth_threshold
-
-        # Remove NaN / fill values
-        arr = arr[np.isfinite(arr)]
-        if len(arr) == 0:
-            return _err(f"No valid data for variable '{variable}'.")
-
-        # Apply wet-cell mask
-        if wet_mask is not None:
-            if len(wet_mask) != len(arr):
+            if len(depth_arr) != len(arr):
                 return _err(
-                    f"Depth mask length ({len(wet_mask)}) does not match "
+                    f"Depth mask length ({len(depth_arr)}) does not match "
                     f"variable array length ({len(arr)})."
                 )
-            arr = arr[wet_mask]
-            if len(arr) == 0:
-                return _err(
-                    f"No wet cells found with depth >= {depth_threshold}."
-                )
+            # Build the mask positionally so it stays index-aligned with `arr`.
+            # Compacting each array by its own finite-mask first would shift the
+            # two out of correspondence whenever their NaNs sit in different cells.
+            wet_mask = np.isfinite(depth_arr) & (depth_arr >= depth_threshold)
+
+        # Remove NaN / fill values, applying the wet-cell mask in the same pass
+        keep = np.isfinite(arr)
+        if wet_mask is not None:
+            keep &= wet_mask
+        arr = arr[keep]
+        if len(arr) == 0:
+            if wet_mask is not None:
+                return _err(f"No wet cells found with depth >= {depth_threshold}.")
+            return _err(f"No valid data for variable '{variable}'.")
 
         stats = {
             "variable": variable,
@@ -480,7 +487,11 @@ def get_flood_extent(
                 for pi in range(1, pts.GetNumberOfPoints() - 1):
                     p1 = np.array(pts.GetPoint(pi)[:2])
                     p2 = np.array(pts.GetPoint(pi + 1)[:2])
-                    area += 0.5 * abs(np.cross(p1 - p0, p2 - p0))
+                    # 2-D cross product, written out explicitly: NumPy 2.0
+                    # removed np.cross() support for 2-element vectors.
+                    d1 = p1 - p0
+                    d2 = p2 - p0
+                    area += 0.5 * abs(d1[0] * d2[1] - d1[1] * d2[0])
                 cell_areas[ci] = area
 
         flooded_mask = depths >= depth_threshold

@@ -85,7 +85,11 @@ def export_to_vtk(
 
         else:  # HEC-RAS
             last = timestep == -1
-            ts = timestep if not last else -1
+            # timestep == -2 means "all time steps", which the underlying
+            # exporter expresses as timeStep=-1 with lastTimeStep=False. Without
+            # this the -2 sentinel was passed through verbatim and rejected.
+            all_steps = timestep == -2
+            ts = -1 if (last or all_steps) else timestep
             session.data.saveHEC_RAS2D_results_to_VTK(
                 timeStep=ts,
                 lastTimeStep=last,
@@ -96,9 +100,14 @@ def export_to_vtk(
 
         vtk_files = sorted(glob.glob(os.path.join(output_dir, "*.vtk")))
 
-        # Update session VTK cache to the last file produced
+        # Update session VTK cache to the last file produced. Keep the cache key
+        # (vtk_file_timestep) in sync, otherwise a later get_result_statistics()
+        # could match a stale key against this newly written file and silently
+        # report the wrong time step. A multi-step export leaves several files,
+        # so invalidate the key rather than mislabel it.
         if vtk_files:
             session.vtk_file = vtk_files[-1]
+            session.vtk_file_timestep = timestep if len(vtk_files) == 1 else None
 
         return _ok(
             {"vtk_files": vtk_files, "output_dir": output_dir},
