@@ -120,6 +120,21 @@ def _get_vtk_variable_names(vtk_file: str) -> list:
     return [cd.GetArrayName(i) for i in range(cd.GetNumberOfArrays())]
 
 
+def _exceedance_index(prob: float, n_valid: int) -> int:
+    """Index into a descending-sorted sample for exceedance probability *prob* (%).
+
+    Uses the Weibull plotting position: the value with 1-based rank
+    ``m = prob/100 * (n + 1)`` in the descending-sorted sample is exceeded
+    ``prob`` percent of the time. Python indexing is 0-based, hence the ``- 1``.
+
+    Omitting that ``- 1`` biases every mid-range probability one rank toward
+    smaller values; the effect is invisible at the tails because the clamps
+    absorb it, which is why it went unnoticed.
+    """
+    rank = int(round(prob * (n_valid + 1) / 100.0))   # 1-based Weibull rank
+    return min(max(rank - 1, 0), n_valid - 1)         # -> clamped 0-based index
+
+
 def _resolve_variable(vtk_file: str, variable) -> str:
     """Return a valid variable name from the VTK file.
 
@@ -675,7 +690,7 @@ def get_mc_statistics(
                     n_valid = len(vals)
                     probs_at = {}
                     for prob in exceedance_probabilities:
-                        idx = min(int(prob * (n_valid + 1) / 100), n_valid - 1) if n_valid > 0 else 0
+                        idx = _exceedance_index(prob, n_valid) if n_valid > 0 else 0
                         probs_at[f"p{prob}"] = round(float(vals[idx]), 4) if n_valid > 0 else None
                     point_stats.append({
                         "name": pt.get("name", f"pt_{pi}"),
@@ -720,8 +735,7 @@ def get_mc_statistics(
                     run_vals = np.sort(all_vals[ci, np.isfinite(all_vals[ci])])[::-1]
                     n_valid = len(run_vals)
                     if n_valid > 0:
-                        idx = min(int(prob * (n_valid + 1) / 100), n_valid - 1)
-                        cell_probs[ci] = run_vals[idx]
+                        cell_probs[ci] = run_vals[_exceedance_index(prob, n_valid)]
 
                 vtk_arr = VN.numpy_to_vtk(
                     np.nan_to_num(cell_probs, nan=0.0), deep=True
