@@ -130,6 +130,7 @@ def _save_session(session_file: str, sess, config_file: str | None = None) -> No
         "result_time_steps": list(sess.result_time_steps),
         "result_variables": list(sess.result_variables),
         "vtk_file": _abs(sess.vtk_file),
+        "vtk_file_timestep": getattr(sess, "vtk_file_timestep", None),
         "config_file": config_file,
     }
     for attr in _DYNAMIC_ATTRS:
@@ -191,10 +192,14 @@ def _restore_session(sess, saved: dict, tool_name: str) -> None:
     if saved.get("result_loaded") and result_file and os.path.isfile(result_file):
         from pyHMT2D.AI_Tools.tools.result_tools import read_results
         read_results(result_file, timestep=-1)
-        # read_results() clears vtk_file; restore cached copy if still on disk
+        # read_results() clears vtk_file; restore cached copy if still on disk.
+        # The time step it was exported for is restored alongside it so
+        # _ensure_vtk() can tell whether the cache is valid for the requested
+        # step rather than reusing it unconditionally.
         vtk_file = saved.get("vtk_file")
         if vtk_file and os.path.isfile(vtk_file):
             sess.vtk_file = vtk_file
+            sess.vtk_file_timestep = saved.get("vtk_file_timestep")
 
 
 # ── stdout capture ────────────────────────────────────────────────────────────

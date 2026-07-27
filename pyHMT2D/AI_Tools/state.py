@@ -37,6 +37,7 @@ class HydraulicSession:
 
     # ── vtk reader (cached after export / read) ───────────────────────────────
     vtk_file: Optional[str] = None            # last exported / used VTK file
+    vtk_file_timestep: Optional[int] = None   # time step vtk_file was exported for
 
     def clear(self) -> None:
         """Reset the session to an empty state."""
@@ -50,6 +51,7 @@ class HydraulicSession:
         self.result_time_steps = []
         self.result_variables = []
         self.vtk_file = None
+        self.vtk_file_timestep = None
 
     def is_open(self) -> bool:
         """Return True if a project has been opened."""

@@ -73,9 +73,19 @@ def _resolve_vtk_varname(name: str, available: list) -> str | None:
 def _ensure_vtk(session, timestep: int = -1) -> tuple:
     """Export results to a temporary VTK file if not already done.
 
+    The cache is keyed on ``timestep``: a previously exported file is reused only
+    when it was exported for the *same* time step. Without this check a query for
+    one time step would silently return another time step's data, since the
+    cached path persists across calls (and, for hmt-cli, across processes via
+    .hmt_session.json).
+
     Returns (vtk_file_path, error_message_or_None).
     """
-    if session.vtk_file and os.path.isfile(session.vtk_file):
+    if (
+        session.vtk_file
+        and os.path.isfile(session.vtk_file)
+        and getattr(session, "vtk_file_timestep", None) == timestep
+    ):
         return session.vtk_file, None
 
     # Need to export
@@ -108,6 +118,7 @@ def _ensure_vtk(session, timestep: int = -1) -> tuple:
             vtk_file = sorted(vtk_files)[-1]
 
         session.vtk_file = vtk_file
+        session.vtk_file_timestep = timestep
         return vtk_file, None
 
     except Exception as exc:
