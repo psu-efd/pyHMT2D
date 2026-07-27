@@ -1899,7 +1899,11 @@ class SRH_2D_SRHGeom:
                 # Area of triangle using cross product
                 v1 = node_coords[1] - node_coords[0]
                 v2 = node_coords[2] - node_coords[0]
-                area = 0.5 * np.cross(v1[:2], v2[:2])  # Remove abs() to preserve sign
+                # 2-D cross product written out explicitly: NumPy 2.0 removed
+                # np.cross() support for 2-element vectors. Signed, as the
+                # quadrilateral branch below is — the sign carries the node
+                # ordering (winding) and is used to orient the bed slope.
+                area = 0.5 * (v1[0] * v2[1] - v1[1] * v2[0])
             elif num_nodes == 4:  # Quadrilateral
                 # Area of quadrilateral using shoelace formula
                 x = node_coords[:num_nodes, 0]
