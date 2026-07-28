@@ -32,7 +32,9 @@ REQUIRED = [
 # What packages are optional?
 EXTRAS = {
     'ai': [
-        'mcp>=1.0.0',           # Model Context Protocol server (FastMCP)
+        # FastMCP entered the SDK in 1.2.0; the `instructions=` kwarg in 1.3.0.
+        # mcp 2.0.0 removed mcp.server.fastmcp entirely — the cap is required.
+        'mcp>=1.3.0,<2',           # Model Context Protocol server (FastMCP)
     ],
 }
 
