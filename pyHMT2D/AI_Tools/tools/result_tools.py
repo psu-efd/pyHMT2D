@@ -15,6 +15,7 @@ from typing import List, Optional
 import numpy as np
 
 from pyHMT2D.AI_Tools.state import get_session
+from pyHMT2D.AI_Tools.tools._units import area_to_km2, area_unit, length_unit
 
 
 def _ok(data, message: str) -> dict:
@@ -427,16 +428,23 @@ def get_flood_extent(
     Parameters
     ----------
     depth_threshold : float
-        Minimum water depth (m) to be considered flooded. Default 0.01 m.
+        Minimum water depth to be considered flooded, in the project's own
+        length unit (metres for SI projects, feet for English ones).
+        Default 0.01.
     timestep : int
         Time step index (-1 = last step). Default -1.
 
     Returns
     -------
     dict with "data" containing
-        {"flooded_area_m2": float, "flooded_area_km2": float,
-         "total_domain_area_m2": float, "flooded_fraction": float,
-         "depth_threshold_m": float, "n_flooded_cells": int}
+        {"flooded_area": float, "total_domain_area": float,
+         "area_units": "m2" | "ft2", "flooded_area_km2": float,
+         "total_domain_area_km2": float, "flooded_fraction": float,
+         "depth_threshold": float, "depth_units": "m" | "ft",
+         "n_flooded_cells": int, "n_total_cells": int}
+
+    Areas are reported in the project's units; the ``_km2`` entries are
+    converted for convenience.
     """
     session = get_session()
     try:
@@ -457,22 +465,22 @@ def get_flood_extent(
         reader = handler.readVTK_UnstructuredGrid(vtk_file)
         ugrid = reader.GetOutput()
 
-        # Identify depth variable name
-        depth_var = None
-        for candidate in ["Water_Depth_m", "Depth_m", "Water_Depth_ft", "water_depth", "Depth"]:
-            if ugrid.GetCellData().GetArray(candidate) is not None:
-                depth_var = candidate
-                break
+        # Identify the depth variable by name. Read the candidates off the VTK
+        # rather than guessing from a fixed list, so English-unit projects
+        # ("Water_Depth_ft") resolve the same way metric ones do.
+        available = _get_vtk_cell_array_names(reader)
+        depth_var = next(
+            (name for name in available if "depth" in name.lower()), None
+        )
         if depth_var is None:
-            # Try to derive from WSE - bed
-            depth_var = handler.get_uGRid_cell_field_with_name(reader, "Water_Depth_m")
-
-        depth_arr = handler.get_uGRid_cell_field_with_name(reader, depth_var or "Water_Depth_m")
-        if depth_arr is None:
             return _err(
-                "Cannot find a water depth variable. "
-                "Ensure results include 'Water_Depth_m' or similar."
+                "Cannot find a water depth variable in the results. "
+                f"Available variables: {available}"
             )
+
+        depth_arr = handler.get_uGRid_cell_field_with_name(reader, depth_var)
+        if depth_arr is None:
+            return _err(f"Failed to read depth variable '{depth_var}'.")
         depths = np.array(depth_arr).flatten()
 
         # Compute cell areas using VTK
@@ -499,22 +507,31 @@ def get_flood_extent(
         total_area = float(np.sum(cell_areas))
         fraction = flooded_area / total_area if total_area > 0 else 0.0
 
+        # Areas come out in the mesh's own units, which follow the project —
+        # feet for an English-unit model. The km² figures are converted, not
+        # just divided by 1e6.
+        a_unit = area_unit(session)
+        l_unit = length_unit(session)
+        flooded_km2 = area_to_km2(flooded_area, session)
+
         result = {
-            "flooded_area_m2": flooded_area,
-            "flooded_area_km2": flooded_area / 1e6,
-            "total_domain_area_m2": total_area,
-            "total_domain_area_km2": total_area / 1e6,
+            "flooded_area": flooded_area,
+            "total_domain_area": total_area,
+            "area_units": a_unit,
+            "flooded_area_km2": flooded_km2,
+            "total_domain_area_km2": area_to_km2(total_area, session),
             "flooded_fraction": round(fraction, 4),
             "flooded_percent": round(fraction * 100, 2),
-            "depth_threshold_m": depth_threshold,
+            "depth_threshold": depth_threshold,
+            "depth_units": l_unit,
             "n_flooded_cells": int(np.sum(flooded_mask)),
             "n_total_cells": n_cells,
         }
 
         return _ok(
             result,
-            f"Flooded area: {flooded_area/1e6:.3f} km² "
-            f"({fraction*100:.1f}% of domain) at depth ≥ {depth_threshold} m.",
+            f"Flooded area: {flooded_area:,.0f} {a_unit} ({flooded_km2:.3f} km², "
+            f"{fraction*100:.1f}% of domain) at depth ≥ {depth_threshold} {l_unit}.",
         )
 
     except Exception as exc:
@@ -553,7 +570,10 @@ def get_cross_section_profile(
     Returns
     -------
     dict with "data" containing a list of
-        {"distance_m": float, "x": float, "y": float, "value": float}
+        {"distance": float, "distance_units": "m" | "ft", "x": float,
+         "y": float, "value": float}
+
+    Distances are along the transect, in the project's own length unit.
     """
     session = get_session()
     try:
@@ -600,9 +620,11 @@ def get_cross_section_profile(
 
         values = probed[1]
 
+        l_unit = length_unit(session)
         profile = [
             {
-                "distance_m": round(float(d), 2),
+                "distance": round(float(d), 2),
+                "distance_units": l_unit,
                 "x": round(float(xi), 2),
                 "y": round(float(yi), 2),
                 "value": round(float(v), 4),
@@ -612,7 +634,8 @@ def get_cross_section_profile(
 
         return _ok(
             profile,
-            f"Extracted {variable} at {n_points} points over {total_dist:.1f} m transect.",
+            f"Extracted {variable} at {n_points} points over a "
+            f"{total_dist:.1f} {l_unit} transect.",
         )
 
     except Exception as exc:

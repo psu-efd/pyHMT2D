@@ -36,16 +36,18 @@ A project must be open. A result file (`.h5` or `.hdf`) must exist.
    ```
    Report: min, max, mean, std, number of cells.
 
-   **c) Flood extent** — ask for depth threshold (default 0.01 m):
+   **c) Flood extent** — ask for depth threshold (default 0.01, in the project's
+   own length unit — m for SI projects, ft for English ones):
    ```bash
    hmt-cli get_flood_extent --args '{"depth_threshold": <threshold>}'
    ```
-   Report: flooded area in m² and km², percentage of domain flooded.
+   Report: flooded area in the project's units (the `area_units` field says which)
+   plus the converted km² figure, and the percentage of domain flooded.
 
    **d) Cross-section profile** — ask for two (x,y) endpoints and variable:
    ```bash
    hmt-cli get_cross_section_profile --args '{"x1": <x1>, "y1": <y1>, "x2": <x2>, "y2": <y2>, "variable": "<var>", "n_points": 50}'
    ```
-   Present as a table: Distance (m) | X | Y | Value.
+   Present as a table: Distance (`distance_units`) | X | Y | Value.
 
 4. **Offer further queries** or suggest `/hmt-export` to create VTK files.

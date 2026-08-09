@@ -19,6 +19,7 @@ from typing import Optional
 
 import pyHMT2D
 from pyHMT2D.AI_Tools.state import get_session
+from pyHMT2D.AI_Tools.tools._units import discharge_unit, length_unit
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -454,10 +455,8 @@ def get_boundary_conditions() -> dict:
                 iq_dict = ctrl.srhsif_content.get("IQParams", {})
                 exh_dict = ctrl.srhsif_content.get("EWSParamsC", {})
 
-            _, output_unit = session.data.get_output_format_unit()
-            is_english = output_unit.upper() in ("EN", "ENGLISH")
-            q_units = "ft3/s" if is_english else "m3/s"
-            h_units = "ft"   if is_english else "m"
+            q_units = discharge_unit(session)
+            h_units = length_unit(session)
 
             for bc_id, bc_type in sorted(bc_dict.items()):
                 value = None
@@ -476,6 +475,7 @@ def get_boundary_conditions() -> dict:
 
         else:  # HEC-RAS
             bc_info = session.data.get2DAreaBoundaryNamesTypes()
+            len_units = length_unit(session)
             for i, entry in enumerate(bc_info):
                 name = entry[0].decode("utf-8", errors="replace") if isinstance(entry[0], bytes) else str(entry[0])
                 area = entry[1].decode("utf-8", errors="replace") if isinstance(entry[1], bytes) else str(entry[1])
@@ -486,7 +486,8 @@ def get_boundary_conditions() -> dict:
                     "name": name,
                     "2d_flow_area": area,
                     "type": btype,
-                    "length_m": length,
+                    "length": length,
+                    "length_units": len_units,
                     "value": None,  # HEC-RAS BC values live in plan files
                 })
 

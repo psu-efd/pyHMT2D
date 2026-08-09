@@ -23,6 +23,35 @@ def _err(message: str) -> dict:
     return {"status": "error", "data": None, "message": message}
 
 
+def _vtk_fingerprints(directory: str) -> dict:
+    """Map every .vtk in ``directory`` to a (mtime_ns, size) fingerprint."""
+    import glob
+
+    fingerprints = {}
+    for path in glob.glob(os.path.join(directory, "*.vtk")):
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        fingerprints[path] = (st.st_mtime_ns, st.st_size)
+    return fingerprints
+
+
+def _written_since(directory: str, before: dict) -> list:
+    """Return the .vtk files created or rewritten since ``before`` was taken.
+
+    Comparing fingerprints rather than just filenames matters because an
+    export commonly overwrites files from a previous run under the same
+    names — a plain set difference would then report nothing at all.
+    """
+    after = _vtk_fingerprints(directory)
+    touched = sorted(p for p, fp in after.items() if before.get(p) != fp)
+    # If nothing looks touched but files exist, the filesystem gave us no usable
+    # signal (identical mtime and size). Fall back to the full listing rather
+    # than claiming a successful export produced nothing.
+    return touched or sorted(after)
+
+
 # ── tool 18 ───────────────────────────────────────────────────────────────────
 
 def export_to_vtk(
@@ -69,7 +98,11 @@ def export_to_vtk(
     os.makedirs(output_dir, exist_ok=True)
 
     try:
-        import glob
+        # Fingerprint the directory first. The exporters do not report which
+        # files they wrote, and output_dir usually already holds VTKs from an
+        # earlier export, so globbing it afterwards would credit this call with
+        # files it never touched (and point the session cache at a stale one).
+        before = _vtk_fingerprints(output_dir)
 
         if session.model_type == "SRH-2D":
             last = timestep == -1
@@ -98,7 +131,7 @@ def export_to_vtk(
                 bFlat=False,
             )
 
-        vtk_files = sorted(glob.glob(os.path.join(output_dir, "*.vtk")))
+        vtk_files = _written_since(output_dir, before)
 
         # Update session VTK cache to the last file produced. Keep the cache key
         # (vtk_file_timestep) in sync, otherwise a later get_result_statistics()

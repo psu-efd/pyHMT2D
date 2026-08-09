@@ -13,6 +13,7 @@ import os
 from typing import List, Optional
 
 from pyHMT2D.AI_Tools.state import get_session
+from pyHMT2D.AI_Tools.tools._units import discharge_unit, length_unit
 
 
 def _ok(data, message: str) -> dict:
@@ -129,7 +130,8 @@ def set_inlet_flow(bc_ids: List[int], values: List[float]) -> dict:
     Returns
     -------
     dict with "data" containing a list of
-        {"id": int, "old_value": float, "new_value": float, "units": "m3/s"}
+        {"id": int, "old_value": float, "new_value": float,
+         "units": "m3/s" | "ft3/s"}
     """
     session = get_session()
     try:
@@ -153,14 +155,37 @@ def set_inlet_flow(bc_ids: List[int], values: List[float]) -> dict:
             return _err(f"Flow rate {v} must be non-negative.")
 
     try:
+        ctrl = (
+            session.data.srhhydro_obj
+            if session.data.control_type == "SRHHydro"
+            else session.data.srhsif_obj
+        )
+
+        if session.data.control_type == "SRHHydro":
+            iq_dict = ctrl.get_InletQ()
+        else:
+            iq_dict = ctrl.srhsif_content.get("IQParams", {})
+
+        # Capture old values before the update, matching set_exit_wse().
+        old_values = []
+        for bid in bc_ids:
+            entry = iq_dict.get(bid)
+            if entry is None:
+                old_values.append(float("nan"))
+            elif isinstance(entry, dict):
+                old_values.append(float(entry.get("discharge", float("nan"))))
+            else:
+                old_values.append(float(entry))
+
         ids_int   = [int(i)   for i in bc_ids]
         vals_float = [float(v) for v in values]
 
         session.data.modify_InletQ(ids_int, vals_float)
 
+        q_unit = discharge_unit(session)
         changes = [
-            {"id": bid, "new_value": val, "units": "m3/s"}
-            for bid, val in zip(ids_int, vals_float)
+            {"id": bid, "old_value": old, "new_value": val, "units": q_unit}
+            for bid, old, val in zip(ids_int, old_values, vals_float)
         ]
         return _ok(
             changes,
@@ -190,7 +215,8 @@ def set_exit_wse(bc_ids: List[int], values: List[float]) -> dict:
     Returns
     -------
     dict with "data" containing a list of
-        {"id": int, "old_value": float, "new_value": float, "units": "m"}
+        {"id": int, "old_value": float, "new_value": float,
+         "units": "m" | "ft"}
     """
     session = get_session()
     try:
@@ -235,8 +261,9 @@ def set_exit_wse(bc_ids: List[int], values: List[float]) -> dict:
         vals_float = [float(v) for v in values]
         session.data.modify_ExitH(ids_int, vals_float)
 
+        h_unit = length_unit(session)
         changes = [
-            {"id": bid, "old_value": old, "new_value": new, "units": "m"}
+            {"id": bid, "old_value": old, "new_value": new, "units": h_unit}
             for bid, old, new in zip(bc_ids, old_values, vals_float)
         ]
 
